@@ -1,50 +1,48 @@
 cmake_minimum_required(VERSION 3.20)
-project(cpso_hpc VERSION 0.1.0 LANGUAGES CXX)
+project(cpso_serial VERSION 0.3.0 LANGUAGES CXX)
 
-option(CPSO_ENABLE_OPENMP "Enable shared-memory parallel execution with OpenMP" ON)
-option(CPSO_BUILD_TESTS "Build the C++ test executable" ON)
+option(CPSO_BUILD_TESTS "Build the C++ test suite" ON)
+option(CPSO_ENABLE_WARNINGS "Enable strict compiler warnings" ON)
 
-add_library(cpso_core SHARED
-    cpp/src/cpso_engine.cpp
+find_package(Threads REQUIRED)
+
+add_library(cpso_serial SHARED
+    cpp/src/analytic_propagator.cpp
+    cpp/src/objectives.cpp
+    cpp/src/optimizer.cpp
     cpp/src/c_api.cpp
 )
-target_include_directories(cpso_core PUBLIC cpp/include PRIVATE cpp/src)
-target_compile_features(cpso_core PUBLIC cxx_std_17)
-target_compile_options(cpso_core PRIVATE
-    $<$<CXX_COMPILER_ID:GNU,Clang>:-O3 -Wall -Wextra -Wpedantic -Wconversion -Wshadow>
+
+target_include_directories(cpso_serial
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include
 )
-set_target_properties(cpso_core PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
-    OUTPUT_NAME cpso_core
+target_compile_features(cpso_serial PUBLIC cxx_std_20)
+target_link_libraries(cpso_serial PRIVATE Threads::Threads)
+target_compile_definitions(cpso_serial PRIVATE
+    CPSO_COMPILER_ID="${CMAKE_CXX_COMPILER_ID}"
+    CPSO_COMPILER_VERSION="${CMAKE_CXX_COMPILER_VERSION}"
+    CPSO_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
+)
+set_target_properties(cpso_serial PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
 )
 
-if(CPSO_ENABLE_OPENMP)
-    find_package(OpenMP QUIET)
-    if(OpenMP_CXX_FOUND)
-        target_link_libraries(cpso_core PRIVATE OpenMP::OpenMP_CXX)
-        target_compile_definitions(cpso_core PRIVATE CPSO_WITH_OPENMP=1)
-        message(STATUS "CPSO: OpenMP enabled (${OpenMP_CXX_VERSION})")
+if(CPSO_ENABLE_WARNINGS)
+    if(MSVC)
+        target_compile_options(cpso_serial PRIVATE /W4 /permissive-)
     else()
-        message(WARNING "OpenMP not found: building a serial fallback")
+        target_compile_options(cpso_serial PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     endif()
 endif()
 
 if(CPSO_BUILD_TESTS)
     enable_testing()
-    add_executable(cpso_cpp_tests cpp/tests/test_engine.cpp cpp/src/cpso_engine.cpp)
-    target_include_directories(cpso_cpp_tests PRIVATE cpp/include cpp/src)
-    target_compile_features(cpso_cpp_tests PRIVATE cxx_std_17)
-    if(CPSO_ENABLE_OPENMP AND OpenMP_CXX_FOUND)
-        target_link_libraries(cpso_cpp_tests PRIVATE OpenMP::OpenMP_CXX)
-        target_compile_definitions(cpso_cpp_tests PRIVATE CPSO_WITH_OPENMP=1)
-    endif()
+    add_executable(cpso_cpp_tests cpp/tests/test_cpso.cpp)
+    target_link_libraries(cpso_cpp_tests PRIVATE cpso_serial)
+    target_compile_features(cpso_cpp_tests PRIVATE cxx_std_20)
     add_test(NAME cpso_cpp_tests COMMAND cpso_cpp_tests)
 endif()
-
-install(TARGETS cpso_core
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
-    ARCHIVE DESTINATION lib
-)
-install(DIRECTORY cpp/include/ DESTINATION include)

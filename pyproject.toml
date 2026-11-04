@@ -1,24 +1,21 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cpso-hpc"
-version = "0.1.0"
-description = "C++/Python continuous particle swarm optimization research framework"
-requires-python = ">=3.11"
-dependencies = ["numpy>=1.24"]
-
-[project.optional-dependencies]
-dev = ["pytest>=7.4", "matplotlib>=3.7", "scipy>=1.10"]
-
-[project.scripts]
-cpso-hpc = "cpso_hpc.cli:main"
+name = "cpso-serial"
+version = "0.3.0"
+description = "Serial reference and synchronous master-slave CPSO performance engine"
+requires-python = ">=3.10"
+authors = [{name = "CPSO research project"}]
+license = {text = "MIT"}
 
 [tool.setuptools]
 package-dir = {"" = "python"}
-packages = ["cpso_hpc"]
+
+[tool.setuptools.packages.find]
+where = ["python"]
 
 [tool.pytest.ini_options]
-pythonpath = ["python"]
-testpaths = ["tests"]
+testpaths = ["tests/python"]
+addopts = "-ra"

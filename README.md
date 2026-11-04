@@ -1,105 +1,138 @@
-# CPSO-HPC — C++ engine with Python orchestration
+# CPSO Serial Reference and Synchronous Master--Slave Engine
 
-Version 0.1.0 is the first controlled migration of the CPSO research code. The numerical hot path is C++17; Python is used for TOML configuration, experiment launch, results serialization and analysis. The C++ library is exposed through a small stable C ABI and loaded with Python `ctypes`, so pybind11 is not required.
+Version **0.3.0** extends the clean C++20 serial reference and synchronous
+master--slave executor with a controlled workload and paired scaling-sweep
+framework. The algorithmic reference remains the serial,
+global-best, synchronous continuous particle swarm optimizer based on the
+frozen damped-oscillator formulation associated with Orlando and Ricciardello.
 
-## Architecture
+## What is implemented
 
-```text
-configs/*.toml
-      │
-      ▼
-Python wrapper (config validation, seeds, output)
-      │ ctypes / C ABI
-      ▼
-C++17 core ── exact frozen-ODE propagator
-      │       ├─ CPSO population and personal bests
-      │       ├─ independent / Star / synchronous Ring
-      │       ├─ native benchmark functions
-      │       └─ OpenMP shared-memory parallelism
-      ▼
-JSON + CSV results
-```
+- Closed-form propagation of the frozen damped oscillator in underdamped,
+  critically damped, and overdamped regimes.
+- Serial synchronous global-best CPSO.
+- Synchronous master--slave CPSO that parallelizes objective evaluations only.
+- A persistent `std::thread` pool with indexed result collection and stable
+  particle-order commits.
+- Deterministic per-particle pseudo-random streams for fixed-seed repeatability.
+- Explicit linear inertia schedule and bounded-domain clamp/restitution map.
+- Objective-evaluation accounting, best-so-far history, and separated timing
+  fields.
+- Six built-in sanity benchmarks: Sphere, Rastrigin, Rosenbrock, Ackley,
+  Griewank, and Salomon.
+- C++ API, C ABI 3, Python `ctypes` wrapper, and C++/Python regression tests.
+- A paired serial/master--slave local scaling experiment driver.
+- A `sphere_work` synthetic arithmetic objective with a configurable number of loop iterations per evaluation (performance microbenchmark only).
+- A multi-factor sweep over dimension, population, objective work, worker count and paired seeds.
+- Median paired speedup, MAD, bootstrap intervals, efficiency, and PDF/SVG/PNG analysis plots.
 
-**Important scope note:** this first migration provides shared-memory parallelism on one host through OpenMP. It is not yet an MPI multi-node implementation. The existing source used Python multiprocessing and MATLAB process pools; the paper should not claim multi-node distributed-memory execution until an MPI backend is implemented and validated on an actual cluster.
+## Build and test
 
-## Build (Linux)
-
-Requirements: CMake 3.20+, a C++17 compiler, OpenMP (recommended), Python 3.11+ and NumPy.
+Requirements: CMake 3.20+, a C++20 compiler, Python 3.10+, and (for Python
+tests) `pytest`.
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCPSO_ENABLE_OPENMP=ON
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCPSO_BUILD_TESTS=ON
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
-python -m pip install -e .
+
+python -m pip install -e . --no-build-isolation
+python -m pip install pytest
+PYTHONPATH=python pytest -q
 ```
 
-On macOS, install a compiler toolchain and CMake (for example with Homebrew). Apple Clang does not provide OpenMP by default; install `libomp` and configure the OpenMP flags, or build with `-DCPSO_ENABLE_OPENMP=OFF` for the serial fallback. The code remains CPU-only and does not require PyTorch.
+The shared library is written to `build/lib`. The Python wrapper discovers it
+there automatically. For a custom location, set `CPSO_SERIAL_LIBRARY` to the
+full library path. For Apple Silicon setup, see [`docs/build_macos.md`](docs/build_macos.md).
 
-## Run
+## Run a smoke experiment
 
 ```bash
-cpso-hpc --config configs/smoke.toml --output results/smoke
+python scripts/run_smoke.py
 ```
 
-Or:
+## Run a paired serial/master--slave scaling sweep
+
+The 0.3.0 sweep varies problem dimension, population, controlled objective cost,
+and worker count. Example (a local exploratory run):
 
 ```bash
-PYTHONPATH=python python scripts/run_experiment.py \
-  --config configs/lsgo_rastrigin_500d.toml \
-  --output results/rastrigin_500d_star
+PYTHONPATH=python python experiments/02_master_slave/run_scaling_sweep.py \
+  --objective sphere_work --dimensions 32 --populations 32 \
+  --iterations 30 --seeds 5 --workers 1,2,4,8 \
+  --work-iterations 0,1000,10000,50000
 ```
 
-For a repeated strong-scaling sweep (the profile contains a fixed nonzero 500-D shift,
-500,000 FEs/run and 30 paired seeds):
+The driver writes `scaling_runs.csv`, `scaling_summary.csv`, and
+`scaling_metadata.json` to a new run directory. It verifies exact serial /
+master--slave output equivalence for every seed before accepting timings.
+Generate vector figures and a report with:
 
 ```bash
-PYTHONPATH=python python scripts/run_scaling.py \
-  --config configs/hpc_strong_scaling_500d.toml \
-  --output-dir results/strong_scaling_500d
+python experiments/02_master_slave/analyze_scaling_sweep.py \
+  results/raw/master_slave_sweep/<run_directory>
 ```
 
-Edit the worker list to match the physical cores actually available on the target host.
-The supplied 96-worker profile is a template, not a claim that the current development
-environment can run 96 workers.
+The controlled `sphere_work` objective is not a recognized optimization
+benchmark. It estimates the workload break-even region of the executor; it
+does not establish performance on arbitrary real objectives. Read
+[`docs/master_slave_scaling_protocol.md`](docs/master_slave_scaling_protocol.md)
+before conducting or interpreting a sweep.
 
-The configuration has three sections: `[problem]`, `[algorithm]`, `[cpso]`. You can change dimension, bounds, optimum position, global population, workers, topology, communication interval, seed, and CPSO coefficients without changing C++ code.
-
-`population_size` is the **total population across all workers**. It is not the population per worker. For example, 100 particles and 4 workers means 25 particles per island (subject to deterministic remainder distribution).
-
-## Topologies
-
-- `independent`: each island uses only its own incumbent.
-- `star`: all islands receive the best incumbent at a communication event.
-- `ring`: synchronous one-hop diffusion around a directed ring.
-
-Use `sync_interval = 1` for a clean Star strong-scaling comparison: with fixed seed and fixed total population, the Star trajectory is invariant to thread count and the worker count changes execution partitioning rather than the optimization trajectory. Ring is an algorithmic variation, not just a parallel implementation of the same trajectory.
-
-## Tests
+## Run the original single-configuration diagnostic
 
 ```bash
-ctest --test-dir build --output-on-failure
-pytest -q
+PYTHONPATH=python python experiments/02_master_slave/benchmark_scaling.py \
+  --benchmark rastrigin --dimension 64 --population 96 --iterations 100 \
+  --seeds 10 --workers 2,4,8
 ```
 
-The tests cover benchmark minima, deterministic seeds, FE accounting, monotone best-so-far logging, and Star invariance to the number of OpenMP workers.
+The script warms each code path, executes paired seed/configuration runs in a
+deterministically shuffled order, and refuses to accept a timing pair unless
+the final value, best position, complete best-so-far history, and function-
+evaluation count match exactly. It writes a CSV of raw run records and a JSON
+metadata/summary file under `results/raw/master_slave/` by default.
 
-## Research cautions
+These are local exploratory measurements. Built-in analytic objectives are
+cheap and may be dominated by thread scheduling and synchronization overhead.
+Do not infer general scalability or make publication claims from one machine or
+one objective family.
 
-- The exact propagator solves the local ODE with frozen random coefficients and frozen personal/social attractors. It does not solve the entire switched stochastic CPSO process as one global closed-form ODE.
-- `dt` controls the interval between refreshes and is an algorithmic parameter, not a local-truncation-error control parameter.
-- The random stream construction is deterministic and scheduling invariant; it does not prove pairwise statistical independence.
-- The native benchmark functions and their coordinate translations are documented in `docs/mathematical_model.md`.
-- The legacy files are retained for provenance but are not used by the new engine.
+## Model and implementation conventions
 
-## Directory layout
+Read before using this implementation in research:
 
-```text
-cpp/                    C++17 engine and C ABI
-python/cpso_hpc/         Python configuration and wrapper
-configs/                 Reproducible TOML experiment files
-scripts/                 Command-line entry points
-tests/, cpp/tests/       Python and C++ tests
-docs/                    Mathematical specification and migration audit
-legacy/original_project/ Original uploaded scripts, kept inactive
-data/gnbg_iii/           GNBG-III provenance and usage notes
-```
+- [`docs/mathematical_model.md`](docs/mathematical_model.md)
+- [`docs/implementation_decisions.md`](docs/implementation_decisions.md)
+- [`docs/master_slave.md`](docs/master_slave.md)
+- [`docs/master_slave_scaling_protocol.md`](docs/master_slave_scaling_protocol.md)
+- [`docs/test_protocol.md`](docs/test_protocol.md)
+
+The closed-form flow is exact for each frozen constant-coefficient oscillator
+segment, not for the complete switched stochastic optimization process. The
+interval length `dt` changes the algorithmic observation/update schedule; it is
+not a numerical ODE accuracy parameter. The source-fidelity register still
+lists equation-level checks against the complete Orlando--Ricciardello paper.
+
+## C++ API
+
+- `analytic_propagator.hpp`: local oscillator flow and boundary map;
+- `objectives.hpp`: built-in objective functions;
+- `optimizer.hpp`: `Config`, `Result`, `minimize_serial`, and
+  `minimize_master_slave`;
+- `thread_pool.hpp`: persistent worker pool and indexed `parallel_for`;
+- `c_api.h`: stable C ABI used by Python, including native build metadata
+  (`native_build_info()`) for experiment manifests.
+
+A custom objective can be passed through the C++ API. In master--slave mode the
+objective must be deterministic and reentrant/thread-safe. The Python
+interface exposes the built-in pure objectives and the explicitly labelled
+`sphere_work` performance microbenchmark. Custom C++ objectives are
+still available through the C++ API.
+
+## Scope boundary
+
+This release does not implement particle-neighborhood topologies, island
+migration, asynchronous scheduling, Cooperative Co-evolution, COCO/CEC
+adapters, standard PSO comparison algorithms, or publication-grade benchmark
+orchestration. These remain later milestones.
