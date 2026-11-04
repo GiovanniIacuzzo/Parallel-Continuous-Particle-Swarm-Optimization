@@ -1,0 +1,156 @@
+\documentclass[10pt,a4paper,twocolumn]{article}
+
+% --- Geometria della Pagina e Layout ---
+\usepackage[top=1.7cm,bottom=1.75cm,left=1.6cm,right=1.6cm,columnsep=0.6cm]{geometry}
+
+% --- Codifica e Lingua ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[italian]{babel}
+
+% --- Pacchetti Matematici ---
+\usepackage{amsmath,amsthm}
+\usepackage{mathtools}
+\usepackage{empheq}
+
+% --- Font Testo e Matematica ---
+\usepackage{amssymb,amsfonts}
+\usepackage{newtxtext,newtxmath}
+\usepackage{bm}
+\usepackage{microtype}
+
+% --- Colori, Tabelle, Figure e Float ---
+\usepackage{xcolor}
+\usepackage{booktabs,array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{stfloats}
+
+% --- Algoritmi e Bibliografia ---
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage[numbers,sort&compress]{natbib}
+
+% --- Collegamenti Ipertestuali e Riferimenti ---
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+% Nomi localizzati dei riferimenti incrociati per la versione italiana.
+\crefname{section}{sezione}{sezioni}
+\Crefname{section}{Sezione}{Sezioni}
+\crefname{subsection}{sottosezione}{sottosezioni}
+\Crefname{subsection}{Sottosezione}{Sottosezioni}
+\crefname{figure}{figura}{figure}
+\Crefname{figure}{Figura}{Figure}
+\crefname{table}{tabella}{tabelle}
+\Crefname{table}{Tabella}{Tabelle}
+\crefname{equation}{equazione}{equazioni}
+\Crefname{equation}{Equazione}{Equazioni}
+\crefname{theorem}{teorema}{teoremi}
+\Crefname{theorem}{Teorema}{Teoremi}
+\crefname{lemma}{lemma}{lemmi}
+\Crefname{lemma}{Lemma}{Lemmi}
+\usepackage{enumitem}
+\usepackage{siunitx}
+
+\allowdisplaybreaks[2]
+\emergencystretch=1.5em
+\sisetup{detect-all,per-mode=symbol}
+
+\renewcommand{\topfraction}{0.75}
+\renewcommand{\bottomfraction}{0.70}
+\renewcommand{\dbltopfraction}{0.75}
+\renewcommand{\textfraction}{0.15}
+\renewcommand{\floatpagefraction}{0.70}
+\renewcommand{\dblfloatpagefraction}{0.70}
+\setcounter{topnumber}{2}
+\setcounter{bottomnumber}{1}
+\setcounter{totalnumber}{3}
+\setcounter{dbltopnumber}{2}
+
+% --- Ambienti Matematici Teorema / Definizione ---
+\newtheorem{theorem}{Teorema}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollario}
+\newtheorem{definition}[theorem]{Definizione}
+\newtheorem{remark}{Osservazione}
+
+\graphicspath{{images/}}
+
+% --- Macro Personalizzate ---
+\newcommand{\Om}{\Omega}
+\newcommand{\eps}{\boldsymbol{\varepsilon}}
+\newcommand{\sig}{\boldsymbol{\sigma}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\V}{V}
+\newcommand{\Q}{Q}
+\newcommand{\Ltwo}{L^2}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\ip}[2]{\left(#1,#2\right)_{\Omega}}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\CD}[1]{{}^{C}D_t^{#1}}
+\newcommand{\I}{\mathbb{I}}
+\newcommand{\tht}{\boldsymbol{\theta}}
+\newcommand{\Gmap}{\mathcal{G}}
+\newcommand{\Jfun}{\mathcal{J}}
+
+% --- Titolo e Autori ---
+\title{...}
+
+\author{
+  \textbf{Giovanni Giuseppe Iacuzzo}\textsuperscript{1,*} \\
+  \small \textsuperscript{1}Dipartimento di Ingegneria e Architettura, Università degli Studi di Enna ``Kore'', Enna, Italia \\
+  \small \textsuperscript{*}Autore corrispondente: \texttt{giovanni.iacuzzo@unikore.it}
+}
+
+\date{}
+
+% -------------------------------------------------------------
+% INIZIO DOCUMENTO
+% -------------------------------------------------------------
+\begin{document}
+
+\maketitle
+
+% --- Abstract ---
+\begin{abstract}
+...
+\end{abstract}
+
+\noindent\textbf{Parole chiave:} ...
+\newpage
+
+\section{Introduzione}
+\label{sec:introduction}
+\input{sections/section_1_introduction.tex}
+\FloatBarrier
+
+\FloatBarrier
+\section*{Disponibilità di dati e codice}
+
+
+% =============================================================
+% RINGRAZIAMENTI
+% =============================================================
+% Ringraziamenti da aggiungere, se necessari.
+
+% =============================================================
+% BIBLIOGRAFIA
+% =============================================================
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+\clearpage
+\onecolumn
+\appendix
+\renewcommand{\thefigure}{\thesection.\arabic{figure}}
+\renewcommand{\thetable}{\thesection.\arabic{table}}
+\renewcommand{\theequation}{\thesection.\arabic{equation}}
+\renewcommand{\theHfigure}{app.\thesection.\arabic{figure}}
+\renewcommand{\theHtable}{app.\thesection.\arabic{table}}
+\renewcommand{\theHequation}{app.\thesection.\arabic{equation}}
+
+\end{document}
