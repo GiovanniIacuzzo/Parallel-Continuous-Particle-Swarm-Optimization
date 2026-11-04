@@ -1,0 +1,8 @@
+docs/
+results/
+data/
+build/
+.pytest_cache/
+__pycache__/
+cpso_hpc.egg-info/
+.DS_Store
