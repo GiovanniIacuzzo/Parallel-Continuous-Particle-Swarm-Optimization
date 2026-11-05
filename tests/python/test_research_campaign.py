@@ -122,8 +122,8 @@ def test_quality_analysis_uses_function_families_as_inferential_units(tmp_path):
 
 
 def test_environment_metadata_is_non_identifying_and_contains_build_context():
-    metadata = collect_environment_metadata(native_version="0.6.0", native_build_info="test-build")
-    assert metadata["native"]["version"] == "0.6.0"
+    metadata = collect_environment_metadata(native_version="0.7.0", native_build_info="test-build")
+    assert metadata["native"]["version"] == "0.7.0"
     assert metadata["native"]["build_info"] == "test-build"
     assert "logical_count" in metadata["cpu"]
     assert "packages" in metadata

@@ -1,11 +1,11 @@
 # CPSO — continuous particle-swarm optimization and parallel execution
 
 This repository contains a C++20 implementation of a continuous-time PSO
-(CPSO) model, a Python `ctypes` interface, and experimental drivers for
-comparing execution architectures. The code separates algorithmic dynamics
-from execution strategy: some parallel modes preserve the serial synchronous
-trajectory exactly, while asynchronous and island modes intentionally change
-information flow and therefore define different search dynamics.
+(CPSO) model, a Python `ctypes` interface, five execution architectures, and a
+separate external-benchmark layer with discrete-PSO reference baselines. The
+code distinguishes algorithmic dynamics from execution strategy: synchronous
+parallel modes are required to preserve the serial CPSO trajectory, whereas
+asynchronous and island modes intentionally change information flow.
 
 ## Implemented execution modes
 
@@ -13,34 +13,71 @@ information flow and therefore define different search dynamics.
 |---|---|---|
 | `serial` | None | Reference algorithm |
 | `master_slave` | Objective-function evaluations | Exact trajectory equivalence is required and tested |
-| `particle_parallel` | Initialization, particle propagation and objective evaluations | Exact trajectory equivalence is required and tested |
+| `particle_parallel` | Initialization, propagation and objective evaluations | Exact trajectory equivalence is required and tested |
 | `asynchronous` | Event-driven particle updates | Different, schedule-dependent update dynamics for multiple workers |
 | `islands` | Independent sub-swarms and optional migration | Different population information flow |
 
 Social topologies are global-best, periodic ring and periodic toroidal von
-Neumann grid. The total objective-evaluation budget used in the architecture
-studies is held at `N * (K + 1)` for population `N` and `K` update steps.
+Neumann grid. The internal architecture studies keep the total objective
+budget at `N * (K + 1)` for population `N` and `K` update steps.
+
+## External optimization benchmarks
+
+The external-objective interface is intentionally serial: Python/Cython
+benchmark callbacks are not assumed to be reentrant or thread-safe. The native
+CPSO engine exposes a callback-based serial entry point; the external benchmark
+campaigns do not measure or claim parallel speedup.
+
+| Suite | Scope | Confirmatory configuration |
+|---|---|---|
+| COCO `bbob` | 24 noiseless single-objective functions; dimensions 2, 3, 5, 10, 20, 40; instances 1–15 | `configs/benchmarks/bbob_confirmatory.json` |
+| COCO `bbob-largescale` | 24 noiseless single-objective functions; dimensions 20, 40, 80, 160, 320, 640; instances 1–15 | `configs/benchmarks/bbob_largescale_confirmatory.json` |
+| CEC 2013 LSGO | 15 large-scale functions; D=1000; 25 seeds; 3,000,000 FE per run | `configs/benchmarks/cec2013_confirmatory.json` |
+
+Both COCO suites are driven through the official `coco-experiment` (`cocoex`)
+package; the functions are not reimplemented locally. COCO observer data are
+retained for standard `cocopp` post-processing. CEC 2013 LSGO is accessed through
+an optional third-party Python wrapper, which is not vendored. Review its
+license before installing or redistributing an environment containing it.
+
+The benchmark campaign compares five algorithms under an exactly matched
+function-evaluation budget:
+
+- `cpso_continuous`: the native continuous-time CPSO implementation;
+- `pso_classic_gbest`: classic global-best PSO;
+- `pso_inertia_gbest`: inertia-weight global-best PSO;
+- `pso_constriction_gbest`: constriction-factor global-best PSO;
+- `pso_inertia_lbest_ring`: inertia-weight local-best PSO on a periodic ring.
+
+The four PSO algorithms are transparent reference baselines, not a claim to
+implement the full SPSO-2007 or SPSO-2011 standards. Their update laws,
+parameters, randomization and common boundary map are documented in
+`docs/external_benchmarks_and_pso_baselines.md`. Methods share the same
+population, deterministic problem/seed key, search bounds and FE budget; the
+seed label does not imply identical initial coordinates or common random
+numbers across different PRNG implementations.
 
 ## Repository map
 
 - `cpp/`: C++20 numerical core, optimizers, thread-pool execution, social
   topologies and C ABI.
-- `python/cpso_serial/`: Python configuration/results and native-library
-  loader. The import package retains the historical `cpso_serial` name.
-- `experiments/02_master_slave/`: early synchronous scaling studies.
-- `experiments/03_topologies/`: social-topology comparison and analysis.
-- `experiments/04_architectures/`: unified five-mode study runner, campaign
-  orchestrator and paired statistical analysis.
-- `configs/`: smoke, architecture-study and predeclared campaign JSON files.
-- `analysis/`: reusable analysis and plotting utilities for earlier studies.
+- `python/cpso_serial/`: Python configuration/results, native-library loader,
+  custom serial objective API, discrete PSO baselines and external benchmark
+  adapters. The import package retains the historical `cpso_serial` name.
+- `experiments/02_master_slave/`: synchronous scaling studies.
+- `experiments/03_topologies/`: social-topology comparisons.
+- `experiments/04_architectures/`: five-mode internal architecture campaign.
+- `experiments/05_external_benchmarks/`: COCO/BBOB, BBOB-Large-Scale and CEC
+  2013 LSGO campaign drivers.
+- `configs/`: smoke and confirmatory configurations.
+- `analysis/`: statistical and plotting utilities.
 - `docs/`: mathematical model, implementation decisions, protocols and audit.
 - `paper/`: current manuscript draft and bibliography.
-- `tests/`: C++ and Python regression suites.
+- `tests/`: C++ and Python regression and integration-contract tests.
 
-## Build and test
+## Build and core test
 
-The native library must be compiled before running Python calls. From the
-repository root:
+From the repository root:
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCPSO_BUILD_TESTS=ON
@@ -56,26 +93,76 @@ PYTHONPATH=python python scripts/run_smoke.py
 The shared-library filename is platform-specific: `.so` on Linux, `.dylib` on
 macOS and `.dll` on Windows. Usually the wrapper discovers the CMake `build/`
 folder automatically; `CPSO_SERIAL_LIBRARY` overrides discovery when needed.
+The distribution metadata is `cpso-parallel`, while the Python import package
+and CMake shared-library target retain the historical `cpso_serial` name.
 
-## Continuous integration
+## Run external-benchmark smoke tests
 
-`.github/workflows/ci.yml` defines GitHub Actions checks on Ubuntu and macOS
-for Python 3.10 and 3.12. It configures/builds the C++ library, runs CTest and
-the Python regression suite, and checks Python syntax. The workflow is
-configured in the repository but still needs to be executed by GitHub; local
-verification for this development pass was performed on Linux/GCC.
+Install the optional dependencies after compiling the native library:
 
-## Experimental entry points
+```bash
+python -m pip install -r requirements-benchmarks-coco.txt
+# Optional post-processing is included above as `cocopp`.
 
-Validate the full predeclared campaign and print its run count, without
-creating output files or requiring the native library:
+python -m pip install -r requirements-benchmarks-cec2013.txt
+# Review the wrapper license before using/redistributing it.
+```
+
+First validate the plans without requiring external packages or creating
+output directories. The preflight prints the expected number of problems,
+method-runs and total FEs, and rejects budgets that are not exact population
+multiples:
+
+```bash
+PYTHONPATH=python python experiments/05_external_benchmarks/run_bbob.py \
+  --config configs/benchmarks/bbob_smoke.json --dry-run
+PYTHONPATH=python python experiments/05_external_benchmarks/run_bbob.py \
+  --config configs/benchmarks/bbob_largescale_smoke.json --dry-run
+PYTHONPATH=python python experiments/05_external_benchmarks/run_cec2013_lsgo.py \
+  --config configs/benchmarks/cec2013_smoke.json --dry-run
+```
+
+For an intermediate experiment, use the `*_preconfirmatory.json` files. They
+cover more functions/instances than smoke tests but deliberately reduce
+problem subsets or FE budgets relative to full campaigns.
+
+Then execute each smoke campaign:
+
+```bash
+PYTHONPATH=python python experiments/05_external_benchmarks/run_bbob.py \
+  --config configs/benchmarks/bbob_smoke.json
+PYTHONPATH=python python experiments/05_external_benchmarks/run_bbob.py \
+  --config configs/benchmarks/bbob_largescale_smoke.json
+PYTHONPATH=python python experiments/05_external_benchmarks/run_cec2013_lsgo.py \
+  --config configs/benchmarks/cec2013_smoke.json
+```
+
+The smoke configurations are integration checks only; they are not suitable
+for ranking algorithms or drawing scientific conclusions. Start with a smaller
+pre-confirmatory subset and pin the external package versions before launching
+any confirmatory campaign. The BBOB and BBOB-Large-Scale configurations each
+contain 10,800 method-problem runs at the selected full suite settings. CEC
+2013 LSGO contains 1,875 method-function-seed runs and 5.625 billion total FE
+across the five methods. These are substantial compute campaigns: do not launch
+them until the smoke tests, package environment, storage capacity and run-time
+budget have been checked.
+
+All external results are stored as resumable JSONL records. COCO also writes
+per-method observer data under `coco_data/` for `cocopp`. Preserve both the
+JSONL sidecars and the raw COCO observer output. Do not edit generated records
+by hand.
+
+## Internal architecture campaign
+
+Validate and count the predeclared internal campaign without creating output
+files or requiring the native library:
 
 ```bash
 PYTHONPATH=python python experiments/04_architectures/run_research_campaign.py \
   configs/campaigns/definitive_architecture_campaign.json --dry-run
 ```
 
-Run the small integration campaign (not for scientific inference):
+Run the small internal integration campaign (not for scientific inference):
 
 ```bash
 PYTHONPATH=python python experiments/04_architectures/run_research_campaign.py \
@@ -83,42 +170,38 @@ PYTHONPATH=python python experiments/04_architectures/run_research_campaign.py \
   --output /tmp/cpso-campaign-smoke --no-plots
 ```
 
-The definitive campaign contains 9,360 optimization runs and 273,888,000
-objective evaluations. Use the protocol in
-`docs/definitive_experimental_campaign.md`; preserve raw JSONL checkpoints and
-manifests. Do not edit generated records by hand. The `results/` directory is
-intentionally not ignored by Git because raw experiments are research data.
+The internal campaign contains 9,360 optimization runs and 273,888,000
+objective evaluations. Its scaling stage uses `sphere_work` exclusively as an
+execution-cost instrument; those results must not be mixed with external
+optimization-quality tables.
 
 ## Scope and scientific limitations
 
-The native engine currently exposes six analytic optimization objectives and
-one separately marked synthetic `sphere_work` objective used only to probe
-evaluation overhead. The current research campaign is an internal architecture
-study, not an external benchmark-suite submission: COCO/BBOB, BBOB-Large-Scale,
-CEC 2013 LSGO adapters, standard-PSO baselines, MPI and GPU backends are not
-implemented in this repository state. No superiority or state-of-the-art claim
-on those suites or architectures follows from the current code.
+The current native engine exposes six analytic objectives and one separately
+marked synthetic `sphere_work` objective. External suite adapters and four
+reference PSO baselines are implemented in a separate serial evaluation layer;
+this does not make the native parallel execution backends compatible with
+arbitrary Python objectives. COCO/CEC runs compare search quality at matched FE
+budgets, not parallel wall-time speedup. No external benchmark results are
+included in this development snapshot, and no superiority or state-of-the-art
+claim follows from the integration tests.
 
-The exact mathematical fidelity of the serial implementation to the complete
-source article by Orlando and Ricciardello (2021) remains an explicit audit
-item in `docs/implementation_decisions.md`. Until that equation-by-equation
-comparison is completed, describe the implementation as a reconstruction
-with documented operational conventions rather than a verified strict
+The exact mathematical fidelity of the serial CPSO implementation to the
+complete source article by Orlando and Ricciardello (2021) remains an explicit
+audit item in `docs/implementation_decisions.md`. Until an equation-by-equation
+comparison with the complete article is completed, describe the native
+implementation as a documented reconstruction rather than a certified strict
 reproduction.
 
-## Package and ABI naming
+## Package and ABI versions
 
-The distribution metadata is `cpso-parallel`, while the Python import package,
-CMake target and shared library retain the historical names `cpso_serial` and
-`libcpso_serial`. This is intentional compatibility debt for now; avoid
-renaming these interfaces without a migration plan. The project/native version
-is `0.6.0`; the C ABI version is `5` (these are separate version numbers).
+Project/package version: `0.7.0`. Native C ABI version: `6`. The ABI 6
+addition provides a custom serial objective callback; it is deliberately
+restricted to the serial execution architecture. The version numbers are
+separate and are checked when the Python wrapper loads the native library.
 
-The current `paper/paper.pdf` is a working draft containing the introduction,
-model/semantics and experimental protocol. It does not yet contain definitive
-results or conclusions. The full status and unresolved prerequisites are
-recorded in `docs/repository_audit.md`; licensing is intentionally unset until
-the rights holder confirms it (`docs/license_status.md`).
-
-See `docs/repository_audit.md` for the current audit scope, verified checks,
-known limitations and recommended development priorities.
+The current `paper/paper.pdf` is a working draft describing the internal
+architecture study and the newly specified external benchmark protocol. It
+does not contain definitive external benchmark results or conclusions. The
+project license is intentionally unset until the rights holder confirms it;
+see `docs/license_status.md`.

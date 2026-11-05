@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(cpso_serial VERSION 0.6.0 LANGUAGES CXX)
+project(cpso_serial VERSION 0.7.0 LANGUAGES CXX)
 
 option(CPSO_BUILD_TESTS "Build the C++ test suite" ON)
 option(CPSO_ENABLE_WARNINGS "Enable strict compiler warnings" ON)

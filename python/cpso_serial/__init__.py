@@ -7,6 +7,7 @@ from .native import (
     run_master_slave,
     run_particle_parallel,
     run_serial,
+    run_serial_objective,
 )
 from .result import CpsoResult
 
@@ -20,4 +21,5 @@ __all__ = [
     "run_master_slave",
     "run_particle_parallel",
     "run_serial",
+    "run_serial_objective",
 ]

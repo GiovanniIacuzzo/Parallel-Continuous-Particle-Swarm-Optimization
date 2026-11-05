@@ -4,7 +4,10 @@
 
 Version 0.3.0 adds a controlled experiment driver for the synchronous master--slave implementation. The purpose is to locate the workload range in which parallel objective evaluation amortizes task dispatch, synchronization, and worker-pool lifecycle costs.
 
-This is an implementation/performance characterization stage. It is not yet a comparison against COCO/CEC benchmark suites and it does not establish general scalability.
+This is an implementation/performance characterization stage, not a quality
+comparison against COCO/CEC suites. External-suite quality drivers now exist
+separately, but they use a serial Python objective callback and do not establish
+parallel scalability.
 
 ## Experimental factors
 

@@ -14,9 +14,9 @@
 #include <vector>
 
 namespace {
-constexpr std::uint32_t kAbiVersion = 5U;
+constexpr std::uint32_t kAbiVersion = 6U;
 #ifndef CPSO_PROJECT_VERSION
-#define CPSO_PROJECT_VERSION "0.6.0"
+#define CPSO_PROJECT_VERSION "0.7.0"
 #endif
 constexpr const char* kVersion = CPSO_PROJECT_VERSION;
 
@@ -105,7 +105,9 @@ int run_impl(
     std::uint64_t* history_evaluations_out,
     const std::size_t history_capacity,
     char* error_message,
-    const std::size_t error_capacity) {
+    const std::size_t error_capacity,
+    const CpsoObjectiveCallback custom_objective = nullptr,
+    void* custom_objective_context = nullptr) {
     try {
         if (config == nullptr || execution == nullptr || c_result == nullptr
             || best_position_out == nullptr || history_out == nullptr) {
@@ -162,7 +164,21 @@ int run_impl(
         cpp_config.grid_columns = static_cast<std::size_t>(config->grid_columns);
 
         cpso::Objective objective;
-        if (config->benchmark_id == CPSO_SPHERE_WORK) {
+        if (custom_objective != nullptr) {
+            if (execution->algorithm_id != CPSO_ALGORITHM_SERIAL) {
+                throw std::invalid_argument(
+                    "Custom objective callbacks are supported only in serial mode");
+            }
+            if (config->objective_work_iterations != 0U) {
+                throw std::invalid_argument(
+                    "objective_work_iterations is not valid with a custom objective");
+            }
+            objective = [custom_objective, custom_objective_context](
+                const std::vector<double>& position) {
+                return custom_objective(
+                    position.data(), position.size(), custom_objective_context);
+            };
+        } else if (config->benchmark_id == CPSO_SPHERE_WORK) {
             objective = [work_iterations = config->objective_work_iterations](
                 const std::vector<double>& position) {
                 return cpso::evaluate_synthetic_sphere_work(position, work_iterations);
@@ -299,6 +315,28 @@ extern "C" CPSO_API int cpso_run_master_slave(
     return run_impl(config, &execution, result, best_position_out, history_out,
                     unused_history_evaluations.data(), history_capacity,
                     error_message, error_capacity);
+}
+
+extern "C" CPSO_API int cpso_run_custom_serial(
+    const CpsoCConfig* config,
+    const CpsoObjectiveCallback objective_callback,
+    void* objective_context,
+    CpsoCResult* result,
+    double* best_position_out,
+    double* history_out,
+    std::uint64_t* history_evaluations_out,
+    const std::size_t history_capacity,
+    char* error_message,
+    const std::size_t error_capacity) {
+    const CpsoCExecutionConfig execution = legacy_execution(CPSO_ALGORITHM_SERIAL, 1U);
+    if (objective_callback == nullptr) {
+        write_error(error_message, error_capacity, "Custom objective callback must not be null");
+        return -1;
+    }
+    return run_impl(
+        config, &execution, result, best_position_out, history_out,
+        history_evaluations_out, history_capacity, error_message, error_capacity,
+        objective_callback, objective_context);
 }
 
 extern "C" CPSO_API int cpso_run_architecture(

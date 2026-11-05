@@ -9,12 +9,14 @@ change search quality; and (iii) when synchronous parallel execution reduces
 wall-clock time without changing the serial trajectory.
 
 The campaign is reproducible and checkpointed, but it is **not yet a complete
-external benchmark submission**. The current native engine exposes six
-built-in analytic functions. COCO/BBOB, BBOB-Large-Scale and CEC 2013 LSGO
-adapters are not part of this release. No claim of benchmark-suite superiority
-or state-of-the-art performance may be based on this campaign alone. External
-suite adapters, version pinning, official instance handling and FE accounting
-must be implemented and tested before those claims are made.
+external benchmark submission**. The internal architecture campaign uses six built-in analytic functions.
+Separate external quality drivers for COCO/BBOB, BBOB-LargeScale and CEC 2013
+LSGO are available under `experiments/05_external_benchmarks/`; they must be
+run and analyzed independently. They use a serial external-objective callback
+and do not characterize execution-architecture speedup. No claim of
+benchmark-suite superiority or state-of-the-art performance may be based on
+this internal campaign alone. External packages must be installed, versions
+pinned and smoke-tested before confirmatory runs.
 
 `sphere_work` is exclusively an execution-cost instrument. Its results belong
 to the systems/scaling analysis and must not be pooled with optimization

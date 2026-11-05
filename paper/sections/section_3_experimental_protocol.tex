@@ -24,7 +24,7 @@ Totale & & 9\,360 & 273\,888\,000 \\
 \end{tabularx}
 \end{table*}
 
-Il primo stadio isola la topologia sociale in esecuzione seriale. Il secondo confronta la semantica event-driven a uno e quattro worker con i riferimenti seriali corrispondenti. Il terzo studia il numero di isole, la topologia interna e le politiche di migrazione ad anello o fully-connected mantenendo costante $N$ e il budget FE. Le configurazioni esatte e le combinazioni sono registrate in \texttt{configs/campaigns/definitive\_architecture\_campaign.json}.
+Il primo stadio isola la topologia sociale in esecuzione seriale. Il secondo confronta la semantica event-driven a uno e quattro worker con i riferimenti seriali corrispondenti. Il terzo studia il numero di isole, la topologia interna e le politiche di migrazione ad anello o fully-connected mantenendo costante $N$ e il budget FE. Le configurazioni esatte e le combinazioni sono registrate in \path{configs/campaigns/definitive_architecture_campaign.json}.
 
 \subsection{Misura dello scaling}
 
@@ -51,3 +51,92 @@ Il numero ridotto di famiglie limita la potenza e la generalizzabilità statisti
 Ogni run è identificata da funzione, dimensione, seme, metodo e hash della configurazione; il manifest conserva inoltre hash del codice, versione/ABI nativa, compilatore, flag di compilazione, CPU, sistema, versioni software e variabili d'ambiente relative al threading. I record sono salvati in JSON Lines append-only e sincronizzati su disco dopo il completamento di ciascuna run. Le campagne sono riprendibili: in fase di resume può essere eliminata soltanto una riga finale interrotta, mentre la corruzione di record completi determina un errore.
 
 La campagna definitiva è definita e validata nel file di configurazione, ma non è stata eseguita integralmente nella versione corrente. I risultati dello smoke test servono soltanto a verificare orchestrazione, contabilità FE, controlli di equivalenza, analisi e generazione delle figure; non sono utilizzati per sostenere conclusioni scientifiche.
+
+
+\subsection{Benchmark esterni e baseline PSO discrete}
+\label{sec:external-benchmarks}
+
+La valutazione interna delle architetture non sostituisce benchmark esterni
+standardizzati. Per questo motivo il software include un livello distinto di
+valutazione della qualità della ricerca su tre famiglie di problemi: COCO
+\texttt{bbob}, COCO \texttt{bbob-largescale} e CEC 2013 LSGO
+\citep{Hansen2021,Varelas2020,Li2013}. I benchmark sono richiamati tramite
+adapter esterni e non vengono ricostruiti nel codice del progetto. Gli adapter
+non modificano le architetture del motore: l'obiettivo esterno è invocato
+attraverso un callback seriale, perché non si assume che le implementazioni
+Python/Cython dei benchmark siano thread-safe.
+
+\begin{table*}[t]
+\centering
+\caption{Protocollo predefinito per le suite esterne. I budget BBOB sono una
+scelta del presente studio; i parametri CEC riportati seguono il protocollo
+pubblicato. Le configurazioni sono predefinite ma le campagne non sono ancora
+state eseguite integralmente.}
+\label{tab:external-benchmarks}
+\small
+\begin{tabularx}{\textwidth}{@{}lXrrr@{}}
+\toprule
+Suite & Problemi & Dimensioni & Istanze/semi & Budget per run \\
+\midrule
+COCO BBOB & 24 funzioni & $2,3,5,10,20,40$ & 15 istanze & $10^4 D$ FE \\
+COCO BBOB-LargeScale & 24 funzioni & $20,40,80,160,320,640$ & 15 istanze & $10^4 D$ FE \\
+CEC 2013 LSGO & 15 funzioni & $D=1000$ & 25 semi & $3\cdot10^6$ FE \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+Per le due suite COCO, ogni metodo riceve un oggetto \texttt{Suite} e un
+\texttt{Observer} nuovi, così da separare contatori e file di log. Il driver
+verifica la corrispondenza tra il numero di chiamate registrate dall'oggetto
+COCO e il contatore FE dell'ottimizzatore; i dati observer sono mantenuti per
+il post-processing standard con \texttt{cocopp}. La suite BBOB standard usa le
+dimensioni $2,3,5,10,20,40$, mentre BBOB-LargeScale usa $20,40,80,160,320,640$
+\citep{Varelas2020}. Per entrambe le suite il progetto seleziona un budget di
+$10^4D$ valutazioni per problema e metodo. Tale budget è una scelta
+sperimentale del progetto e non viene presentato come requisito normativo di
+COCO.
+
+Per CEC 2013 LSGO vengono utilizzate le 15 funzioni a 1000 variabili, con 25
+semi indipendenti e budget massimo di $3\cdot10^6$ valutazioni per run. Sono
+registrati i valori best-so-far a $1.2\cdot10^5$, $6\cdot10^5$ e
+$3\cdot10^6$ FE, come previsto dal rapporto tecnico della competizione
+\citep{Li2013}. I limiti di ricerca sono letti dai metadati dell'adapter; la
+mappa di vincolo comune del presente studio applica il clipping alla frontiera
+e la restituzione della velocità con coefficiente $0.5$. Questa è una scelta
+operativa uniforme dei metodi, non una proprietà intrinseca delle funzioni CEC.
+
+I metodi confrontati sono la CPSO continua nativa e quattro baseline discrete
+implementate separatamente in NumPy. La prima baseline è una PSO global-best
+classica, con $c_1=c_2=2$ e velocità inerziale non pesata
+\citep{Kennedy1995}. La seconda utilizza un coefficiente di inerzia lineare da
+$0.9$ a $0.4$, con $c_1=c_2=2.05$ \citep{ShiEberhart1998}. La terza applica il
+fattore di costrizione
+\begin{equation}
+  \chi=\frac{2}{\varphi-2+\sqrt{\varphi^2-4\varphi}},
+  \qquad \varphi=c_1+c_2>4,
+  \label{eq:constriction-baseline}
+\end{equation}
+con $c_1=c_2=2.05$ \citep{Clerc2002}. La quarta utilizza la stessa inerzia
+lineare della seconda ma sostituisce l'informazione globale con il miglior
+personale in un vicinato ad anello periodico di raggio uno
+\citep{KennedyMendes2002}. Le prime tre baseline usano l'informazione
+global-best.
+
+Tutti e cinque i metodi condividono dimensione della popolazione, dominio,
+frazione iniziale della velocità e budget FE esatto. Le campagne confermative
+utilizzano $N=40$ e budget multipli di $N$, cosicché il costo di inizializzazione
+è di $N$ valutazioni e ogni batch successivo contiene $N$ aggiornamenti. I
+semi sono determinati da una funzione hash stabile dell'identificatore del
+problema e del seme di campagna. Lo stesso identificatore di seme è associato a
+ogni metodo per consentire l'appaiamento statistico, ma ciò non implica
+coordinate iniziali identiche: CPSO C++ e PSO NumPy utilizzano generatori
+casuali differenti. Le baseline sono implementazioni di riferimento esplicite
+e non vengono etichettate come riproduzioni complete degli standard SPSO-2007 o
+SPSO-2011.
+
+Le campagne complete sono onerose: ciascuna delle due suite COCO comprende
+10\,800 run metodo-problema; CEC 2013 LSGO comprende 1\,875 run e 5.625
+miliardi di valutazioni complessive sui cinque metodi. Gli smoke test verificano
+solo l'integrazione, il budget FE, la serializzazione e il resume; non sono
+utilizzati per classificare gli algoritmi. Nel presente manoscritto non sono
+ancora riportati risultati ottenuti con le suite esterne.

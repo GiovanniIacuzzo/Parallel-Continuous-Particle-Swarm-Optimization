@@ -1,0 +1,61 @@
+{
+  "campaign_id": "cpso_cec2013_lsgo_confirmatory_v1",
+  "function_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25
+  ],
+  "population_size": 40,
+  "max_evaluations": 3000000,
+  "milestones": [
+    120000,
+    600000,
+    3000000
+  ],
+  "methods": [
+    "cpso_continuous",
+    "pso_classic_gbest",
+    "pso_inertia_gbest",
+    "pso_constriction_gbest",
+    "pso_inertia_lbest_ring"
+  ]
+}

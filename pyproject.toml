@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cpso-parallel"
-version = "0.6.0"
+version = "0.7.0"
 description = "Continuous PSO engine with synchronous, asynchronous, and island parallel architectures"
 requires-python = ">=3.10"
 authors = [{name = "CPSO research project"}]
@@ -13,6 +13,11 @@ authors = [{name = "CPSO research project"}]
 
 [project.optional-dependencies]
 analysis = ["numpy>=1.23", "matplotlib>=3.7", "scipy>=1.10", "psutil>=5.9"]
+# COCO/BBOB uses the official COCO experiment and post-processing packages.
+coco = ["numpy>=1.23", "coco-experiment", "cocopp"]
+# Optional external wrapper; it is distributed under GPL-3.0 and is not vendored.
+cec2013 = ["numpy>=1.23", "cec2013lsgo"]
+benchmarks = ["numpy>=1.23", "coco-experiment", "cocopp"]
 test = ["pytest>=7.0"]
 
 [tool.setuptools]

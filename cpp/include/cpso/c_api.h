@@ -78,6 +78,12 @@ typedef struct CpsoCExecutionConfig {
     int migration_topology_id;
 } CpsoCExecutionConfig;
 
+// Custom scalar objective callback. This callback is intentionally supported
+// only by cpso_run_custom_serial: Python/foreign callbacks are not assumed to
+// be thread-safe and must not be invoked concurrently from native workers.
+typedef double (*CpsoObjectiveCallback)(
+    const double* position, size_t dimension, void* user_data);
+
 typedef struct CpsoCResult {
     double best_value;
     uint64_t function_evaluations;
@@ -119,6 +125,21 @@ CPSO_API int cpso_run_master_slave(
     CpsoCResult* result,
     double* best_position_out,
     double* history_out,
+    size_t history_capacity,
+    char* error_message,
+    size_t error_capacity);
+
+// Run the serial CPSO solver against a caller-owned objective function.
+// The callback must return a finite scalar value and must not throw across the
+// C ABI. A non-finite return value aborts the optimization with an error.
+CPSO_API int cpso_run_custom_serial(
+    const CpsoCConfig* config,
+    CpsoObjectiveCallback objective_callback,
+    void* objective_context,
+    CpsoCResult* result,
+    double* best_position_out,
+    double* history_out,
+    uint64_t* history_evaluations_out,
     size_t history_capacity,
     char* error_message,
     size_t error_capacity);

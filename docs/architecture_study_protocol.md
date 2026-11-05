@@ -91,10 +91,11 @@ least 30 as a starting point), prespecify target values, and add an appropriate
 non-parametric omnibus/post-hoc analysis with multiplicity correction.
 
 The built-in functions are development benchmarks only; `sphere_work` is a
-synthetic execution-cost instrument. This driver does not yet call COCO/BBOB,
-BBOB-Large-Scale or CEC 2013 LSGO. Adapters for those suites must be introduced
-with their own version/provenance metadata and FE-accounting tests before
-large-scale scientific claims are made.
+synthetic execution-cost instrument. This internal architecture-study driver
+does not call COCO/BBOB, BBOB-Large-Scale or CEC 2013 LSGO. Those suites are now
+covered by the separate drivers in `experiments/05_external_benchmarks/` and
+must be analyzed independently; their serial callback interface is not a
+parallel-execution backend.
 
 ## Timing rules
 

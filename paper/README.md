@@ -2,9 +2,10 @@
 
 `paper.tex`, `sections/` e `references.bib` sono le fonti LaTeX autorevoli.
 `paper.pdf` è la bozza corrente generata da queste fonti: contiene abstract,
-introduzione, modello e semantica delle architetture, protocollo sperimentale e
+introduzione, modello e semantica delle architetture, protocollo interno,
+protocolli COCO BBOB/BBOB-LargeScale e CEC 2013 LSGO, baseline PSO e
 bibliografia. Il PDF è di lavoro, non pronto per la submission: mancano i
-risultati della campagna definitiva, la discussione empirica, le conclusioni e
+risultati delle campagne definitive, la discussione empirica, le conclusioni e
 la verifica integrale della fedeltà al testo sorgente.
 
 `paper_pre_revision.pdf` è un artefatto della versione precedente e non è

@@ -1,6 +1,6 @@
 # CPSO: mathematical specification and implemented execution semantics
 
-**Implementation reviewed:** project 0.6.0, native C ABI 5.  
+**Implementation reviewed:** project 0.7.0, native C ABI 6.  
 **Source-fidelity status:** the local ODE and its analytic flow are verified; a strict equation-by-equation reproduction of Orlando--Ricciardello (2021) is not yet certified because the complete source text was not present in the repository or accessible in the public preview. The open conventions are listed in `implementation_decisions.md`.
 
 ## 1. Optimization problem and particle state
@@ -69,7 +69,7 @@ single ODE with continuously varying coefficients.
 
 ## 3. Random-coefficient convention and reproducibility
 
-In project 0.6.0, one scalar pair \((r_1,r_2)\) is sampled per particle and
+In project 0.7.0, one scalar pair \((r_1,r_2)\) is sampled per particle and
 per update interval and shared by all coordinates of that particle. This is an
 explicit vector-ODE convention, not a statement that the source article
 necessarily uses the same convention. It remains subject to the source audit.
@@ -217,8 +217,12 @@ exceed wall time. They must not be substituted for elapsed wall time.
 - The current built-in optimization objectives are Sphere, Rastrigin,
   Rosenbrock, Ackley, Griewank, and Salomon. `sphere_work` is only a synthetic
   execution-cost instrument and is not an optimization benchmark result.
-- COCO/BBOB, BBOB-Large-Scale, CEC 2013, standard-PSO baselines, cooperative
-  co-evolution, MPI, and GPU adapters are not implemented in this release.
+- External COCO/BBOB, BBOB-Large-Scale and CEC 2013 LSGO benchmark drivers,
+  together with four discrete-PSO quality baselines, are implemented in a
+  separate serial evaluation layer. They do not alter the native parallel
+  execution architectures. Actual runs with the external benchmark packages
+  are still required. Cooperative co-evolution, MPI and GPU backends are not
+  implemented.
 - A strict reproduction claim for Orlando--Ricciardello (2021) remains blocked
   until the complete source is audited for random-variable conventions,
   parameter schedules, initialization, boundary handling, and observation

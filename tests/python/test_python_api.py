@@ -44,11 +44,11 @@ def test_python_config_validation() -> None:
 
 
 def test_native_version_and_build_info() -> None:
-    assert native_version() == "0.6.0"
+    assert native_version() == "0.7.0"
     info = native_build_info()
     assert "compiler=" in info
     assert "cxx_standard=20" in info
-    assert "abi=5" in info
+    assert "abi=6" in info
 
 
 def test_serial_smoke_contract() -> None:
@@ -78,6 +78,42 @@ def test_fixed_seed_repeatability() -> None:
     assert first.best_position == second.best_position
     assert first.best_history == second.best_history
     assert first.function_evaluations == second.function_evaluations
+
+
+def test_custom_serial_objective_callback_uses_native_cpsp_and_exact_fe_budget() -> None:
+    from cpso_serial import run_serial_objective
+
+    config = CpsoConfig(
+        lower_bounds=(-2.0, -2.0), upper_bounds=(2.0, 2.0),
+        population_size=8, iterations=5, seed=901,
+    )
+    evaluations = 0
+
+    def sphere(point):
+        nonlocal evaluations
+        evaluations += 1
+        return sum(value * value for value in point)
+
+    result = run_serial_objective(config, sphere)
+    assert result.function_evaluations == 8 * 6
+    assert evaluations == result.function_evaluations
+    assert result.history_evaluations == (8, 16, 24, 32, 40, 48)
+    assert result.best_history[-1] == result.best_value
+
+
+def test_custom_serial_objective_propagates_python_exceptions() -> None:
+    from cpso_serial import run_serial_objective
+
+    config = CpsoConfig(
+        lower_bounds=(-1.0,), upper_bounds=(1.0,),
+        population_size=4, iterations=2, seed=902,
+    )
+
+    def failing_objective(_point):
+        raise LookupError("objective adapter failure")
+
+    with pytest.raises(LookupError, match="objective adapter failure"):
+        run_serial_objective(config, failing_objective)
 
 
 def test_distinct_run_seeds_produce_distinct_initialization_signatures() -> None:

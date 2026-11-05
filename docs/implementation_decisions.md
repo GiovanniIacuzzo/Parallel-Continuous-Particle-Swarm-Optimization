@@ -161,3 +161,46 @@ blocked on obtaining the complete article text. The local analytic propagator
 is tested against an independent RK4 implementation and its semigroup
 property, but those tests cannot establish that every modelling convention
 matches the published source.
+
+
+## External benchmark and baseline layer — project 0.7.0 (development)
+
+The project version is advanced to 0.7.0 and the native C ABI to 6. ABI 6
+adds a custom objective callback entry point for serial CPSO runs. It rejects
+non-serial execution architectures; the callback is synchronous and no
+thread-safety or reentrancy guarantee is implied. The Python wrapper preserves
+Python exceptions and reports them after control returns from the native call.
+
+The external quality layer now provides adapters and drivers for COCO `bbob`,
+COCO `bbob-largescale`, and CEC 2013 LSGO, plus four independent NumPy PSO
+reference variants (classic gbest, inertia gbest, constriction gbest, and
+inertia lbest ring). All methods receive equal population and exact FE budget.
+The C++ CPSO uses its own per-particle random streams; the NumPy baselines use
+NumPy's generator. Matching problem/seed labels therefore create paired
+replicates but do not guarantee identical initial coordinates or common random
+numbers.
+
+The external objective layer is quality-only. It must not be used for
+master--slave/particle-parallel scaling claims because the Python callback is
+serial-only. COCO writes native observer records for post-processing; CEC writes
+FE checkpoints in JSONL. Both experiment drivers are resumable by a stable run
+key and require exact FE divisibility by population size.
+
+The COCO confirmatory plans select 24 functions, six dimensions and 15
+instances for each of BBOB and BBOB-LargeScale, with project-selected budget
+`10,000 * D` per problem/method. The BBOB-LargeScale dimensions are
+20, 40, 80, 160, 320 and 640. The CEC 2013 LSGO plan follows 15 functions,
+D=1000, 25 seeds, 3,000,000 FE and checkpoints at 120,000, 600,000 and
+3,000,000 FE. These configurations are predeclared but are not results.
+
+External package integration was tested locally through controlled fake COCO
+and CEC objects, including end-to-end execution, FE parity, JSONL output and
+resume behavior. The official `coco-experiment` and CEC wrapper packages were
+not installed in the offline environment, so real-suite execution remains a
+release gate. The commonly used CEC wrapper is GPL-3.0; its code is not vendored.
+
+The four discrete PSO implementations are explicit reference algorithms, not
+full standardized SPSO-2007/2011 implementations. Their randomization,
+initialization, velocity caps, constriction parameters, local-best neighborhood
+and boundary map are recorded in
+`docs/external_benchmarks_and_pso_baselines.md`.

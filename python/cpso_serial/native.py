@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import ctypes
 import os
+import math
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional, Sequence
 
 from .config import CpsoConfig
 from .result import CpsoResult
 
 
-_ABI_VERSION = 5
+_ABI_VERSION = 6
 _TOPOLOGY_IDS = {"global": 0, "ring": 1, "grid_von_neumann": 2}
 _BENCHMARK_IDS = {
     "sphere": 1,
@@ -28,6 +29,14 @@ _ARCHITECTURE_IDS = {
     "islands": 4,
 }
 _MIGRATION_TOPOLOGY_IDS = {"ring": 0, "fully_connected": 1}
+
+
+_ObjectiveCallback = ctypes.CFUNCTYPE(
+    ctypes.c_double,
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.c_size_t,
+    ctypes.c_void_p,
+)
 
 
 class _CConfig(ctypes.Structure):
@@ -111,6 +120,19 @@ def _load_library() -> ctypes.CDLL:
             library.cpso_abi_version.restype = ctypes.c_uint32
             library.cpso_version.restype = ctypes.c_char_p
             library.cpso_build_info.restype = ctypes.c_char_p
+            library.cpso_run_custom_serial.argtypes = [
+                ctypes.POINTER(_CConfig),
+                _ObjectiveCallback,
+                ctypes.c_void_p,
+                ctypes.POINTER(_CResult),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.c_size_t,
+                ctypes.POINTER(ctypes.c_char),
+                ctypes.c_size_t,
+            ]
+            library.cpso_run_custom_serial.restype = ctypes.c_int
             library.cpso_run_architecture.argtypes = [
                 ctypes.POINTER(_CConfig),
                 ctypes.POINTER(_CExecutionConfig),
@@ -147,9 +169,12 @@ def _run(
     migration_interval: int = 0,
     migration_topology: str = "ring",
     work_iterations: int = 0,
+    custom_objective: Optional[Callable[[Sequence[float]], float]] = None,
 ) -> CpsoResult:
     config.validate()
-    if benchmark not in _BENCHMARK_IDS:
+    if custom_objective is not None and architecture != "serial":
+        raise ValueError("Custom objectives are supported only by the serial architecture")
+    if custom_objective is None and benchmark not in _BENCHMARK_IDS:
         raise ValueError(f"Unsupported benchmark {benchmark!r}; choose from {sorted(_BENCHMARK_IDS)}")
     if architecture not in _ARCHITECTURE_IDS:
         raise ValueError(f"Unsupported architecture {architecture!r}")
@@ -157,7 +182,9 @@ def _run(
         raise ValueError("work_iterations must be an integer")
     if not 0 <= work_iterations <= 100_000_000:
         raise ValueError("work_iterations must be in [0,100000000]")
-    if benchmark != "sphere_work" and work_iterations != 0:
+    if custom_objective is not None and work_iterations != 0:
+        raise ValueError("work_iterations cannot be combined with a custom objective")
+    if custom_objective is None and benchmark != "sphere_work" and work_iterations != 0:
         raise ValueError("work_iterations is only valid for benchmark='sphere_work'")
     if config.dimension > 2_147_483_647 or config.population_size > 2_147_483_647:
         raise ValueError("dimension and population_size must fit a signed 32-bit integer")
@@ -209,7 +236,7 @@ def _run(
 
     c_config = _CConfig(
         abi_version=_ABI_VERSION,
-        benchmark_id=_BENCHMARK_IDS[benchmark],
+        benchmark_id=_BENCHMARK_IDS.get(benchmark, 1),
         dimension=config.dimension,
         population_size=config.population_size,
         iterations=config.iterations,
@@ -238,12 +265,37 @@ def _run(
     )
     c_result = _CResult()
     library = _load_library()
-    status = library.cpso_run_architecture(
-        ctypes.byref(c_config), ctypes.byref(execution), ctypes.byref(c_result),
-        best_position, history, history_evaluations, history_capacity,
-        error, len(error),
-    )
+    callback_errors: list[BaseException] = []
+    if custom_objective is not None:
+        def evaluate_custom(
+            position_pointer: ctypes.POINTER(ctypes.c_double),
+            dimension: int,
+            _context: ctypes.c_void_p,
+        ) -> float:
+            try:
+                point = tuple(float(position_pointer[i]) for i in range(dimension))
+                value = float(custom_objective(point))
+                return value
+            except BaseException as exc:  # never allow Python exceptions to cross the C ABI
+                callback_errors.append(exc)
+                return math.nan
+
+        callback = _ObjectiveCallback(evaluate_custom)
+        status = library.cpso_run_custom_serial(
+            ctypes.byref(c_config), callback, None, ctypes.byref(c_result),
+            best_position, history, history_evaluations, history_capacity,
+            error, len(error),
+        )
+    else:
+        callback = None
+        status = library.cpso_run_architecture(
+            ctypes.byref(c_config), ctypes.byref(execution), ctypes.byref(c_result),
+            best_position, history, history_evaluations, history_capacity,
+            error, len(error),
+        )
     if status != 0:
+        if callback_errors:
+            raise callback_errors[0]
         message = error.value.decode("utf-8", errors="replace") or "Unknown native error"
         raise RuntimeError(f"CPSO native execution failed: {message}")
 
@@ -275,6 +327,23 @@ def _run(
         migrations_performed=int(c_result.migrations_performed),
         worker_count=int(c_result.worker_count),
         island_count=int(c_result.island_count),
+    )
+
+
+def run_serial_objective(
+    config: CpsoConfig,
+    objective: Callable[[Sequence[float]], float],
+) -> CpsoResult:
+    """Run serial CPSO against a caller-supplied deterministic scalar objective.
+
+    The callback is invoked synchronously on the calling thread. This makes it
+    suitable for COCO/CEC benchmark adapters without assuming foreign callback
+    thread-safety; it is not a parallel objective-evaluation interface.
+    """
+    if not callable(objective):
+        raise TypeError("objective must be callable")
+    return _run(
+        config, "sphere", architecture="serial", custom_objective=objective
     )
 
 

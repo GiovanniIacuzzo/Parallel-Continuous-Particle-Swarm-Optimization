@@ -1,0 +1,16 @@
+{
+  "campaign_id": "cpso_bbob_smoke_v1",
+  "suite": "bbob",
+  "instances": "instances: 1-2",
+  "suite_options": "dimensions: 2,3 function_indices: 1-3",
+  "population_size": 40,
+  "budget_multiplier": 200,
+  "seed": 20261105,
+  "methods": [
+    "cpso_continuous",
+    "pso_classic_gbest",
+    "pso_inertia_gbest",
+    "pso_constriction_gbest",
+    "pso_inertia_lbest_ring"
+  ]
+}
