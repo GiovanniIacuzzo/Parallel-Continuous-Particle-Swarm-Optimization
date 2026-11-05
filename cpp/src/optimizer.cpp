@@ -1,66 +1,20 @@
 #include "cpso/optimizer.hpp"
-
-#include "cpso/analytic_propagator.hpp"
 #include "cpso/thread_pool.hpp"
+#include "optimizer_internal.hpp"
 
 #include <algorithm>
-#include <atomic>
 #include <chrono>
 #include <cmath>
-#include <exception>
 #include <limits>
-#include <memory>
-#include <random>
 #include <stdexcept>
-#include <utility>
 #include <vector>
 
 namespace cpso {
+using namespace detail;
 namespace {
-
-using Clock = std::chrono::steady_clock;
-
-struct Particle {
-    std::vector<double> position;
-    std::vector<double> velocity;
-    std::vector<double> personal_best;
-    double current_value{std::numeric_limits<double>::infinity()};
-    double personal_best_value{std::numeric_limits<double>::infinity()};
-    std::mt19937_64 random_engine;
-};
-
-[[nodiscard]] std::uint64_t splitmix64(std::uint64_t value) noexcept {
-    value += 0x9E3779B97F4A7C15ULL;
-    value = (value ^ (value >> 30U)) * 0xBF58476D1CE4E5B9ULL;
-    value = (value ^ (value >> 27U)) * 0x94D049BB133111EBULL;
-    return value ^ (value >> 31U);
-}
-
-[[nodiscard]] double uniform01(std::mt19937_64& engine) {
-    return std::generate_canonical<double, 53>(engine);
-}
-
-[[nodiscard]] double inertia_at(const Config& config, const std::size_t iteration) {
-    if (config.iterations <= 1U) {
-        return config.mu_max;
-    }
-    const double fraction = static_cast<double>(iteration)
-        / static_cast<double>(config.iterations - 1U);
-    return config.mu_max - (config.mu_max - config.mu_min) * fraction;
-}
-
-[[nodiscard]] double checked_evaluate(
-    const Objective& objective,
-    const std::vector<double>& position) {
-    const double value = objective(position);
-    if (!std::isfinite(value)) {
-        throw std::runtime_error("Objective function returned a non-finite value");
-    }
-    return value;
-}
-
 struct EvaluationTimings {
     double wall_seconds{};
+    double worker_seconds{};
 };
 
 void evaluate_serial_batch(
@@ -70,7 +24,9 @@ void evaluate_serial_batch(
     EvaluationTimings& timings) {
     const auto wall_start = Clock::now();
     for (std::size_t i = 0; i < positions.size(); ++i) {
+        const auto task_start = Clock::now();
         values[i] = checked_evaluate(objective, positions[i]);
+        timings.worker_seconds += std::chrono::duration<double>(Clock::now() - task_start).count();
     }
     timings.wall_seconds += std::chrono::duration<double>(Clock::now() - wall_start).count();
 }
@@ -82,18 +38,25 @@ void evaluate_parallel_batch(
     std::vector<double>& values,
     EvaluationTimings& timings) {
     const auto wall_start = Clock::now();
+    std::vector<double> task_seconds(positions.size(), 0.0);
     pool.parallel_for(positions.size(), [&](const std::size_t i) {
+        const auto task_start = Clock::now();
         values[i] = checked_evaluate(objective, positions[i]);
+        task_seconds[i] = std::chrono::duration<double>(Clock::now() - task_start).count();
     });
     timings.wall_seconds += std::chrono::duration<double>(Clock::now() - wall_start).count();
+    for (const double seconds : task_seconds) {
+        timings.worker_seconds += seconds;
+    }
 }
 
 template <typename BatchEvaluator>
-[[nodiscard]] Result minimize_impl(
+[[nodiscard]] Result minimize_synchronous_impl(
     const Config& config,
     const Objective& objective,
     BatchEvaluator&& evaluate_batch,
-    const std::size_t worker_count) {
+    const std::size_t worker_count,
+    ThreadPool* particle_pool) {
     validate_config(config);
     if (!objective) {
         throw std::invalid_argument("Objective function must be callable");
@@ -106,41 +69,42 @@ template <typename BatchEvaluator>
 
     Result result;
     result.worker_count = worker_count;
+    result.island_count = 1U;
     result.best_history.reserve(config.iterations + 1U);
+    result.history_evaluations.reserve(config.iterations + 1U);
     result.best_position.assign(dimension, 0.0);
 
-    // Generate the complete initial population before evaluating it. Each
-    // particle owns an independent stream, so this preserves the serial
-    // reference sequence while permitting an evaluation batch to run in parallel.
     std::vector<std::vector<double>> pending_positions(
         population_size, std::vector<double>(dimension));
     std::vector<std::vector<double>> pending_velocities(
         population_size, std::vector<double>(dimension));
+    const auto topology_setup_start = Clock::now();
+    const ParticleTopology topology(
+        config.topology, population_size, config.grid_rows, config.grid_columns);
+    result.topology_setup_seconds =
+        std::chrono::duration<double>(Clock::now() - topology_setup_start).count();
     std::vector<double> pending_values(population_size, std::numeric_limits<double>::infinity());
 
-    for (std::size_t i = 0; i < population_size; ++i) {
-        Particle& particle = particles[i];
-        particle.random_engine.seed(splitmix64(config.seed ^ static_cast<std::uint64_t>(i + 1U)));
-        particle.position.resize(dimension);
-        particle.velocity.resize(dimension);
-        particle.personal_best.resize(dimension);
-
-        for (std::size_t j = 0; j < dimension; ++j) {
-            const double lower = config.lower_bounds[j];
-            const double upper = config.upper_bounds[j];
-            const double width = upper - lower;
-            particle.position[j] = lower + uniform01(particle.random_engine) * width;
-            particle.velocity[j] = (2.0 * uniform01(particle.random_engine) - 1.0)
-                                   * config.initial_velocity_fraction * width;
+    const auto initialization_start = Clock::now();
+    const auto initialize_one = [&](const std::size_t i) {
+        initialize_particle(particles[i], config, dimension, static_cast<std::uint64_t>(i + 1U));
+        pending_positions[i] = particles[i].position;
+    };
+    if (particle_pool != nullptr) {
+        particle_pool->parallel_for(population_size, initialize_one);
+    } else {
+        for (std::size_t i = 0; i < population_size; ++i) {
+            initialize_one(i);
         }
-        pending_positions[i] = particle.position;
     }
+    result.initialization_seconds =
+        std::chrono::duration<double>(Clock::now() - initialization_start).count();
 
     EvaluationTimings evaluation_timings;
     evaluate_batch(pending_positions, pending_values, evaluation_timings);
     result.function_evaluations += static_cast<std::uint64_t>(population_size);
 
-    // Stable tie-breaking is by particle index in both execution modes.
+    // Stable tie-breaking is by particle index.
     for (std::size_t i = 0; i < population_size; ++i) {
         Particle& particle = particles[i];
         particle.current_value = pending_values[i];
@@ -152,67 +116,71 @@ template <typename BatchEvaluator>
         }
     }
     result.best_history.push_back(result.best_value);
+    result.history_evaluations.push_back(result.function_evaluations);
 
-    // Synchronous generation semantics: freeze one gbest snapshot, propagate
-    // every particle serially, evaluate the full batch, and only then commit.
+    std::size_t best_index = global_best_index(particles);
     for (std::size_t iteration = 0; iteration < config.iterations; ++iteration) {
-        const std::vector<double> global_best_snapshot = result.best_position;
-        const double mu = inertia_at(config, iteration);
+        std::vector<double> global_best_snapshot;
+        std::vector<std::vector<double>> local_snapshot;
+        const auto social_start = Clock::now();
+        if (config.topology == TopologyKind::GlobalBest) {
+            global_best_snapshot = particles[best_index].personal_best;
+        } else {
+            local_snapshot = local_social_snapshot(particles, topology);
+        }
+        result.social_selection_seconds +=
+            std::chrono::duration<double>(Clock::now() - social_start).count();
+
+        std::vector<double> propagation_task_seconds(population_size, 0.0);
         const auto propagation_start = Clock::now();
-
-        for (std::size_t i = 0; i < population_size; ++i) {
-            Particle& particle = particles[i];
-            const double r1 = uniform01(particle.random_engine);
-            const double r2 = uniform01(particle.random_engine);
-            const double cognitive_weight = config.cognitive * r1;
-            const double social_weight = config.social * r2;
-            const double omega2 = cognitive_weight + social_weight;
-
-            for (std::size_t j = 0; j < dimension; ++j) {
-                double equilibrium = 0.0;
-                if (omega2 > 0.0) {
-                    equilibrium = (cognitive_weight * particle.personal_best[j]
-                                   + social_weight * global_best_snapshot[j]) / omega2;
-                }
-
-                OscillatorState next = propagate_frozen_oscillator(
-                    particle.position[j], particle.velocity[j], equilibrium,
-                    omega2, mu, config.dt);
-                apply_clamped_restitution(
-                    next.position, next.velocity,
-                    config.lower_bounds[j], config.upper_bounds[j],
-                    config.boundary_restitution);
-                pending_positions[i][j] = next.position;
-                pending_velocities[i][j] = next.velocity;
+        const auto propagate_one = [&](const std::size_t i) {
+            const auto task_start = Clock::now();
+            const std::vector<double>& attractor = config.topology == TopologyKind::GlobalBest
+                ? global_best_snapshot : local_snapshot[i];
+            propagate_particle(
+                particles[i], attractor, config, iteration,
+                pending_positions[i], pending_velocities[i]);
+            propagation_task_seconds[i] =
+                std::chrono::duration<double>(Clock::now() - task_start).count();
+        };
+        if (particle_pool != nullptr) {
+            particle_pool->parallel_for(population_size, propagate_one);
+        } else {
+            for (std::size_t i = 0; i < population_size; ++i) {
+                propagate_one(i);
             }
         }
         result.propagation_seconds +=
             std::chrono::duration<double>(Clock::now() - propagation_start).count();
+        for (const double seconds : propagation_task_seconds) {
+            result.propagation_worker_seconds += seconds;
+        }
 
         evaluate_batch(pending_positions, pending_values, evaluation_timings);
         result.function_evaluations += static_cast<std::uint64_t>(population_size);
 
-        // Commit in particle order: deterministic tie-breaking is independent
-        // of the order in which objective tasks completed on worker threads.
         for (std::size_t i = 0; i < population_size; ++i) {
             Particle& particle = particles[i];
             particle.position = pending_positions[i];
             particle.velocity = pending_velocities[i];
             particle.current_value = pending_values[i];
             if (particle.current_value < particle.personal_best_value) {
-                particle.personal_best_value = particle.current_value;
                 particle.personal_best = particle.position;
+                particle.personal_best_value = particle.current_value;
             }
             if (particle.personal_best_value < result.best_value) {
                 result.best_value = particle.personal_best_value;
                 result.best_position = particle.personal_best;
             }
         }
+        best_index = global_best_index(particles);
         result.iterations_completed = iteration + 1U;
         result.best_history.push_back(result.best_value);
+        result.history_evaluations.push_back(result.function_evaluations);
     }
 
     result.evaluation_wall_seconds = evaluation_timings.wall_seconds;
+    result.evaluation_worker_seconds = evaluation_timings.worker_seconds;
     result.elapsed_seconds = std::chrono::duration<double>(Clock::now() - start).count();
     return result;
 }
@@ -266,6 +234,25 @@ void validate_config(const Config& config) {
         || config.boundary_restitution < 0.0 || config.boundary_restitution > 1.0) {
         throw std::invalid_argument("boundary_restitution must lie in [0,1]");
     }
+    switch (config.topology) {
+        case TopologyKind::GlobalBest:
+        case TopologyKind::Ring:
+            if (config.grid_rows != 0U || config.grid_columns != 0U) {
+                throw std::invalid_argument("grid dimensions are only valid for grid topology");
+            }
+            break;
+        case TopologyKind::GridVonNeumann:
+            if (config.grid_rows < 2U || config.grid_columns < 2U) {
+                throw std::invalid_argument("grid topology requires grid_rows >= 2 and grid_columns >= 2");
+            }
+            if (config.grid_rows > std::numeric_limits<std::size_t>::max() / config.grid_columns
+                || config.grid_rows * config.grid_columns != config.population_size) {
+                throw std::invalid_argument("grid_rows * grid_columns must equal population_size");
+            }
+            break;
+        default:
+            throw std::invalid_argument("Unsupported particle topology");
+    }
 }
 
 Result minimize_serial(const Config& config, const Objective& objective) {
@@ -275,7 +262,7 @@ Result minimize_serial(const Config& config, const Objective& objective) {
         EvaluationTimings& timings) {
         evaluate_serial_batch(objective, positions, values, timings);
     };
-    return minimize_impl(config, objective, serial_evaluator, 1U);
+    return minimize_synchronous_impl(config, objective, serial_evaluator, 1U, nullptr);
 }
 
 Result minimize_master_slave(
@@ -299,8 +286,35 @@ Result minimize_master_slave(
             EvaluationTimings& timings) {
             evaluate_parallel_batch(pool, objective, positions, values, timings);
         };
-        result = minimize_impl(config, objective, parallel_evaluator, worker_count);
-    }  // Include pool creation and shutdown in total wall-clock time.
+        result = minimize_synchronous_impl(config, objective, parallel_evaluator, worker_count, nullptr);
+    }
+    result.elapsed_seconds = std::chrono::duration<double>(Clock::now() - total_start).count();
+    return result;
+}
+
+Result minimize_particle_parallel(
+    const Config& config,
+    const Objective& objective,
+    const std::size_t worker_count) {
+    validate_config(config);
+    if (worker_count == 0U || worker_count > 4096U) {
+        throw std::invalid_argument("worker_count must lie in [1,4096]");
+    }
+    if (!objective) {
+        throw std::invalid_argument("Objective function must be callable");
+    }
+    const auto total_start = Clock::now();
+    Result result;
+    {
+        ThreadPool pool(worker_count);
+        const auto parallel_evaluator = [&objective, &pool](
+            const std::vector<std::vector<double>>& positions,
+            std::vector<double>& values,
+            EvaluationTimings& timings) {
+            evaluate_parallel_batch(pool, objective, positions, values, timings);
+        };
+        result = minimize_synchronous_impl(config, objective, parallel_evaluator, worker_count, &pool);
+    }
     result.elapsed_seconds = std::chrono::duration<double>(Clock::now() - total_start).count();
     return result;
 }

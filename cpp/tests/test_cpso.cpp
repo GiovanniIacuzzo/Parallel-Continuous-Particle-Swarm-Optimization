@@ -1,12 +1,15 @@
 #include "cpso/analytic_propagator.hpp"
 #include "cpso/objectives.hpp"
 #include "cpso/optimizer.hpp"
+#include "cpso/random_stream.hpp"
+#include "cpso/topology.hpp"
 
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <exception>
 #include <iostream>
+#include <set>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -198,6 +201,174 @@ void test_synthetic_work_objective() {
     }
 }
 
+void test_particle_random_stream_derivation() {
+    std::set<std::pair<std::uint64_t, std::uint64_t>> fingerprints;
+    for (std::uint64_t seed = 700U; seed < 704U; ++seed) {
+        for (std::uint64_t particle_id = 1U; particle_id <= 40U; ++particle_id) {
+            auto first = cpso::make_particle_random_engine(seed, particle_id);
+            auto repeated = cpso::make_particle_random_engine(seed, particle_id);
+            const std::uint64_t first_a = first();
+            const std::uint64_t second_a = first();
+            const std::uint64_t first_b = repeated();
+            const std::uint64_t second_b = repeated();
+            require(first_a == first_b && second_a == second_b,
+                    "A particle stream must be repeatable for a fixed run seed and particle ID");
+            require(fingerprints.emplace(first_a, second_a).second,
+                    "Distinct tested run-seed/particle-ID pairs must not share the stream fingerprint");
+        }
+    }
+    bool threw = false;
+    try {
+        (void)cpso::make_particle_random_engine(1U, 0U);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    require(threw, "Particle stream IDs must be one-based");
+}
+
+void test_topology_neighborhoods() {
+    const cpso::ParticleTopology global(cpso::TopologyKind::GlobalBest, 4U);
+    const auto* shared_global_neighbors = &global.neighbors(0U);
+    for (std::size_t i = 0; i < 4U; ++i) {
+        require(global.neighbors(i) == std::vector<std::size_t>({0U, 1U, 2U, 3U}),
+                "Global topology must connect every particle to the full population");
+        require(&global.neighbors(i) == shared_global_neighbors,
+                "Global topology must reuse one shared O(N) index list");
+    }
+
+    const cpso::ParticleTopology ring(cpso::TopologyKind::Ring, 4U);
+    require(ring.neighbors(0U) == std::vector<std::size_t>({0U, 1U, 3U}),
+            "Ring topology must wrap around at the left boundary");
+    require(ring.neighbors(2U) == std::vector<std::size_t>({1U, 2U, 3U}),
+            "Ring topology must include self and immediate neighbors");
+
+    const cpso::ParticleTopology ring_two(cpso::TopologyKind::Ring, 2U);
+    require(ring_two.neighbors(0U) == std::vector<std::size_t>({0U, 1U}),
+            "Two-particle ring must deduplicate periodic neighbors");
+    const cpso::ParticleTopology ring_one(cpso::TopologyKind::Ring, 1U);
+    require(ring_one.neighbors(0U) == std::vector<std::size_t>({0U}),
+            "One-particle ring must contain only itself");
+
+    const cpso::ParticleTopology grid(cpso::TopologyKind::GridVonNeumann, 9U, 3U, 3U);
+    require(grid.neighbors(0U) == std::vector<std::size_t>({0U, 1U, 2U, 3U, 6U}),
+            "Toroidal 3x3 von-Neumann neighborhood at the upper-left corner");
+    require(grid.neighbors(4U) == std::vector<std::size_t>({1U, 3U, 4U, 5U, 7U}),
+            "Toroidal 3x3 von-Neumann neighborhood at the center");
+    const cpso::ParticleTopology grid_two(cpso::TopologyKind::GridVonNeumann, 4U, 2U, 2U);
+    require(grid_two.neighbors(0U) == std::vector<std::size_t>({0U, 1U, 2U}),
+            "2x2 toroidal grid must deduplicate coincident neighbors");
+
+    const auto leaders = ring.select_local_leaders({3.0, 1.0, 2.0, 0.5});
+    require(leaders == std::vector<std::size_t>({3U, 1U, 3U, 3U}),
+            "Ring social leaders must be the lowest-valued personal best in each neighborhood");
+    const auto tied_leaders = ring.select_local_leaders({1.0, 1.0, 1.0, 1.0});
+    require(tied_leaders == std::vector<std::size_t>({0U, 0U, 1U, 0U}),
+            "Local leader ties must be resolved by smallest particle index");
+}
+
+void test_topology_validation() {
+    bool threw = false;
+    try {
+        (void)cpso::ParticleTopology(cpso::TopologyKind::GridVonNeumann, 10U, 3U, 3U);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    require(threw, "Grid shape must multiply to population size");
+
+    threw = false;
+    try {
+        (void)cpso::ParticleTopology(cpso::TopologyKind::GridVonNeumann, 9U, 0U, 9U);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    require(threw, "Grid dimensions must be positive");
+
+    threw = false;
+    try {
+        (void)cpso::ParticleTopology(cpso::TopologyKind::GridVonNeumann, 10U, 1U, 10U);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    require(threw, "Grid topology must reject a degenerate one-dimensional shape");
+
+    threw = false;
+    try {
+        (void)cpso::ParticleTopology(cpso::TopologyKind::Ring, 9U, 3U, 3U);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    require(threw, "Grid shape must not be silently accepted by ring topology");
+
+    const cpso::ParticleTopology ring(cpso::TopologyKind::Ring, 4U);
+    threw = false;
+    try {
+        (void)ring.select_local_leaders({1.0, 2.0});
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    require(threw, "Leader selection must reject a population-size mismatch");
+
+    threw = false;
+    try {
+        (void)ring.select_local_leaders({1.0, std::numeric_limits<double>::infinity(), 2.0, 3.0});
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    require(threw, "Leader selection must reject non-finite personal-best values");
+}
+
+void test_topology_optimizer_and_parallel_equivalence() {
+    cpso::Config config = test_config();
+    const auto objective = [](const std::vector<double>& x) {
+        return cpso::evaluate_benchmark(cpso::Benchmark::Rastrigin, x);
+    };
+
+    config.topology = cpso::TopologyKind::GlobalBest;
+    const auto global = cpso::minimize_serial(config, objective);
+    for (const std::size_t workers : {1U, 2U, 4U}) {
+        const auto parallel = cpso::minimize_master_slave(config, objective, workers);
+        require(parallel.best_value == global.best_value,
+                "Global topology master-slave value must match serial");
+        require(parallel.best_position == global.best_position,
+                "Global topology master-slave position must match serial");
+        require(parallel.best_history == global.best_history,
+                "Global topology master-slave history must match serial");
+    }
+
+    config.topology = cpso::TopologyKind::Ring;
+    const auto ring = cpso::minimize_serial(config, objective);
+    for (const std::size_t workers : {1U, 2U, 4U}) {
+        const auto parallel = cpso::minimize_master_slave(config, objective, workers);
+        require(parallel.best_value == ring.best_value,
+                "Ring topology master-slave value must match serial");
+        require(parallel.best_position == ring.best_position,
+                "Ring topology master-slave position must match serial");
+        require(parallel.best_history == ring.best_history,
+                "Ring topology master-slave history must match serial");
+    }
+
+    config.topology = cpso::TopologyKind::GridVonNeumann;
+    config.grid_rows = 4U;
+    config.grid_columns = 8U;
+    const auto grid = cpso::minimize_serial(config, objective);
+    for (const std::size_t workers : {1U, 2U, 4U}) {
+        const auto parallel = cpso::minimize_master_slave(config, objective, workers);
+        require(parallel.best_value == grid.best_value,
+                "Grid topology master-slave value must match serial");
+        require(parallel.best_position == grid.best_position,
+                "Grid topology master-slave position must match serial");
+        require(parallel.best_history == grid.best_history,
+                "Grid topology master-slave history must match serial");
+    }
+
+    require(global.best_history != ring.best_history || global.best_position != ring.best_position,
+            "Global and ring social topologies should produce distinguishable trajectories on this test case");
+    require(global.best_history != grid.best_history || global.best_position != grid.best_position,
+            "Global and grid social topologies should produce distinguishable trajectories on this test case");
+    require(ring.best_history != grid.best_history || ring.best_position != grid.best_position,
+            "Ring and grid social topologies should produce distinguishable trajectories on this test case");
+}
+
 void test_optimizer_contract() {
     const auto config = test_config();
     const auto objective = [](const std::vector<double>& x) {
@@ -211,6 +382,12 @@ void test_optimizer_contract() {
     require(first.best_value == second.best_value, "Fixed-seed best value must be repeatable");
     require(first.function_evaluations == config.population_size * (config.iterations + 1),
             "FE count must include initialization and every particle evaluation");
+    require(first.elapsed_seconds >= 0.0
+                && first.evaluation_wall_seconds >= 0.0
+                && first.propagation_seconds >= 0.0
+                && first.topology_setup_seconds >= 0.0
+                && first.social_selection_seconds >= 0.0,
+            "All recorded timing fields must be non-negative");
     require(first.best_history.size() == config.iterations + 1,
             "History must include initial state and all completed generations");
     require(first.iterations_completed == config.iterations,
@@ -259,7 +436,9 @@ void test_master_slave_equivalence() {
         require(parallel.worker_count == workers,
                 "Master--slave result must record the requested worker count");
         require(parallel.evaluation_wall_seconds >= 0.0
-                    && parallel.propagation_seconds >= 0.0,
+                    && parallel.propagation_seconds >= 0.0
+                    && parallel.topology_setup_seconds >= 0.0
+                    && parallel.social_selection_seconds >= 0.0,
                 "Master--slave timing fields must be non-negative");
     }
 }
@@ -373,6 +552,167 @@ void test_validation_and_nonfinite_objective() {
     require(threw, "Non-finite objective values must be rejected");
 }
 
+
+void test_particle_parallel_exact_equivalence() {
+    const cpso::Config base = test_config();
+    const std::vector<cpso::TopologyKind> topologies = {
+        cpso::TopologyKind::GlobalBest,
+        cpso::TopologyKind::Ring,
+        cpso::TopologyKind::GridVonNeumann,
+    };
+    for (const cpso::TopologyKind topology : topologies) {
+        cpso::Config config = base;
+        config.topology = topology;
+        if (topology == cpso::TopologyKind::GridVonNeumann) {
+            config.population_size = 20U;
+            config.grid_rows = 4U;
+            config.grid_columns = 5U;
+        }
+        const auto objective = [](const std::vector<double>& x) {
+            return cpso::evaluate_benchmark(cpso::Benchmark::Rastrigin, x);
+        };
+        const cpso::Result serial = cpso::minimize_serial(config, objective);
+        for (const std::size_t workers : {1U, 2U, 4U, 8U}) {
+            const cpso::Result parallel = cpso::minimize_particle_parallel(
+                config, objective, workers);
+            require(parallel.best_value == serial.best_value,
+                    "Particle-parallel best value must match serial exactly");
+            require(parallel.best_position == serial.best_position,
+                    "Particle-parallel position must match serial exactly");
+            require(parallel.best_history == serial.best_history,
+                    "Particle-parallel history must match serial exactly");
+            require(parallel.history_evaluations == serial.history_evaluations,
+                    "Particle-parallel history FE axis must match serial exactly");
+            require(parallel.function_evaluations == serial.function_evaluations,
+                    "Particle-parallel FE count must match serial");
+            require(parallel.worker_count == workers,
+                    "Particle-parallel worker metadata must be correct");
+        }
+    }
+}
+
+void test_asynchronous_contract_and_repeatability() {
+    cpso::Config config = test_config();
+    config.topology = cpso::TopologyKind::Ring;
+    const auto objective = [](const std::vector<double>& x) {
+        return cpso::evaluate_benchmark(cpso::Benchmark::Rastrigin, x);
+    };
+    const cpso::Result first = cpso::minimize_asynchronous(config, objective, 1U);
+    const cpso::Result second = cpso::minimize_asynchronous(config, objective, 1U);
+    require(first.best_value == second.best_value,
+            "Single-worker asynchronous mode must be repeatable");
+    require(first.best_position == second.best_position,
+            "Single-worker asynchronous position must be repeatable");
+    require(first.best_history == second.best_history,
+            "Single-worker asynchronous event history must be repeatable");
+
+    const cpso::Result parallel = cpso::minimize_asynchronous(config, objective, 4U);
+    const std::uint64_t expected_fe = static_cast<std::uint64_t>(config.population_size)
+        * static_cast<std::uint64_t>(config.iterations + 1U);
+    require(parallel.function_evaluations == expected_fe,
+            "Asynchronous FE count must equal population times updates plus initialization");
+    require(parallel.best_history.size() == 1U
+                + config.population_size * config.iterations,
+            "Asynchronous history must contain initial best and every committed update");
+    require(parallel.history_evaluations.size() == parallel.best_history.size(),
+            "Asynchronous history and FE axis lengths must match");
+    require(parallel.history_evaluations.front() == config.population_size,
+            "Asynchronous history must begin after initial population evaluation");
+    require(parallel.history_evaluations.back() == expected_fe,
+            "Asynchronous history must end at total FE count");
+    for (std::size_t i = 1; i < parallel.history_evaluations.size(); ++i) {
+        require(parallel.history_evaluations[i] == parallel.history_evaluations[i - 1U] + 1U,
+                "Asynchronous event FE axis must increment one evaluation at a time");
+        require(parallel.best_history[i] <= parallel.best_history[i - 1U],
+                "Asynchronous best-so-far history must be non-increasing");
+    }
+    require(parallel.best_value == parallel.best_history.back(),
+            "Asynchronous final best must equal the last event-history value");
+    require(parallel.iterations_completed == config.iterations,
+            "Asynchronous completed iterations are per-particle update counts");
+}
+
+void test_island_model_contract_and_migration() {
+    cpso::Config config = test_config();
+    config.population_size = 24U;
+    config.iterations = 10U;
+    const auto objective = [](const std::vector<double>& x) {
+        return cpso::evaluate_benchmark(cpso::Benchmark::Sphere, x);
+    };
+
+    cpso::IslandConfig no_migration;
+    no_migration.island_count = 4U;
+    no_migration.worker_count = 4U;
+    no_migration.migration_interval = 0U;
+    const cpso::Result independent = cpso::minimize_islands(config, objective, no_migration);
+    require(independent.function_evaluations == 24U * 11U,
+            "Island model without migration must preserve the total FE budget");
+    require(independent.best_history.size() == config.iterations + 1U,
+            "Island history must be generation-synchronous");
+    require(independent.history_evaluations.back() == independent.function_evaluations,
+            "Island history FE axis must terminate at total FE count");
+    require(independent.migrations_performed == 0U,
+            "Disabled migration must not perform any migration");
+
+    cpso::IslandConfig ring_migration;
+    ring_migration.island_count = 4U;
+    ring_migration.worker_count = 4U;
+    ring_migration.migration_interval = 2U;
+    ring_migration.migration_topology = cpso::MigrationTopology::Ring;
+    const cpso::Result migrated = cpso::minimize_islands(config, objective, ring_migration);
+    require(migrated.function_evaluations == independent.function_evaluations,
+            "Migration must not consume objective evaluations");
+    require(migrated.best_value <= independent.best_value + 1e-14,
+            "Elitist best-to-worst migration cannot worsen the global incumbent");
+    require(migrated.migrations_performed <= 4U * 4U,
+            "Migration counter must not exceed destinations times migration events");
+
+    cpso::IslandConfig fully_connected = ring_migration;
+    fully_connected.migration_topology = cpso::MigrationTopology::FullyConnected;
+    const cpso::Result all_to_all = cpso::minimize_islands(config, objective, fully_connected);
+    require(all_to_all.function_evaluations == independent.function_evaluations,
+            "Fully-connected migration must preserve FE budget");
+    require(all_to_all.migrations_performed <= 4U * 4U,
+            "Fully-connected migration counter must respect migration-event bound");
+    const cpso::Result all_to_all_repeat = cpso::minimize_islands(config, objective, fully_connected);
+    require(all_to_all.best_value == all_to_all_repeat.best_value,
+            "Synchronous island model must be deterministic for a fixed seed/configuration");
+    require(all_to_all.best_position == all_to_all_repeat.best_position,
+            "Synchronous island best position must be reproducible");
+    require(all_to_all.migrations_performed == all_to_all_repeat.migrations_performed,
+            "Synchronous island migration count must be reproducible");
+}
+
+void test_island_validation() {
+    cpso::Config config = test_config();
+    cpso::IslandConfig islands;
+    islands.island_count = 4U;
+    islands.worker_count = 4U;
+    bool threw = false;
+    try {
+        config.population_size = 19U;
+        (void)cpso::minimize_islands(config,
+            [](const std::vector<double>& x) { return x[0] * x[0]; }, islands);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    require(threw, "Island population must divide evenly across islands");
+
+    config = test_config();
+    config.topology = cpso::TopologyKind::GridVonNeumann;
+    config.population_size = 20U;
+    config.grid_rows = 4U;
+    config.grid_columns = 5U;
+    threw = false;
+    try {
+        (void)cpso::minimize_islands(config,
+            [](const std::vector<double>& x) { return x[0] * x[0]; }, islands);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    require(threw, "Grid particle topology must be rejected inside the current island backend");
+}
+
 }  // namespace
 
 int main() {
@@ -384,10 +724,18 @@ int main() {
         test_synthetic_work_objective();
         test_optimizer_contract();
         test_master_slave_equivalence();
+        test_particle_random_stream_derivation();
+        test_topology_neighborhoods();
+        test_topology_validation();
+        test_topology_optimizer_and_parallel_equivalence();
         test_master_slave_parallel_initial_evaluations();
         test_master_slave_exception_and_validation();
         test_zero_iteration_and_single_particle();
         test_validation_and_nonfinite_objective();
+        test_particle_parallel_exact_equivalence();
+        test_asynchronous_contract_and_repeatability();
+        test_island_model_contract_and_migration();
+        test_island_validation();
         std::cout << "All CPSO C++ tests passed.\n";
         return 0;
     } catch (const std::exception& exception) {

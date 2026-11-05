@@ -5,13 +5,13 @@
 #include <stdint.h>
 
 #if defined(_WIN32)
-  #if defined(CPSO_BUILDING_LIBRARY)
-    #define CPSO_API __declspec(dllexport)
-  #else
-    #define CPSO_API __declspec(dllimport)
-  #endif
+#  if defined(CPSO_BUILDING_LIBRARY)
+#    define CPSO_API __declspec(dllexport)
+#  else
+#    define CPSO_API __declspec(dllimport)
+#  endif
 #else
-  #define CPSO_API __attribute__((visibility("default")))
+#  define CPSO_API __attribute__((visibility("default")))
 #endif
 
 #ifdef __cplusplus
@@ -26,6 +26,25 @@ enum CpsoBenchmarkId {
     CPSO_GRIEWANK = 5,
     CPSO_SALOMON = 6,
     CPSO_SPHERE_WORK = 7
+};
+
+enum CpsoTopologyId {
+    CPSO_TOPOLOGY_GLOBAL_BEST = 0,
+    CPSO_TOPOLOGY_RING = 1,
+    CPSO_TOPOLOGY_GRID_VON_NEUMANN = 2
+};
+
+enum CpsoAlgorithmId {
+    CPSO_ALGORITHM_SERIAL = 0,
+    CPSO_ALGORITHM_MASTER_SLAVE = 1,
+    CPSO_ALGORITHM_PARTICLE_PARALLEL = 2,
+    CPSO_ALGORITHM_ASYNCHRONOUS = 3,
+    CPSO_ALGORITHM_ISLANDS = 4
+};
+
+enum CpsoMigrationTopologyId {
+    CPSO_MIGRATION_RING = 0,
+    CPSO_MIGRATION_FULLY_CONNECTED = 1
 };
 
 typedef struct CpsoCConfig {
@@ -44,8 +63,20 @@ typedef struct CpsoCConfig {
     double dt;
     double initial_velocity_fraction;
     double boundary_restitution;
+    int topology_id;
+    int grid_rows;
+    int grid_columns;
     uint64_t objective_work_iterations;
 } CpsoCConfig;
+
+typedef struct CpsoCExecutionConfig {
+    uint32_t abi_version;
+    int algorithm_id;
+    size_t worker_count;
+    size_t island_count;
+    size_t migration_interval;
+    int migration_topology_id;
+} CpsoCExecutionConfig;
 
 typedef struct CpsoCResult {
     double best_value;
@@ -55,16 +86,24 @@ typedef struct CpsoCResult {
     double elapsed_seconds;
     double evaluation_wall_seconds;
     double propagation_seconds;
+    double topology_setup_seconds;
+    double social_selection_seconds;
     size_t worker_count;
+    double initialization_seconds;
+    double propagation_worker_seconds;
+    double evaluation_worker_seconds;
+    double migration_seconds;
+    double async_update_wall_seconds;
+    uint64_t migrations_performed;
+    size_t island_count;
 } CpsoCResult;
 
 CPSO_API uint32_t cpso_abi_version(void);
 CPSO_API const char* cpso_version(void);
 CPSO_API const char* cpso_build_info(void);
 
-// Returns 0 on success and -1 on error. On success, best_position_out must
-// provide at least dimension values and history_out at least iterations+1.
-// On error, error_message receives a null-terminated diagnostic when possible.
+// Legacy convenience entry points retained for serial/master--slave clients.
+// ABI v5 extends CpsoCResult with phase and migration counters.
 CPSO_API int cpso_run_serial(
     const CpsoCConfig* config,
     CpsoCResult* result,
@@ -74,16 +113,28 @@ CPSO_API int cpso_run_serial(
     char* error_message,
     size_t error_capacity);
 
-// Synchronous master--slave mode: only objective evaluations are executed on
-// worker threads. worker_count must be >= 1. Built-in objectives, including
-// the explicitly synthetic sphere_work arithmetic microbenchmark, are safe
-// for concurrent evaluation. ABI v3 adds objective_work_iterations.
 CPSO_API int cpso_run_master_slave(
     const CpsoCConfig* config,
     size_t worker_count,
     CpsoCResult* result,
     double* best_position_out,
     double* history_out,
+    size_t history_capacity,
+    char* error_message,
+    size_t error_capacity);
+
+// Unified execution entry point. For synchronous algorithms history_capacity
+// must be >= iterations+1. For asynchronous CPSO it must be >=
+// population_size*iterations+1 because history is recorded after every
+// committed particle update. history_evaluations_out aligns each history value
+// with the number of objective evaluations completed at that observation.
+CPSO_API int cpso_run_architecture(
+    const CpsoCConfig* config,
+    const CpsoCExecutionConfig* execution,
+    CpsoCResult* result,
+    double* best_position_out,
+    double* history_out,
+    uint64_t* history_evaluations_out,
     size_t history_capacity,
     char* error_message,
     size_t error_capacity);

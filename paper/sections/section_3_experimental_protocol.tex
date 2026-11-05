@@ -1,0 +1,53 @@
+\section{Protocollo sperimentale}
+\label{sec:exp}
+
+\subsection{Disegno della campagna}
+
+La campagna predefinita è articolata in quattro stadi, separando gli effetti sulla dinamica di ricerca dalla misurazione dello scaling computazionale. Per gli stadi di qualità si considerano Sphere, Rastrigin, Rosenbrock, Ackley, Griewank e Salomon, in dimensione $D\in\{30,100\}$, con popolazione totale $N=64$, $K=500$ aggiornamenti e 30 semi appaiati. Ogni run utilizza quindi $N(K+1)=32\,064$ valutazioni obiettivo.
+
+\begin{table*}[t]
+\centering
+\caption{Struttura della campagna predefinita. Gli stadi 1--3 misurano qualità con budget di valutazioni fissato; lo stadio 4 misura esclusivamente il tempo dell'esecutore su un carico sintetico.}
+\label{tab:campaign-design}
+\small
+\begin{tabularx}{\textwidth}{@{}lXrr@{}}
+\toprule
+Stadio & Confronto principale & Run & Valutazioni obiettivo \\
+\midrule
+1. Topologie & Serial-global, serial-ring, serial-grid & 1\,080 & 34\,629\,120 \\
+2. Asincronia & Tre topologie; asincrono con 1 e 4 worker; riferimenti seriali abbinati & 3\,240 & 103\,887\,360 \\
+3. Isole & 2, 4 e 8 isole; topologia locale e politiche di migrazione & 3\,960 & 126\,973\,440 \\
+4. Strong scaling & Serial, master--slave e particle-parallel; 1, 2, 4 e 8 worker & 1\,080 & 8\,398\,080 \\
+\midrule
+Totale & & 9\,360 & 273\,888\,000 \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+Il primo stadio isola la topologia sociale in esecuzione seriale. Il secondo confronta la semantica event-driven a uno e quattro worker con i riferimenti seriali corrispondenti. Il terzo studia il numero di isole, la topologia interna e le politiche di migrazione ad anello o fully-connected mantenendo costante $N$ e il budget FE. Le configurazioni esatte e le combinazioni sono registrate in \texttt{configs/campaigns/definitive\_architecture\_campaign.json}.
+
+\subsection{Misura dello scaling}
+
+Il quarto stadio usa esclusivamente `sphere\_work`, una funzione sintetica basata su Sphere con una ricorrenza aritmetica controllabile. Sono considerati $D\in\{30,100\}$, $N\in\{64,128\}$, $K=80$, carichi di 0, 512 e 4\,096 iterazioni per valutazione e 10 semi appaiati. Per ogni backend sincrono si misurano 1, 2, 4 e 8 worker. Il carico sintetico non è incluso nell'analisi di qualità e non viene presentato come benchmark di ottimizzazione.
+
+Lo speedup e l'efficienza sono definiti come
+\begin{equation}
+  S(p)=\frac{T_{\mathrm{serial}}}{T_p},
+  \qquad E(p)=\frac{S(p)}{p},
+  \label{eq:speedup-efficiency}
+\end{equation}
+ma vengono riportati soltanto per master--slave e particle-parallel dopo il superamento del controllo di equivalenza esatta del paragrafo~\ref{sec:model}. Le modalità asincrona e a isole non sono confrontate in termini di speedup contro il seriale, poiché non preservano la stessa traiettoria.
+
+\subsection{Unità statistiche e inferenza}
+
+I semi sono appaiati all'interno di ciascuna coppia funzione-dimensione. Le sei funzioni costituiscono i cluster di livello superiore; le dimensioni sono misure ripetute annidate nella famiglia di funzione e i semi sono repliche appaiate annidate nella cella funzione-dimensione. Per un confronto tra metodo $A$ e riferimento $B$, si calcola prima la mediana delle differenze appaiate $\log_{10}(J_A)-\log_{10}(J_B)$ tra semi in ogni cella funzione-dimensione; quindi si riducono le due dimensioni alla mediana di famiglia. Il numero di unità indipendenti per l'inferenza confermativa è pertanto sei, non dodici e non il numero complessivo dei semi.
+
+Le differenze a livello di famiglia sono sottoposte a test signed-rank bilaterale con enumerazione esatta delle configurazioni di segno; i valori di probabilità sono corretti con la procedura di Holm all'interno della famiglia di confronti pre-specificata. L'analisi omnibus di Friedman è basata sui ranghi dei metodi all'interno di ogni famiglia e usa 20\,000 permutazioni dei nomi dei metodi entro famiglia per calibrare il valore di probabilità. I valori asintotici chi-quadro e Iman--Davenport sono conservati soltanto come diagnostica secondaria. Gli intervalli al 95\% sono ottenuti con bootstrap annidato: ricampionamento delle famiglie, delle dimensioni dentro ciascuna famiglia e dei semi appaiati dentro ciascuna cella.
+
+Il numero ridotto di famiglie limita la potenza e la generalizzabilità statistica. I conteggi di vittorie, sconfitte e pareggi a livello run e le statistiche separate per funzione-dimensione sono riportati a fini descrittivi, ma non vengono trattati come osservazioni indipendenti. Il target di successo è $10^{-8}$ per le funzioni con ottimo globale nullo; le run senza successo sono censurate al budget FE nel calcolo dell'ERT. In assenza di successi l'ERT è infinito e deve essere accompagnato dal numero di successi.
+
+\subsection{Riproducibilità e stato dei risultati}
+
+Ogni run è identificata da funzione, dimensione, seme, metodo e hash della configurazione; il manifest conserva inoltre hash del codice, versione/ABI nativa, compilatore, flag di compilazione, CPU, sistema, versioni software e variabili d'ambiente relative al threading. I record sono salvati in JSON Lines append-only e sincronizzati su disco dopo il completamento di ciascuna run. Le campagne sono riprendibili: in fase di resume può essere eliminata soltanto una riga finale interrotta, mentre la corruzione di record completi determina un errore.
+
+La campagna definitiva è definita e validata nel file di configurazione, ma non è stata eseguita integralmente nella versione corrente. I risultati dello smoke test servono soltanto a verificare orchestrazione, contabilità FE, controlli di equivalenza, analisi e generazione delle figure; non sono utilizzati per sostenere conclusioni scientifiche.

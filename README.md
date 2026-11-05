@@ -1,138 +1,124 @@
-# CPSO Serial Reference and Synchronous Master--Slave Engine
+# CPSO — continuous particle-swarm optimization and parallel execution
 
-Version **0.3.0** extends the clean C++20 serial reference and synchronous
-master--slave executor with a controlled workload and paired scaling-sweep
-framework. The algorithmic reference remains the serial,
-global-best, synchronous continuous particle swarm optimizer based on the
-frozen damped-oscillator formulation associated with Orlando and Ricciardello.
+This repository contains a C++20 implementation of a continuous-time PSO
+(CPSO) model, a Python `ctypes` interface, and experimental drivers for
+comparing execution architectures. The code separates algorithmic dynamics
+from execution strategy: some parallel modes preserve the serial synchronous
+trajectory exactly, while asynchronous and island modes intentionally change
+information flow and therefore define different search dynamics.
 
-## What is implemented
+## Implemented execution modes
 
-- Closed-form propagation of the frozen damped oscillator in underdamped,
-  critically damped, and overdamped regimes.
-- Serial synchronous global-best CPSO.
-- Synchronous master--slave CPSO that parallelizes objective evaluations only.
-- A persistent `std::thread` pool with indexed result collection and stable
-  particle-order commits.
-- Deterministic per-particle pseudo-random streams for fixed-seed repeatability.
-- Explicit linear inertia schedule and bounded-domain clamp/restitution map.
-- Objective-evaluation accounting, best-so-far history, and separated timing
-  fields.
-- Six built-in sanity benchmarks: Sphere, Rastrigin, Rosenbrock, Ackley,
-  Griewank, and Salomon.
-- C++ API, C ABI 3, Python `ctypes` wrapper, and C++/Python regression tests.
-- A paired serial/master--slave local scaling experiment driver.
-- A `sphere_work` synthetic arithmetic objective with a configurable number of loop iterations per evaluation (performance microbenchmark only).
-- A multi-factor sweep over dimension, population, objective work, worker count and paired seeds.
-- Median paired speedup, MAD, bootstrap intervals, efficiency, and PDF/SVG/PNG analysis plots.
+| Mode | Parallel work | Relation to serial reference |
+|---|---|---|
+| `serial` | None | Reference algorithm |
+| `master_slave` | Objective-function evaluations | Exact trajectory equivalence is required and tested |
+| `particle_parallel` | Initialization, particle propagation and objective evaluations | Exact trajectory equivalence is required and tested |
+| `asynchronous` | Event-driven particle updates | Different, schedule-dependent update dynamics for multiple workers |
+| `islands` | Independent sub-swarms and optional migration | Different population information flow |
+
+Social topologies are global-best, periodic ring and periodic toroidal von
+Neumann grid. The total objective-evaluation budget used in the architecture
+studies is held at `N * (K + 1)` for population `N` and `K` update steps.
+
+## Repository map
+
+- `cpp/`: C++20 numerical core, optimizers, thread-pool execution, social
+  topologies and C ABI.
+- `python/cpso_serial/`: Python configuration/results and native-library
+  loader. The import package retains the historical `cpso_serial` name.
+- `experiments/02_master_slave/`: early synchronous scaling studies.
+- `experiments/03_topologies/`: social-topology comparison and analysis.
+- `experiments/04_architectures/`: unified five-mode study runner, campaign
+  orchestrator and paired statistical analysis.
+- `configs/`: smoke, architecture-study and predeclared campaign JSON files.
+- `analysis/`: reusable analysis and plotting utilities for earlier studies.
+- `docs/`: mathematical model, implementation decisions, protocols and audit.
+- `paper/`: current manuscript draft and bibliography.
+- `tests/`: C++ and Python regression suites.
 
 ## Build and test
 
-Requirements: CMake 3.20+, a C++20 compiler, Python 3.10+, and (for Python
-tests) `pytest`.
+The native library must be compiled before running Python calls. From the
+repository root:
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCPSO_BUILD_TESTS=ON
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 
-python -m pip install -e . --no-build-isolation
-python -m pip install pytest
-PYTHONPATH=python pytest -q
+python -m pip install -e ".[analysis,test]" --no-build-isolation
+CPSO_SERIAL_LIBRARY="$PWD/build/lib/libcpso_serial.so" PYTHONPATH=python \
+  python -m pytest -q
+PYTHONPATH=python python scripts/run_smoke.py
 ```
 
-The shared library is written to `build/lib`. The Python wrapper discovers it
-there automatically. For a custom location, set `CPSO_SERIAL_LIBRARY` to the
-full library path. For Apple Silicon setup, see [`docs/build_macos.md`](docs/build_macos.md).
+The shared-library filename is platform-specific: `.so` on Linux, `.dylib` on
+macOS and `.dll` on Windows. Usually the wrapper discovers the CMake `build/`
+folder automatically; `CPSO_SERIAL_LIBRARY` overrides discovery when needed.
 
-## Run a smoke experiment
+## Continuous integration
+
+`.github/workflows/ci.yml` defines GitHub Actions checks on Ubuntu and macOS
+for Python 3.10 and 3.12. It configures/builds the C++ library, runs CTest and
+the Python regression suite, and checks Python syntax. The workflow is
+configured in the repository but still needs to be executed by GitHub; local
+verification for this development pass was performed on Linux/GCC.
+
+## Experimental entry points
+
+Validate the full predeclared campaign and print its run count, without
+creating output files or requiring the native library:
 
 ```bash
-python scripts/run_smoke.py
+PYTHONPATH=python python experiments/04_architectures/run_research_campaign.py \
+  configs/campaigns/definitive_architecture_campaign.json --dry-run
 ```
 
-## Run a paired serial/master--slave scaling sweep
-
-The 0.3.0 sweep varies problem dimension, population, controlled objective cost,
-and worker count. Example (a local exploratory run):
+Run the small integration campaign (not for scientific inference):
 
 ```bash
-PYTHONPATH=python python experiments/02_master_slave/run_scaling_sweep.py \
-  --objective sphere_work --dimensions 32 --populations 32 \
-  --iterations 30 --seeds 5 --workers 1,2,4,8 \
-  --work-iterations 0,1000,10000,50000
+PYTHONPATH=python python experiments/04_architectures/run_research_campaign.py \
+  configs/campaigns/campaign_smoke.json \
+  --output /tmp/cpso-campaign-smoke --no-plots
 ```
 
-The driver writes `scaling_runs.csv`, `scaling_summary.csv`, and
-`scaling_metadata.json` to a new run directory. It verifies exact serial /
-master--slave output equivalence for every seed before accepting timings.
-Generate vector figures and a report with:
+The definitive campaign contains 9,360 optimization runs and 273,888,000
+objective evaluations. Use the protocol in
+`docs/definitive_experimental_campaign.md`; preserve raw JSONL checkpoints and
+manifests. Do not edit generated records by hand. The `results/` directory is
+intentionally not ignored by Git because raw experiments are research data.
 
-```bash
-python experiments/02_master_slave/analyze_scaling_sweep.py \
-  results/raw/master_slave_sweep/<run_directory>
-```
+## Scope and scientific limitations
 
-The controlled `sphere_work` objective is not a recognized optimization
-benchmark. It estimates the workload break-even region of the executor; it
-does not establish performance on arbitrary real objectives. Read
-[`docs/master_slave_scaling_protocol.md`](docs/master_slave_scaling_protocol.md)
-before conducting or interpreting a sweep.
+The native engine currently exposes six analytic optimization objectives and
+one separately marked synthetic `sphere_work` objective used only to probe
+evaluation overhead. The current research campaign is an internal architecture
+study, not an external benchmark-suite submission: COCO/BBOB, BBOB-Large-Scale,
+CEC 2013 LSGO adapters, standard-PSO baselines, MPI and GPU backends are not
+implemented in this repository state. No superiority or state-of-the-art claim
+on those suites or architectures follows from the current code.
 
-## Run the original single-configuration diagnostic
+The exact mathematical fidelity of the serial implementation to the complete
+source article by Orlando and Ricciardello (2021) remains an explicit audit
+item in `docs/implementation_decisions.md`. Until that equation-by-equation
+comparison is completed, describe the implementation as a reconstruction
+with documented operational conventions rather than a verified strict
+reproduction.
 
-```bash
-PYTHONPATH=python python experiments/02_master_slave/benchmark_scaling.py \
-  --benchmark rastrigin --dimension 64 --population 96 --iterations 100 \
-  --seeds 10 --workers 2,4,8
-```
+## Package and ABI naming
 
-The script warms each code path, executes paired seed/configuration runs in a
-deterministically shuffled order, and refuses to accept a timing pair unless
-the final value, best position, complete best-so-far history, and function-
-evaluation count match exactly. It writes a CSV of raw run records and a JSON
-metadata/summary file under `results/raw/master_slave/` by default.
+The distribution metadata is `cpso-parallel`, while the Python import package,
+CMake target and shared library retain the historical names `cpso_serial` and
+`libcpso_serial`. This is intentional compatibility debt for now; avoid
+renaming these interfaces without a migration plan. The project/native version
+is `0.6.0`; the C ABI version is `5` (these are separate version numbers).
 
-These are local exploratory measurements. Built-in analytic objectives are
-cheap and may be dominated by thread scheduling and synchronization overhead.
-Do not infer general scalability or make publication claims from one machine or
-one objective family.
+The current `paper/paper.pdf` is a working draft containing the introduction,
+model/semantics and experimental protocol. It does not yet contain definitive
+results or conclusions. The full status and unresolved prerequisites are
+recorded in `docs/repository_audit.md`; licensing is intentionally unset until
+the rights holder confirms it (`docs/license_status.md`).
 
-## Model and implementation conventions
-
-Read before using this implementation in research:
-
-- [`docs/mathematical_model.md`](docs/mathematical_model.md)
-- [`docs/implementation_decisions.md`](docs/implementation_decisions.md)
-- [`docs/master_slave.md`](docs/master_slave.md)
-- [`docs/master_slave_scaling_protocol.md`](docs/master_slave_scaling_protocol.md)
-- [`docs/test_protocol.md`](docs/test_protocol.md)
-
-The closed-form flow is exact for each frozen constant-coefficient oscillator
-segment, not for the complete switched stochastic optimization process. The
-interval length `dt` changes the algorithmic observation/update schedule; it is
-not a numerical ODE accuracy parameter. The source-fidelity register still
-lists equation-level checks against the complete Orlando--Ricciardello paper.
-
-## C++ API
-
-- `analytic_propagator.hpp`: local oscillator flow and boundary map;
-- `objectives.hpp`: built-in objective functions;
-- `optimizer.hpp`: `Config`, `Result`, `minimize_serial`, and
-  `minimize_master_slave`;
-- `thread_pool.hpp`: persistent worker pool and indexed `parallel_for`;
-- `c_api.h`: stable C ABI used by Python, including native build metadata
-  (`native_build_info()`) for experiment manifests.
-
-A custom objective can be passed through the C++ API. In master--slave mode the
-objective must be deterministic and reentrant/thread-safe. The Python
-interface exposes the built-in pure objectives and the explicitly labelled
-`sphere_work` performance microbenchmark. Custom C++ objectives are
-still available through the C++ API.
-
-## Scope boundary
-
-This release does not implement particle-neighborhood topologies, island
-migration, asynchronous scheduling, Cooperative Co-evolution, COCO/CEC
-adapters, standard PSO comparison algorithms, or publication-grade benchmark
-orchestration. These remain later milestones.
+See `docs/repository_audit.md` for the current audit scope, verified checks,
+known limitations and recommended development priorities.

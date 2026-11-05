@@ -76,6 +76,7 @@
 \newtheorem{theorem}{Teorema}[section]
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{corollary}[theorem]{Corollario}
+\newtheorem{proposition}[theorem]{Proposizione}
 \newtheorem{definition}[theorem]{Definizione}
 \newtheorem{remark}{Osservazione}
 
@@ -99,7 +100,7 @@
 \newcommand{\Jfun}{\mathcal{J}}
 
 % --- Titolo e Autori ---
-\title{...}
+\title{Architetture parallele per una formulazione continua della Particle Swarm Optimization}
 
 \author{
   \textbf{Giovanni Giuseppe Iacuzzo}\textsuperscript{1,*} \\
@@ -118,10 +119,10 @@
 
 % --- Abstract ---
 \begin{abstract}
-...
+La Particle Swarm Optimization continua (CPSO) descrive l'evoluzione di una particella mediante una dinamica differenziale propagata in forma analitica. La sua parallelizzazione richiede di specificare quando vengono osservate le traiettorie e quando le informazioni personali e sociali diventano disponibili. Questo lavoro definisce e implementa cinque modalità di esecuzione: un riferimento seriale sincrono, master--slave, particle-parallel sincrona, asincrona event-driven e a isole. Le prime due architetture parallele sincrone sono progettate per preservare la semantica del riferimento, mentre le ultime due introducono differenti dinamiche di aggiornamento e scambio dell'informazione. Sono considerate tre topologie sociali (globale, anello e griglia toroidale di von Neumann). Il protocollo di qualità utilizza sei funzioni analitiche in dimensione 30 e 100, con budget di valutazioni appaiati; il protocollo temporale impiega separatamente una funzione sintetica a costo controllabile. L'analisi distingue le famiglie di funzione dalle misure ripetute sulle dimensioni e dai semi appaiati. Il manoscritto presenta attualmente la specificazione operativa e il protocollo sperimentale; i risultati della campagna definitiva e la verifica integrale di fedeltà al testo sorgente sono ancora da completare.
 \end{abstract}
 
-\noindent\textbf{Parole chiave:} ...
+\noindent\textbf{Parole chiave:} Particle Swarm Optimization; PSO a tempo continuo; parallelizzazione; algoritmi sincroni e asincroni; modelli a isole; equivalenza algoritmica; analisi sperimentale.
 \newpage
 
 \section{Introduzione}
@@ -129,8 +130,13 @@
 \input{sections/section_1_introduction.tex}
 \FloatBarrier
 
+\input{sections/section_2_model_and_semantics.tex}
 \FloatBarrier
+\input{sections/section_3_experimental_protocol.tex}
+\FloatBarrier
+
 \section*{Disponibilità di dati e codice}
+Il codice sorgente e le configurazioni sperimentali sono inclusi nella repository di sviluppo associata al manoscritto. La campagna definitiva non è ancora stata eseguita integralmente; pertanto, al momento non sono disponibili dataset completi di risultati grezzi né un archivio persistente associato a questa versione. Eventuali risultati parziali o smoke test non sono utilizzati come evidenza scientifica nel manoscritto.
 
 
 % =============================================================

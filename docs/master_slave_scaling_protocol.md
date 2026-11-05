@@ -111,3 +111,13 @@ The local Linux pilot included with the development release is only a test of th
 ## From controlled workload to real objectives
 
 After finding the synthetic break-even region, repeat selected worker/population/dimension combinations with the built-in analytic functions and later with COCO/CEC adapters. The synthetic objective answers: "How much objective-side arithmetic is needed for this executor to amortize its overhead?" It does not answer: "Does master--slave improve performance on an arbitrary scientific objective?"
+
+
+## Interaction with particle-social topology
+
+Version 0.4.0 adds global-best, ring, and grid social-neighborhood algorithms.
+Do not mix topology changes into a pure master--slave speedup pair. For a
+strong-scaling comparison, keep one topology fixed between serial and
+master--slave runs. For a topology-quality comparison, use identical seeds and
+function-evaluation budgets and run the variants through the same executor;
+the dedicated protocol is documented in `particle_topologies.md`.

@@ -1,4 +1,4 @@
-# Synchronous master--slave CPSO (introduced in 0.2.0; extended in 0.3.0)
+# Synchronous CPSO execution (master--slave introduced in 0.2.0; topologies extended in 0.4.0)
 
 ## Scope
 
@@ -16,7 +16,9 @@ function-evaluation count for deterministic, reentrant objective functions.
 
 For each generation `k`:
 
-1. Copy the current global-best vector once.
+1. Freeze the social information used by that generation. Global-best copies
+   the incumbent global-best vector once; ring and grid select one local
+   personal-best leader per particle from the same pre-generation snapshot.
 2. Visit particles in index order and propagate each coordinate using the
    unchanged frozen-oscillator propagator and that particle's RNG stream.
 3. Store all candidate positions in a generation buffer.
@@ -28,8 +30,13 @@ For each generation `k`:
    global best using the same strict-improvement rule as the serial version.
 
 Initialization follows the same batch-evaluation structure. Every particle's
-RNG is seeded independently by its ID, so evaluating the initial population in
-a different order cannot change the random streams.
+RNG is seeded from the run seed and its one-based ID through `std::seed_seq`,
+so evaluating the initial population in a different order cannot change its
+stream. This derivation was corrected in 0.4.0 because the former
+`SplitMix64(seed XOR particle_id)` scheme could reuse streams across different
+seed/particle pairs. See `implementation_decisions.md`; 0.4.0 trajectories are
+not bitwise comparable with 0.3.0, although the global-best update semantics
+are preserved.
 
 ## Determinism and objective contract
 
@@ -43,7 +50,10 @@ separate thread-safe adapter or must run serially.
 Built-in C API benchmark functions are deterministic and safe for concurrent
 evaluation. ABI 2 (release 0.2.0) introduced timing and worker-count fields;
 ABI 3 (release 0.3.0) appended the `objective_work_iterations` parameter for
-the synthetic `sphere_work` microbenchmark. The Python wrapper checks the ABI
+the synthetic `sphere_work` microbenchmark. ABI 4 (release 0.4.0) added the
+particle topology identifier and grid shape. ABI 5 (release 0.5.0) adds the
+architecture selector and execution configuration for particle-parallel,
+event-driven asynchronous, and island modes. The Python wrapper checks the ABI
 version before use.
 
 The `worker_count` result field records the requested pool size. A batch with
@@ -59,6 +69,18 @@ fewer candidates than workers uses only as many tasks as candidates.
   to avoid contaminating measurements of very cheap objective functions.
 - `propagation_seconds`: time spent propagating particles and applying the
   boundary map. Propagation remains sequential in this milestone.
+- `topology_setup_seconds`: one-time construction time for the immutable
+  particle-neighborhood representation. Global-best stores one shared O(N)
+  index list; ring/grid store bounded-size neighborhoods per particle.
+- `social_selection_seconds`: accumulated time per generation to freeze the
+  social attractors. It includes selecting local leaders and copying the
+  corresponding attractor vectors for ring/grid, or copying the incumbent
+  vector for global-best.
+
+The topology and social-selection timers are diagnostic subcomponents, not
+independent wall-clock measurements to be summed blindly with the total time.
+They are useful for explaining overhead across population sizes and topology
+families; `elapsed_seconds` remains the primary end-to-end runtime.
 
 For primary wall-time speedup use paired runs:
 
@@ -83,3 +105,9 @@ changed topology or update policy and call the ratio speedup.
   asynchronous CPSO.
 - No performance advantage is claimed until measured on the target hardware
   under a documented protocol.
+
+
+The executor is topology-agnostic: global-best, ring, and toroidal von-Neumann
+grid variants all use the same synchronous batch dispatch. See
+[`particle_topologies.md`](particle_topologies.md) for exact neighborhood
+definitions and the paired algorithmic comparison protocol.

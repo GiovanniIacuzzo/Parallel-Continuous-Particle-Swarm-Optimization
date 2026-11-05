@@ -15,7 +15,7 @@ into an executable bounded optimizer.
 | Bounds | Endpoint clamp with outward-velocity restitution | Added bounded-domain policy; not part of the unconstrained ODE |
 | Personal best | Strict objective improvement | Standard elitist memory update |
 | Early stopping | Disabled | Keeps requested transition and FE budgets exact |
-| Random generator | Per-particle `std::mt19937_64` streams seeded from SplitMix64 | Deterministic stream ownership; not a statistical-independence proof |
+| Random generator | Per-particle `std::mt19937_64` streams seeded through `std::seed_seq` from separate run-seed and particle-ID words | Deterministic stream ownership; tested for duplicate fingerprints on the release seed/ID regression set; not a formal statistical-independence proof |
 | Objective values | Six standard analytic functions | Sanity/smoke test objectives, not a replacement for COCO or CEC suites |
 
 ## Source-audit item before publication
@@ -58,3 +58,106 @@ and its tests must be updated before the serial baseline is considered frozen.
 ## Controlled workload addition (0.3.0)
 
 The C ABI was raised to version 3 to add `objective_work_iterations`. This field is accepted only with the explicitly synthetic `sphere_work` objective and is bounded to 100,000,000 recurrence iterations per evaluation. With zero work iterations, `sphere_work` returns the Sphere function exactly. For a positive workload, it adds a negligible deterministic positive term to keep the arithmetic recurrence observable under compiler optimization. This objective is intended solely to characterize executor overhead and break-even behavior; it is not part of the standard benchmark suite and must not be reported as an ordinary Sphere run.
+
+
+## Particle-social topologies (0.4.0)
+
+The default global-best behavior is preserved, including incumbent retention
+on equal objective values. The ring is periodic with radius one. The grid is a
+periodic row-major von-Neumann graph with self plus four orthogonal neighbors;
+indices are deduplicated for narrow grids. For ring/grid, equal local
+personal-best objective values are resolved by the smallest particle index.
+All social leaders are selected from a frozen pre-propagation generation
+snapshot. No intra-generation update is visible to another particle.
+
+The topology is independent of the serial/master--slave executor. The new
+Python/C ABI configuration fields select topology and grid shape; ABI 4 is
+intentionally incompatible with older native libraries, and the wrapper fails
+fast on version mismatch.
+
+
+## Random-stream derivation correction (0.4.0)
+
+The 0.3.0 expression `SplitMix64(run_seed XOR particle_id)` can reuse the same
+pre-hash value for different `(run_seed, particle_id)` pairs. This creates
+identical pre-hash values for some different run-seed/particle-ID pairs and can reduce the
+independence intended by the multi-seed experiment design. In 0.4.0 the two
+64-bit identifiers are split into separate 32-bit words and passed, together
+with fixed project tags, to `std::seed_seq` to initialize each
+`std::mt19937_64` engine. The mapping is deterministic and tested for repeated
+stream fingerprints over the regression set. It is not a proof of statistical
+independence. Consequently, 0.4.0 preserves the global-best update/social
+semantics but does not preserve bitwise trajectories from 0.3.0; all new
+multi-seed campaigns must use the 0.4.0 RNG derivation consistently.
+
+## Parallel execution architectures (0.5.0)
+
+| Mode | Operational semantics | Equivalence status |
+|---|---|---|
+| Serial synchronous | Frozen social snapshot per generation; sequential particle propagation, objective calls and commits | Reference |
+| Master--slave synchronous | Serial propagation and commits; objective batches evaluated by a persistent worker pool | Exact serial equivalence required |
+| Particle-parallel synchronous | Particle initialization, propagation after the frozen social snapshot, and objective batches are parallel; commits remain deterministic and sequential | Exact serial equivalence required |
+| Event-driven asynchronous | One queued event advances one particle by one segment; each completed personal-best update is published immediately and the particle is requeued | Different algorithmic schedule; completion order is schedule-dependent for multiple workers |
+| Synchronous islands | Fixed total population split evenly among independent islands; island tasks advance concurrently with generation barriers | Different population information flow; not serial-equivalent |
+
+For the island model, migration sources are copied into a compact immutable
+snapshot before any destination is changed. This gives simultaneous migration
+semantics and avoids order-dependent cascading transfers. Ring migration sends
+each island's incumbent to the next island; fully-connected migration sends
+each destination the best incumbent among all other islands. A destination's
+worst personal-best particle is replaced only by a strictly better immigrant;
+its velocity is reset to zero. The incumbent is already evaluated, so migration
+adds no function evaluations. A migration event after the final generation is
+skipped because no subsequent update can use the immigrant.
+
+The total evaluation budget is fixed across modes at `N * (K + 1)` for total
+population `N` and `K` particle updates. Synchronous histories are recorded at
+generation boundaries; asynchronous histories are recorded after each
+committed particle event and carry an explicit FE axis. Parallel callbacks must
+be reentrant/thread-safe. Worker-time sums can exceed wall time and are kept
+separate from elapsed wall-time measurements.
+
+The C ABI version was raised to 5 in release 0.5.0. Project/package version
+0.6.0 retains ABI 5 because its version-alignment and tooling changes do not
+alter the public C structs or calling convention. The unified architecture-study driver
+stores both a study-configuration SHA-256 and a source-code SHA-256 in its run
+manifest; it refuses to resume an output directory if either differs. Its
+bootstrap intervals are descriptive only. The current development study uses
+built-in objectives; COCO/BBOB and CEC adapters remain outside this release.
+
+## Development remediation — project 0.6.0 follow-up
+
+The following changes are part of the current development line and do not
+change the C ABI or the mathematical propagator:
+
+- The JSONL checkpoint reader accepts a valid final JSON record without a
+  newline and can repair only an incomplete, unterminated final record during
+  resume. Any malformed newline-terminated record is treated as interior
+  corruption and causes a hard error. Analysis is read-only and refuses an
+  incomplete tail until the study is resumed.
+- Completed-study validation checks exact coverage of every configured
+  `(function, dimension, seed, method)` tuple, rejects duplicate/unexpected or
+  missing runs, checks the exact FE budget, verifies aligned finite histories,
+  requires a non-increasing best-so-far series, and checks that its final value
+  matches the reported incumbent.
+- Confirmatory quality inference treats the six objective functions as the
+  top-level clusters. Dimension is nested within function and seed within the
+  function-dimension cell. The twelve function-dimension blocks remain
+  descriptive; paired Wilcoxon and Friedman summaries use six family-level
+  units. The nested bootstrap resamples families, dimensions, and paired seeds.
+  With only six objective families, statistical power and external
+  generalizability remain limited.
+- Run manifests now include non-identifying CPU/platform, Python/package,
+  thread-environment and native build metadata. CMake cache/build flags and
+  physical-core details must still be archived explicitly for each definitive
+  timing campaign where the environment helper cannot identify them.
+- The manuscript has been narrowed to the implemented five shared-memory
+  execution modes, three social topologies, six built-in analytic functions,
+  and the synthetic timing objective. External benchmarks and discrete-PSO
+  baselines are not represented as implemented results.
+
+The full source-equation audit against Orlando--Ricciardello (2021) remains
+blocked on obtaining the complete article text. The local analytic propagator
+is tested against an independent RK4 implementation and its semigroup
+property, but those tests cannot establish that every modelling convention
+matches the published source.

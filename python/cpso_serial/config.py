@@ -19,6 +19,9 @@ class CpsoConfig:
     dt: float = 0.7
     initial_velocity_fraction: float = 0.1
     boundary_restitution: float = 0.5
+    topology: str = "global"
+    grid_rows: int | None = None
+    grid_columns: int | None = None
 
     @property
     def dimension(self) -> int:
@@ -59,3 +62,15 @@ class CpsoConfig:
         if not (math.isfinite(self.boundary_restitution)
                 and 0.0 <= self.boundary_restitution <= 1.0):
             raise ValueError("boundary_restitution must lie in [0,1]")
+        if not isinstance(self.topology, str) or self.topology not in {
+            "global", "ring", "grid_von_neumann"
+        }:
+            raise ValueError("topology must be 'global', 'ring', or 'grid_von_neumann'")
+        if self.topology == "grid_von_neumann":
+            for name, value in (("grid_rows", self.grid_rows), ("grid_columns", self.grid_columns)):
+                if isinstance(value, bool) or not isinstance(value, int) or value < 2:
+                    raise ValueError(f"{name} must be an integer >= 2 for grid topology")
+            if self.grid_rows * self.grid_columns != self.population_size:
+                raise ValueError("grid_rows * grid_columns must equal population_size")
+        elif self.grid_rows is not None or self.grid_columns is not None:
+            raise ValueError("grid_rows/grid_columns may only be set for grid_von_neumann topology")
