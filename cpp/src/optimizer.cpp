@@ -80,7 +80,8 @@ template <typename BatchEvaluator>
         population_size, std::vector<double>(dimension));
     const auto topology_setup_start = Clock::now();
     const ParticleTopology topology(
-        config.topology, population_size, config.grid_rows, config.grid_columns);
+        config.topology, population_size, config.grid_rows, config.grid_columns,
+        config.seed, config.topology_degree, config.topology_rewiring_probability);
     result.topology_setup_seconds =
         std::chrono::duration<double>(Clock::now() - topology_setup_start).count();
     std::vector<double> pending_values(population_size, std::numeric_limits<double>::infinity());
@@ -234,6 +235,11 @@ void validate_config(const Config& config) {
         || config.boundary_restitution < 0.0 || config.boundary_restitution > 1.0) {
         throw std::invalid_argument("boundary_restitution must lie in [0,1]");
     }
+    if (!std::isfinite(config.topology_rewiring_probability)
+        || config.topology_rewiring_probability < 0.0
+        || config.topology_rewiring_probability > 1.0) {
+        throw std::invalid_argument("topology_rewiring_probability must lie in [0,1]");
+    }
     switch (config.topology) {
         case TopologyKind::GlobalBest:
         case TopologyKind::Ring:
@@ -248,6 +254,32 @@ void validate_config(const Config& config) {
             if (config.grid_rows > std::numeric_limits<std::size_t>::max() / config.grid_columns
                 || config.grid_rows * config.grid_columns != config.population_size) {
                 throw std::invalid_argument("grid_rows * grid_columns must equal population_size");
+            }
+            break;
+        case TopologyKind::Wheel:
+            if (config.grid_rows != 0U || config.grid_columns != 0U || config.population_size < 2U) {
+                throw std::invalid_argument("wheel topology requires N >= 2 and no grid dimensions");
+            }
+            break;
+        case TopologyKind::RandomConnected:
+            if (config.grid_rows != 0U || config.grid_columns != 0U
+                || config.population_size < 3U || config.topology_degree == 0U
+                || config.topology_degree >= config.population_size) {
+                throw std::invalid_argument("random topology requires N >= 3 and 1 <= topology_degree < N");
+            }
+            break;
+        case TopologyKind::SmallWorld:
+            if (config.grid_rows != 0U || config.grid_columns != 0U
+                || config.population_size < 4U || config.topology_degree < 2U
+                || config.topology_degree >= config.population_size || config.topology_degree % 2U != 0U) {
+                throw std::invalid_argument("small-world topology requires even 2 <= topology_degree < N and N >= 4");
+            }
+            break;
+        case TopologyKind::ScaleFree:
+            if (config.grid_rows != 0U || config.grid_columns != 0U
+                || config.topology_degree < 2U || config.topology_degree % 2U != 0U
+                || config.population_size < config.topology_degree / 2U + 1U) {
+                throw std::invalid_argument("scale-free topology requires even topology_degree >= 2 and N >= topology_degree/2 + 1");
             }
             break;
         default:

@@ -33,6 +33,12 @@ class PSOConfig:
     velocity_limit_fraction: float | None = 0.2
     boundary_restitution: float = 0.5
     ring_radius: int = 1
+    # Literature-defined controls for the advanced reference algorithms.
+    spso_informants: int = 3
+    fips_phi: float = 4.1
+    cso_phi: float = 0.1
+    dms_subswarm_size: int = 3
+    dms_regroup_interval: int = 5
 
     @property
     def dimension(self) -> int:
@@ -53,6 +59,9 @@ class PSOConfig:
             ("population_size", self.population_size, 2),
             ("max_evaluations", self.max_evaluations, 2),
             ("ring_radius", self.ring_radius, 1),
+            ("spso_informants", self.spso_informants, 1),
+            ("dms_subswarm_size", self.dms_subswarm_size, 2),
+            ("dms_regroup_interval", self.dms_regroup_interval, 1),
         ):
             if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
                 raise ValueError(f"{name} must be an integer >= {minimum}")
@@ -77,6 +86,10 @@ class PSOConfig:
         if not (math.isfinite(self.boundary_restitution)
                 and 0 <= self.boundary_restitution <= 1):
             raise ValueError("boundary_restitution must lie in [0,1]")
+        if not math.isfinite(self.fips_phi) or self.fips_phi <= 4.0:
+            raise ValueError("fips_phi must be finite and > 4 for constriction stability")
+        if not math.isfinite(self.cso_phi) or self.cso_phi < 0.0:
+            raise ValueError("cso_phi must be finite and >= 0")
         width = upper - lower
         with np.errstate(over="ignore", invalid="ignore"):
             initial_velocity_range = self.initial_velocity_fraction * width
@@ -109,26 +122,31 @@ def available_pso_methods() -> tuple[str, ...]:
         "inertia_lbest_ring",
         "clpso",
         "slpso",
+        "spso2011",
+        "fips_ring",
+        "cso",
+        "dms_pso",
     )
 
 
 def pso_method_metadata(method: str, config: PSOConfig) -> dict[str, float | int | str | None]:
-    """Return the fully resolved parameterization used by a named baseline."""
+    """Return the fully resolved, per-run parameterization for a PSO variant."""
     if method not in available_pso_methods():
         raise ValueError(f"Unknown PSO method {method!r}; choose from {available_pso_methods()}")
     c1 = config.cognitive
     c2 = config.social
+    inertia_max = config.inertia_max
+    inertia_min = config.inertia_min
+    chi = 1.0
+    velocity_limit = config.velocity_limit_fraction
+    topology = "global-best"
+    parameters: dict[str, float | int | str | None] = {}
+
     if method == "classic_gbest":
         c1 = c2 = 2.0
         inertia_max = inertia_min = 1.0
-        chi = 1.0
-        velocity_limit = config.velocity_limit_fraction
-        topology = "global-best"
     elif method == "inertia_gbest":
-        inertia_max, inertia_min = config.inertia_max, config.inertia_min
-        chi = 1.0
-        velocity_limit = config.velocity_limit_fraction
-        topology = "global-best"
+        pass
     elif method == "constriction_gbest":
         if c1 + c2 <= 4.0:
             raise ValueError("constriction_gbest requires cognitive + social > 4")
@@ -138,30 +156,79 @@ def pso_method_metadata(method: str, config: PSOConfig) -> dict[str, float | int
         chi = 2.0 / (phi - 2.0 + math.sqrt(phi * phi - 4.0 * phi))
         inertia_max = inertia_min = 1.0
         velocity_limit = None
-        topology = "global-best"
     elif method == "inertia_lbest_ring":
-        inertia_max, inertia_min = config.inertia_max, config.inertia_min
-        chi = 1.0
-        velocity_limit = config.velocity_limit_fraction
         topology = f"periodic-ring(radius={config.ring_radius})"
     elif method == "clpso":
-        # Literature parameterization of CLPSO (Liang et al., IEEE TEVC, 2006).
-        # The project applies its common clamped-restitution boundary map.
-        c1 = 1.49445
-        c2 = 0.0
+        c1, c2 = 1.49445, 0.0
         inertia_max, inertia_min = 0.9, 0.4
-        chi = 1.0
         velocity_limit = 0.2
         topology = "comprehensive-learning-exemplars-per-coordinate"
-    else:
-        # SL-PSO (Cheng & Jin, Information Sciences, 2015). The population is
-        # fixed by the shared benchmark protocol rather than dimension-scaled.
+        parameters.update({
+            "clpso_learning_probability": "0.05 + 0.45*(exp(10*i/(N-1))-1)/(exp(10)-1)",
+            "clpso_refresh_gap": 7,
+            "clpso_acceleration": 1.49445,
+        })
+    elif method == "slpso":
         c1 = c2 = 0.0
         inertia_max = inertia_min = 1.0
-        chi = 1.0
         velocity_limit = None
         topology = "fitness-sorted-social-demonstrator-learning"
-    return {
+        parameters.update({
+            "slpso_reference_M": 100,
+            "slpso_alpha": 0.5,
+            "slpso_beta": 0.01,
+            "slpso_social_influence_factor": 0.01 * config.dimension / 100.0,
+            "slpso_population_policy": "fixed_population_for_equal_FE_comparison; paper default M+ceil(D/10)",
+        })
+    elif method == "spso2011":
+        c1 = c2 = 0.5 + math.log(2.0)
+        inertia_max = inertia_min = 1.0 / (2.0 * math.log(2.0))
+        velocity_limit = None
+        topology = f"random-informants(k={config.spso_informants}, resample-on-no-global-improvement)"
+        parameters.update({
+            "spso_informants": config.spso_informants,
+            "spso_gravity_coefficient": 0.5 + math.log(2.0),
+            "spso_informant_graph": "directed-random-k-out; self-informant",
+            "spso_gravity_center": "x + c*(pbest + lbest - 2*x)/3; midpoint if lbest=pbest",
+            "spso_hypersphere_sampling": "uniform-direction-uniform-radius (SPSO-2011 default)",
+            "spso_initial_velocity": "uniform(lower-x, upper-x) in normalized box",
+            "spso_boundary_policy": "clip-offending-coordinates-and-reverse-0.5-component",
+        })
+    elif method == "fips_ring":
+        phi = config.fips_phi
+        chi = 2.0 / (phi - 2.0 + math.sqrt(phi * phi - 4.0 * phi))
+        c1, c2 = 0.0, phi
+        inertia_max = inertia_min = 1.0
+        velocity_limit = None
+        topology = "periodic-ring-degree-2; all-neighbor-pbest"
+        parameters.update({"fips_phi": phi, "fips_neighbors": 2})
+    elif method == "cso":
+        c1 = c2 = 0.0
+        inertia_max = inertia_min = 1.0
+        velocity_limit = None
+        topology = "random-pairwise-competition; swarm-mean"
+        parameters.update({
+            "cso_phi": config.cso_phi,
+            "cso_pairing": "random-perfect-matching-each-generation",
+            "cso_update_fraction": 0.5,
+            "cso_velocity_initialization": "zero",
+            "cso_boundary_policy": "project-and-restitute-offending-components",
+        })
+    elif method == "dms_pso":
+        c1 = c2 = 2.0
+        inertia_max, inertia_min = 0.9, 0.2
+        velocity_limit = config.velocity_limit_fraction
+        topology = "dynamic-random-regrouping; local-best-within-subswarm"
+        parameters.update({
+            "dms_subswarm_size_target": config.dms_subswarm_size,
+            "dms_regroup_interval": config.dms_regroup_interval,
+            "dms_regrouping": "uniform-random-permutation",
+            "dms_inertia_schedule": "linear-0.9-to-0.2",
+            "dms_population_remainder_policy": "remainder-added-to-last-subswarm",
+            "dms_local_search": "disabled",
+        })
+
+    parameters.update({
         "cognitive": c1,
         "social": c2,
         "inertia_max": inertia_max,
@@ -169,32 +236,19 @@ def pso_method_metadata(method: str, config: PSOConfig) -> dict[str, float | int
         "constriction_factor": chi,
         "velocity_limit_fraction": velocity_limit,
         "initial_velocity_fraction": (
-            0.0 if method == "slpso" else config.initial_velocity_fraction
+            "uniform-domain-relative" if method == "spso2011"
+            else 0.0 if method in {"slpso", "cso"}
+            else config.initial_velocity_fraction
         ),
         "boundary_restitution": config.boundary_restitution,
         "topology": topology,
         "ring_radius": config.ring_radius if method == "inertia_lbest_ring" else None,
-        "clpso_learning_probability": (
-            "0.05 + 0.45*(exp(10*i/(N-1))-1)/(exp(10)-1), i=0,...,N-1"
-            if method == "clpso" else None
-        ),
-        "clpso_refresh_gap": 7 if method == "clpso" else None,
-        "clpso_acceleration": 1.49445 if method == "clpso" else None,
-        "slpso_reference_M": 100 if method == "slpso" else None,
-        "slpso_alpha": 0.5 if method == "slpso" else None,
-        "slpso_beta": 0.01 if method == "slpso" else None,
-        "slpso_social_influence_factor": (
-            0.01 * config.dimension / 100.0 if method == "slpso" else None
-        ),
-        "slpso_population_policy": (
-            "fixed_population_for_equal_FE_comparison; paper default M+ceil(D/10)"
-            if method == "slpso" else None
-        ),
         "update_semantics": "frozen-generation-snapshot",
         "population_size": config.population_size,
         "max_evaluations": config.max_evaluations,
         "seed": config.seed,
-    }
+    })
+    return parameters
 
 
 def _social_attractors(
@@ -531,6 +585,9 @@ def minimize_pso(
         return _minimize_clpso(objective, config, parameters)
     if method == "slpso":
         return _minimize_slpso(objective, config, parameters)
+    if method in {"spso2011", "fips_ring", "cso", "dms_pso"}:
+        from .pso_advanced import minimize_advanced_pso
+        return minimize_advanced_pso(objective, config, method=method, parameters=parameters)
     if method == "inertia_lbest_ring" and 2 * config.ring_radius + 1 > config.population_size:
         raise ValueError("ring_radius is too large for the selected population")
 

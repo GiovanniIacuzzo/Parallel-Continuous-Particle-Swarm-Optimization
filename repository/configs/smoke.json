@@ -1,0 +1,15 @@
+{
+  "benchmark": "rastrigin",
+  "lower_bounds": [-5.12, -5.12, -5.12, -5.12, -5.12],
+  "upper_bounds": [5.12, 5.12, 5.12, 5.12, 5.12],
+  "population_size": 32,
+  "iterations": 80,
+  "seed": 20261104,
+  "mu_max": 0.9,
+  "mu_min": 0.4,
+  "cognitive": 2.05,
+  "social": 2.05,
+  "dt": 0.7,
+  "initial_velocity_fraction": 0.1,
+  "boundary_restitution": 0.5
+}

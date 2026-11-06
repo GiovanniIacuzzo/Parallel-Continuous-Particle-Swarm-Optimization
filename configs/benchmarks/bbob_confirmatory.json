@@ -13,6 +13,10 @@
     "pso_constriction_gbest",
     "pso_inertia_lbest_ring",
     "pso_clpso",
-    "pso_slpso"
+    "pso_slpso",
+    "pso_spso2011",
+    "pso_fips",
+    "pso_cso",
+    "pso_dms"
   ]
 }

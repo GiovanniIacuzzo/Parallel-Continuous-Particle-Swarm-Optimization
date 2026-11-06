@@ -31,7 +31,11 @@ enum CpsoBenchmarkId {
 enum CpsoTopologyId {
     CPSO_TOPOLOGY_GLOBAL_BEST = 0,
     CPSO_TOPOLOGY_RING = 1,
-    CPSO_TOPOLOGY_GRID_VON_NEUMANN = 2
+    CPSO_TOPOLOGY_GRID_VON_NEUMANN = 2,
+    CPSO_TOPOLOGY_WHEEL = 3,
+    CPSO_TOPOLOGY_RANDOM_CONNECTED = 4,
+    CPSO_TOPOLOGY_SMALL_WORLD = 5,
+    CPSO_TOPOLOGY_SCALE_FREE = 6
 };
 
 enum CpsoAlgorithmId {
@@ -67,6 +71,10 @@ typedef struct CpsoCConfig {
     int grid_rows;
     int grid_columns;
     uint64_t objective_work_iterations;
+    // ABI v7 graph-topology parameters. topology_degree means expected degree
+    // (random), ring degree (small-world), or 2*m (scale-free).
+    int topology_degree;
+    double topology_rewiring_probability;
 } CpsoCConfig;
 
 typedef struct CpsoCExecutionConfig {

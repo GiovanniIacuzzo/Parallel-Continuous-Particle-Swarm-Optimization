@@ -1,0 +1,23 @@
+{
+  "campaign_id": "cpso_cec2013_lsgo_smoke_v1",
+  "function_ids": [
+    1
+  ],
+  "seeds": [
+    1
+  ],
+  "population_size": 40,
+  "max_evaluations": 400,
+  "milestones": [
+    400
+  ],
+  "methods": [
+    "cpso_continuous",
+    "pso_classic_gbest",
+    "pso_inertia_gbest",
+    "pso_constriction_gbest",
+    "pso_inertia_lbest_ring",
+    "pso_clpso",
+    "pso_slpso"
+  ]
+}

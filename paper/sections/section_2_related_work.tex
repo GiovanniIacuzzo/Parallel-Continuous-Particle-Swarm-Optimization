@@ -1,0 +1,94 @@
+\section{Stato dell'arte e posizionamento}
+\label{sec:related-work}
+
+\subsection{Parallelizzazione della PSO: esecutori e semantica}
+
+La letteratura sulla parallel PSO comprende modelli master--slave, parallelismo a grana fine, aggiornamenti asincroni, accelerazione GPU e modelli a isole. Le prime analisi generali del parallelismo negli algoritmi evolutivi chiariscono la distinzione tra distribuzione della valutazione, parallelismo interno alla popolazione e decomposizione in sottopopolazioni \citep{Alba2002,CantuPaz2001}; le rassegne specifiche PSO organizzano i metodi in funzione della granularità, della sincronizzazione e della piattaforma \citep{Lalwani2019}. Le implementazioni parallele per problemi di ottimizzazione numerica mostrano che la valutazione indipendente delle particelle può essere sfruttata in architetture globali o master--slave \citep{Schutte2004}, mentre lavori successivi hanno studiato esplicitamente gli aggiornamenti asincroni \citep{Koh2006} e le implementazioni su GPU \citep{Mussi2011}.
+
+Tra i lavori più direttamente affini al livello esecutivo si colloca PAPSO di Li et al. \citep{LiEtAl2023PAPSO}, che combina thread pool fork--join, comunicazione non bloccante e work stealing per una PSO asincrona su CPU multicore. Gli autori confrontano il proprio framework con OpenMP e con l'esecuzione non parallela, riportando miglioramenti di tempo e scaling nel proprio ambiente sperimentale. Charilogis et al. \citep{Charilogis2023ParallelPSO} propongono invece modifiche alla PSO e meccanismi di propagazione delle particelle migliori tra unità parallele, con una valutazione in termini di chiamate alla funzione e tempo. Si tratta di lavori pertinenti, ma non costituiscono un confronto numerico diretto con il presente studio: cambiano algoritmo, parametri, hardware, funzioni e granularità delle misure.
+
+Un ulteriore filone considera implementazioni eterogenee CPU--GPU e modelli specifici per applicazioni intensive; ad esempio, una realizzazione parallela di ALC-PSO combina OmpSs e CUDA \citep{YazdanpanahAlaei2024ALCPSO}. Più recentemente, Sato et al. hanno studiato la parallelizzazione multicore di MOPSO/D attraverso un virtual global best e una partizione dello spazio degli obiettivi \citep{SatoEtAl2026MOPSOD}. Questo risultato è rilevante per il tema generale del parallelismo swarm, ma il suo problema è multi-obiettivo e il meccanismo di decomposizione non è equivalente al modello single-objective qui considerato. Analogamente, lavori 2026 su PSO multicore-aware per edge offloading e su varianti parallelizzate per training di reti neurali sono applicazioni ibride e specifiche di dominio, non baseline direttamente trasferibili al protocollo single-objective \citep{VermaEtAl2026MCLyPSO,BarkasEtAl2026ParallelPSO}.
+
+La nostra distinzione fra esecutori sincroni e algoritmi con dinamica modificata è quindi complementare, non sostitutiva, a questi lavori. La valutazione non mira a dimostrare che un backend CPU sia universalmente più veloce di PAPSO, OpenMP o GPU; mira a verificare se due strategie di parallelizzazione del medesimo modello CPSO preservino il riferimento seriale e a misurare il loro scaling rispetto a quel riferimento. L'asincronia event-driven e le isole vengono invece analizzate come regimi algoritmici autonomi, non come esecutori equivalenti.
+
+\subsection{Topologie sociali e modelli a isole}
+
+La struttura del vicinato è una componente fondativa della PSO. I lavori di Kennedy e Mendes documentano il ruolo della struttura di popolazione e delle topologie di informazione nella prestazione dell'algoritmo \citep{Kennedy1999Topology,KennedyMendes2002}. L'anello e il global-best costituiscono due estremi utili: il primo limita la diffusione dell'informazione a un vicinato locale, il secondo rende disponibile il migliore globale a tutta la popolazione. La griglia toroidale di von Neumann rappresenta una struttura locale regolare a due dimensioni. Queste tre topologie sono mantenute nel protocollo architetturale principale perché forniscono riferimenti facilmente interpretabili e consolidati.
+
+Le quattro topologie aggiuntive ampliano lo spettro di connettività: wheel separa un hub dalle periferie; random connessa introduce irregolarità senza imporre una geometria regolare; Watts--Strogatz controlla il rewiring di un reticolo locale e quindi il compromesso tra clustering e distanze; Barab\'asi--Albert introduce attaccamento preferenziale e nodi ad alto grado. Le ultime due richiamano proprietà di rete studiate in modo indipendente dalla PSO \citep{WattsStrogatz1998,BarabasiAlbert1999}; la variante scale-free è stata già esplorata direttamente nella PSO da Liu et al. \citep{LiuScaleFreePSO2014}. Un'analisi del 2025 costruisce reti di interazione dalle traiettorie PSO e riporta caratteristiche small-world e distribuzioni dei gradi a coda pesante su tredici funzioni benchmark \citep{DengLiu2025NetworkPSO}. Questo lavoro rafforza la motivazione di includere topologie non regolari, ma non dimostra che una delle famiglie implementate sia universalmente ottimale.
+
+I modelli a isole sono un paradigma più generale degli algoritmi evolutivi: ciascuna isola evolve una popolazione locale e scambia individui secondo una topologia e una politica di migrazione. Da Silveira et al. analizzano topologie e politiche di migrazione in modelli sincroni e asincroni per algoritmi genetici \citep{DaSilveiraEtAl2023PIM}; lavori successivi introducono isole eterogenee e riconfigurabili \citep{DaSilveiraDeLimaAyala2024}. Sono precedenti pertinenti per la progettazione della migrazione, ma non sono confronti PSO continui: l'algoritmo locale e i problemi applicativi sono diversi. Nel nostro modello le isole eseguono la stessa CPSO locale; la variabile di studio è la decomposizione della popolazione, il numero di isole, la topologia intra-isola e la politica di migrazione.
+
+La campagna a sette topologie non è un disegno degree-matched: le famiglie hanno per costruzione distribuzioni del grado differenti. Pertanto il risultato sarà interpretato come confronto tra istanze canoniche di famiglie di grafo, non come prova causale che attribuisca la differenza osservata esclusivamente alla forma geometrica della rete.
+
+\begin{table*}[t]
+\centering
+\caption{Motivazione sperimentale delle sette topologie implementate. Le prime tre sono incluse nella campagna architetturale principale; le altre quattro appartengono all'espansione dedicata.}
+\label{tab:topology-rationale}
+\small
+\begin{tabularx}{\textwidth}{@{}l p{0.28\textwidth} X@{}}
+\toprule
+Topologia & Proprietà strutturale & Motivazione e ruolo nel disegno \\
+\midrule
+Global-best & Informazione del miglior personale globale disponibile a tutti & Riferimento a massima diffusione informativa; permette di confrontare i backend sotto una topologia canonica fortemente connessa. \\
+Ring & Vicinato locale periodico a basso grado & Riferimento classico local-best; riduce la portata della comunicazione e rende osservabile la diffusione locale dell'informazione \citep{KennedyMendes2002}. \\
+Von Neumann & Griglia toroidale regolare con vicini ortogonali & Topologia locale regolare bidimensionale, utile per confrontare l'anello con un vicinato locale più strutturato \citep{Kennedy1999Topology}. \\
+Wheel & Un nodo hub collegato a tutti i nodi periferici; periferie non direttamente collegate & Caso di elevata centralizzazione e dipendenza da un nodo di riferimento; estensione strutturale non inclusa nel nucleo principale. \\
+Random connessa & Archi campionati casualmente con successiva connessione delle componenti & Introduce irregolarità nella connettività senza imporre una geometria spaziale; la riparazione della connettività è parte della definizione operativa. \\
+Small-world & Reticolo locale con rewiring di Watts--Strogatz & Combina clustering locale e scorciatoie; motivata dalle proprietà small-world osservate in reti di interazione PSO \citep{WattsStrogatz1998,DengLiu2025NetworkPSO}. \\
+Scale-free & Attaccamento preferenziale con presenza di nodi hub & Introduce una distribuzione del grado eterogenea e code pesanti; è stata studiata anche in modelli PSO \citep{BarabasiAlbert1999,LiuScaleFreePSO2014,DengLiu2025NetworkPSO}. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection{Baseline PSO e testbed di valutazione}
+
+Le dieci baseline sono scelte per coprire assi distinti della letteratura PSO, non per massimizzare il numero dei metodi. Le quattro varianti classiche (global-best standard, inerzia lineare, fattore di costrizione e local-best ring) forniscono riferimenti facilmente riconoscibili e collegano le principali scelte di aggiornamento e topologia \citep{Kennedy1995,ShiEberhart1998,Clerc2002,KennedyMendes2002}. CLPSO e SL-PSO rappresentano meccanismi di apprendimento sociale più articolati, con motivazioni di diversificazione e scalabilità \citep{Liang2006CLPSO,ChengJin2015SLPSO}. SPSO-2011 fornisce un riferimento standardizzato della famiglia PSO \citep{ZambranoBigiarini2013}. FIPS esplicita l'uso congiunto delle informazioni di tutti i vicini \citep{MendesKennedyNeves2004}. CSO rappresenta l'apprendimento competitivo per problemi large-scale \citep{Cheng2015}; DMS-PSO introduce sottosciami dinamici e riorganizzazione periodica \citep{LiangSuganthan2005DMS}. L'insieme confronta quindi aggiornamenti globali e locali, inerzia e costrizione, apprendimento per esemplari, informazione fully-informed, competizione e multi-swarm.
+
+
+\begin{table*}[t]
+\centering
+\caption{Corrispondenza tra le dieci baseline PSO, il riferimento bibliografico e il meccanismo che ciascuna baseline porta nel confronto. Le implementazioni e gli adattamenti del protocollo sono specificati nella sezione~\ref{sec:external-benchmarks}.}
+\label{tab:baseline-rationale}
+\small
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+Baseline & Riferimento & Ragione dell'inclusione \\
+\midrule
+Classic global-best & Kennedy (1995) \citep{Kennedy1995} & Riferimento storico della dinamica gbest, necessario per ancorare il confronto a una PSO canonica. \\
+Inertia global-best & Shi e Eberhart (1998) \citep{ShiEberhart1998} & Isola il ruolo dell'inerzia e della sua schedule nella gestione del compromesso esplorazione--sfruttamento. \\
+Constriction global-best & Clerc (2002) \citep{Clerc2002} & Introduce una parametrizzazione basata sul fattore di costrizione, distinta dalla schedule inerziale. \\
+Inertia local-best ring & Kennedy e Mendes (2002) \citep{KennedyMendes2002} & Controlla l'effetto di un'informazione sociale locale rispetto al riferimento global-best. \\
+CLPSO & Liang et al. (2006) \citep{Liang2006CLPSO} & Rappresenta l'apprendimento per esemplari coordinata-per-coordinata e una strategia di diversificazione. \\
+SL-PSO & Cheng e Jin (2015) \citep{ChengJin2015SLPSO} & Porta un meccanismo di social learning specificamente proposto per problemi scalabili. \\
+SPSO-2011 & Zambrano-Bigiarini et al. (2013) \citep{ZambranoBigiarini2013} & Fornisce un riferimento standardizzato della famiglia PSO, pur senza rivendicare identità bitwise con una specifica implementazione esterna. \\
+FIPS & Mendes et al. (2004) \citep{MendesKennedyNeves2004} & Usa contributi aggregati dei vicini invece di un singolo leader sociale. \\
+CSO & Cheng e Jin (2015) \citep{Cheng2015} & Introduce competizione a coppie e aggiornamento dei perdenti, senza la stessa regola di attrazione al best globale. \\
+DMS-PSO & Liang e Suganthan (2005) \citep{LiangSuganthan2005DMS} & Rappresenta sottosciami dinamici e riorganizzazione periodica della popolazione. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+Per la valutazione black-box, COCO BBOB offre 24 funzioni single-objective noiseless e protocolli basati sul tempo di raggiungimento di target di qualità; BBOB-LargeScale estende le funzioni a dimensioni maggiori, fino a 640 nella suite standard \citep{Hansen2021,Varelas2020}. L'analisi anytime e le ECDF dei runtime-to-target sono riferimenti metodologici più informativi di un singolo best finale, perché misurano il numero di FE necessario per raggiungere livelli prefissati \citep{HansenEtAl2022Anytime}. CEC 2013 LSGO introduce quindici funzioni a 1000 variabili e un protocollo con checkpoint FE espliciti \citep{Li2013}. Le tre suite coprono quindi ottimizzazione continua generale, problemi ad alta dimensione e benchmark large-scale strutturati.
+
+Il confronto qui definito rimane tuttavia PSO-vs-PSO. Non include ancora CMA-ES, differential evolution (ad esempio SHADE/L-SHADE) o ottimizzatori non-PSO selezionati dal repository COCO. Di conseguenza, le conclusioni potranno riguardare il posizionamento relativo della CPSO rispetto alle dieci implementazioni PSO specificate, non una superiorità sullo stato dell'arte complessivo degli ottimizzatori continui. Un confronto con non-PSO sarebbe un'estensione separata e richiederebbe implementazioni e protocolli altrettanto controllati.
+
+\subsection{Sintesi del posizionamento}
+
+\begin{table*}[t]
+\centering
+\caption{Mappa dei filoni bibliografici rispetto alle domande sperimentali del presente lavoro. La colonna finale chiarisce il tipo di confronto: diretto sul tema, ma non necessariamente numericamente comparabile.}
+\label{tab:related-work-map}
+\small
+\begin{tabularx}{\textwidth}{@{}p{0.20\textwidth}p{0.34\textwidth}X@{}}
+\toprule
+Filone & Riferimenti rappresentativi & Collegamento con il presente studio \\
+\midrule
+Parallel PSO CPU / asincrona & Schutte et al. (2004); Koh et al. (2006); Li et al. (2023); Charilogis et al. (2023) & Parallelismo della valutazione, thread pool, scheduling asincrono e sincronizzazione delle informazioni; confronto concettuale con i nostri backend, non confronto cronometrico tra hardware eterogenei. \\
+CPU/GPU e PSO applicative & Mussi et al. (2011); Yazdanpanah e Alaei (2024); Verma et al. (2026) & Mostrano l'estensione a GPU, CPU eterogenee e applicazioni; il nostro perimetro attuale è CPU shared-memory e benchmark single-objective. \\
+Topologia e network science & Kennedy (1999); Kennedy e Mendes (2002); Liu et al. (2014); Deng e Liu (2025) & Motivano le topologie locali, small-world e scale-free e l'analisi esplicita della rete di comunicazione. \\
+Parallel island models & da Silveira et al. (2023, 2024) & Motivano topologie di migrazione e politiche di scambio; i lavori citati studiano EA/GA e non costituiscono baseline CPSO. \\
+Benchmark black-box & Hansen et al. (2021, 2022); Varelas et al. (2020); Li et al. (2013) & Fondano la scelta di COCO BBOB/BBOB-LS e CEC 2013 LSGO e l'uso di metriche FE-to-target e checkpoint. \\
+\bottomrule
+\end{tabularx}
+\end{table*}

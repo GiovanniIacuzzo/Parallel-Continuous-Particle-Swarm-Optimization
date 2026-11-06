@@ -71,7 +71,8 @@ Result minimize_asynchronous(
 
     const auto topology_start = Clock::now();
     const ParticleTopology topology(
-        config.topology, population_size, config.grid_rows, config.grid_columns);
+        config.topology, population_size, config.grid_rows, config.grid_columns,
+        config.seed, config.topology_degree, config.topology_rewiring_probability);
     result.topology_setup_seconds =
         std::chrono::duration<double>(Clock::now() - topology_start).count();
 

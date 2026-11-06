@@ -1,0 +1,4 @@
+# Optional COCO/BBOB and BBOB-Large-Scale benchmark integration.
+# Install after the native CPSO library and core requirements.
+coco-experiment
+cocopp

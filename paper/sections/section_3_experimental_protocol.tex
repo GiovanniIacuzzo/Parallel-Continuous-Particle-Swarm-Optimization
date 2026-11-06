@@ -26,9 +26,19 @@ Totale & & 9\,360 & 273\,888\,000 \\
 
 Il primo stadio isola la topologia sociale in esecuzione seriale. Il secondo confronta la semantica event-driven a uno e quattro worker con i riferimenti seriali corrispondenti. Il terzo studia il numero di isole, la topologia interna e le politiche di migrazione ad anello o fully-connected mantenendo costante $N$ e il budget FE. Le configurazioni esatte e le combinazioni sono registrate in \path{configs/campaigns/definitive_architecture_campaign.json}.
 
+
+\subsection{Espansione a sette topologie}
+\label{sec:topology-expansion}
+
+La campagna principale usa tre topologie (global-best, ring e von Neumann) per contenere il numero di combinazioni nella comparazione fra semantiche. La copertura software è più ampia: la campagna complementare \texttt{cpso\_topology\_expansion} aggiunge wheel, random connessa, small-world e scale-free, per un totale di sette famiglie. Il protocollo è separato dalla campagna principale e non implica la valutazione del prodotto cartesiano completo fra sette topologie e cinque modalità.
+
+Il pilot topologico usa sei funzioni native, $D\in\{30,100\}$, $N=64$, 200 aggiornamenti e 10 semi; confronta le sette topologie in esecuzione seriale per 840 run. Lo stadio di costo usa \texttt{sphere\_work}, $D=30$, $N=64$, 150 aggiornamenti e 10 semi; per ciascuna topologia confronta serial, master--slave e particle-parallel con quattro worker, per 210 run. Il pilot totale è quindi di 1\,050 run. La configurazione confirmatory replica lo stesso disegno con 30 semi, per 3\,150 run. Le topologie sono statiche durante ogni run e la loro costruzione è controllata da un seme dedicato. I dettagli dei parametri di generazione e le limitazioni di connettività sono quelli riportati nella sezione~\ref{sec:model}.
+
+Nel confronto qualità i semi sono appaiati tra topologie all'interno di ogni cella funzione-dimensione. L'inferenza segue la stessa gerarchia a sei famiglie di funzione descritta sotto. Nel confronto prestazionale l'equivalenza sincrona viene controllata separatamente per ciascuna topologia prima di calcolare i rapporti di tempo. Poiché le famiglie hanno profili di grado differenti, l'esperimento confronta modelli di grafo canonici e non isola causalmente la sola geometria della rete a grado medio fissato.
+
 \subsection{Misura dello scaling}
 
-Il quarto stadio usa esclusivamente `sphere\_work`, una funzione sintetica basata su Sphere con una ricorrenza aritmetica controllabile. Sono considerati $D\in\{30,100\}$, $N\in\{64,128\}$, $K=80$, carichi di 0, 512 e 4\,096 iterazioni per valutazione e 10 semi appaiati. Per ogni backend sincrono si misurano 1, 2, 4 e 8 worker. Il carico sintetico non è incluso nell'analisi di qualità e non viene presentato come benchmark di ottimizzazione.
+Il quarto stadio usa esclusivamente \texttt{sphere\_work}, una funzione sintetica basata su Sphere con una ricorrenza aritmetica controllabile. Sono considerati $D\in\{30,100\}$, $N\in\{64,128\}$, $K=80$, carichi di 0, 512 e 4\,096 iterazioni per valutazione e 10 semi appaiati. Per ogni backend sincrono si misurano 1, 2, 4 e 8 worker. Il carico sintetico non è incluso nell'analisi di qualità e non viene presentato come benchmark di ottimizzazione.
 
 Lo speedup e l'efficienza sono definiti come
 \begin{equation}
@@ -105,7 +115,7 @@ mappa di vincolo comune del presente studio applica il clipping alla frontiera
 e la restituzione della velocità con coefficiente $0.5$. Questa è una scelta
 operativa uniforme dei metodi, non una proprietà intrinseca delle funzioni CEC.
 
-I metodi confrontati sono la CPSO continua nativa e sei baseline PSO a tempo
+I metodi confrontati sono la CPSO continua nativa e dieci baseline PSO a tempo
 discreto in spazio continuo implementate separatamente in NumPy. La prima baseline è una PSO global-best
 classica, con $c_1=c_2=2$ e velocità inerziale non pesata
 \citep{Kennedy1995}. La seconda utilizza un coefficiente di inerzia lineare da
@@ -162,22 +172,99 @@ ciò differisce dalla raccomandazione originale $M+\lceil D/10\rceil$ e viene
 registrato come adattamento sperimentale. Anche SL-PSO utilizza la mappa comune
 di gestione dei vincoli.
 
-Tutti e sette i metodi condividono dimensione della popolazione, dominio e
-budget FE esatto. SL-PSO inizializza lo spostamento a zero, mentre le altre
-baseline PSO usano la frazione iniziale dichiarata nella configurazione.
-Tutti gli aggiornamenti sono costruiti da uno snapshot di generazione. Le
-campagne confermative utilizzano $N=40$ e budget multipli di $N$, cosicché il
-costo di inizializzazione è di $N$ valutazioni e il budget FE è identico per
-tutti i metodi. I semi sono determinati da una funzione hash stabile
-dell'identificatore del problema e del seme di campagna. Lo stesso identificatore
-di seme è associato a ogni metodo per consentire l'appaiamento statistico, ma
-ciò non implica coordinate iniziali identiche: CPSO C++ e PSO NumPy utilizzano
-generatori casuali differenti. Le baseline non vengono etichettate come
-riproduzioni complete degli standard SPSO-2007 o SPSO-2011.
+La settima baseline è SPSO-2011 \citep{ZambranoBigiarini2013}. Utilizza un
+vicinato informant diretto generato casualmente: ogni particella informa $K=3$
+particelle selezionate casualmente e sé stessa; il grafo viene rigenerato dopo
+una generazione senza miglioramento del best globale. Per la particella $i$,
+indicando con $p_i$ il personal best e con $l_i$ il migliore personal best nel
+suo vicinato, il centro geometrico è
+\begin{equation}
+ G_i=x_i+c\frac{p_i+l_i-2x_i}{3},\qquad c=\frac12+\log 2,
+ \label{eq:spso-gravity}
+\end{equation}
+con il centro a due punti $G_i=x_i+c(p_i-x_i)/2$ quando $l_i=p_i$. La nuova
+posizione è campionata nella ipersfera centrata in $G_i$ e di raggio
+$\|G_i-x_i\|$, con direzione uniforme e raggio uniforme; si usa
+$\omega=(2\log2)^{-1}$. Le coordinate sono normalizzate nel box unitario
+per l'aggiornamento geometrico e riportate nel dominio originale.
 
-Le campagne complete sono onerose: ciascuna delle due suite COCO comprende
-15\,120 run metodo-problema; CEC 2013 LSGO comprende 2\,625 run e 7.875
-miliardi di valutazioni complessive sui sette metodi. Gli smoke test verificano
-solo l'integrazione, il budget FE, la serializzazione e il resume; non sono
-utilizzati per classificare gli algoritmi. Nel presente manoscritto non sono
-ancora riportati risultati ottenuti con le suite esterne.
+L'ottava baseline è FIPS (Fully Informed Particle Swarm)
+\citep{MendesKennedyNeves2004}. Invece di usare il solo miglior vicino,
+accumula i contributi dei due vicini in un anello periodico:
+\begin{equation}
+\begin{aligned}
+ v_i^{t+1}&=\chi v_i^t+\frac{\chi}{|N_i|}
+ \sum_{j\in N_i}R_{ij}\odot(p_j-x_i^t),\\
+ &\quad R_{ij,k}\sim U(0,\phi),\qquad \phi=4.1,
+\end{aligned}
+ \label{eq:fips-ring}
+\end{equation}
+dove $\chi=2/(\phi-2+\sqrt{\phi^2-4\phi})$ è il fattore di
+costrizione. Il vicinato è fissato per tutta la run e non include la particella
+centrale.
+
+La nona baseline è il Competitive Swarm Optimizer (CSO)
+\citep{Cheng2015}. A ogni generazione le particelle sono accoppiate casualmente;
+in ogni coppia il vincitore resta invariato e il perdente aggiorna velocità e
+posizione in funzione del vincitore, della propria velocità e della media
+precedente della popolazione:
+\begin{equation}
+\begin{aligned}
+ v_l^{t+1}&=r_1\odot v_l^t+r_2\odot(x_w^t-x_l^t)\\
+ &\quad +\varphi r_3\odot(\bar x^t-x_l^t),\\
+ x_l^{t+1}&=x_l^t+v_l^{t+1}.
+\end{aligned}
+ \label{eq:cso-update}
+\end{equation}
+con $r_1,r_2,r_3\sim U(0,1)$ e $\varphi=0.1$. Solo i perdenti vengono
+rivalutati: con $N$ pari, una generazione completa consuma $N/2$ FE. La storia
+è pertanto indicizzata per valutazioni effettive e non per generazioni.
+
+La decima baseline è il Dynamic Multi-Swarm PSO (DMS-PSO)
+\citep{LiangSuganthan2005DMS}. La popolazione viene partizionata in
+sottosciami di dimensione obiettivo $m=3$; ogni particella è attratta dal
+proprio personal best e dal miglior personal best del sottosciame corrente:
+\begin{equation}
+\begin{aligned}
+ v_i^{t+1}&=\omega_t v_i^t+2r_1\odot(p_i-x_i^t)\\
+ &\quad +2r_2\odot(l_i-x_i^t),\\
+ x_i^{t+1}&=x_i^t+v_i^{t+1}.
+\end{aligned}
+ \label{eq:dms-update}
+\end{equation}
+L'inerzia decresce linearmente da $0.9$ a $0.2$ e i sottosciami vengono
+ricomposti casualmente ogni $R=5$ generazioni. È implementata la variante base,
+senza l'estensione opzionale di ricerca locale quasi-Newton; l'eventuale resto
+della partizione è assorbito nell'ultimo gruppo, secondo la politica registrata
+nei metadati.
+
+Tutti gli undici metodi condividono dimensione della popolazione, dominio,
+identificatore del problema e budget FE esatto. I parametri specifici, le
+politiche di inizializzazione e le convenzioni di gestione dei vincoli sono
+registrati nei metadati di ogni run; tali differenze sono parte delle
+formulazioni e non vengono nascoste dietro una falsa equivalenza dinamica.
+Le campagne confermative utilizzano $N=40$ e budget multipli di $N$; per CSO
+ciò corrisponde a un numero intero di generazioni da $N/2$ valutazioni. I semi
+sono determinati da una funzione hash stabile dell'identificatore del problema
+e del seme di campagna. Lo stesso identificatore è associato a ogni metodo per
+consentire l'appaiamento statistico, ma non implica coordinate iniziali
+identiche: CPSO C++ e PSO NumPy utilizzano generatori casuali differenti.
+SPSO-2011 è allineato alla descrizione algoritmica standard qui specificata,
+ma non viene dichiarata identità bitwise con una specifica implementazione
+software esterna. FIPS è riferito alla variante ad anello a due vicini; CSO e
+DMS-PSO adottano la mappa di vincolo dichiarata nel protocollo. Le dieci
+varianti costituiscono un insieme rappresentativo e non esaustivo dello stato
+dell'arte.
+
+
+
+Per l'esecuzione locale di sviluppo sono già predisposti tre profili ridotti, che mantengono identica la popolazione e il budget FE fra gli undici metodi della singola suite. Il pilot BBOB seleziona sette funzioni, $D\in\{5,20\}$, cinque istanze e budget $10^3D$, per 770 run. Il profilo BBOB-LargeScale pre-confirmatory seleziona otto funzioni, $D\in\{20,80,320,640\}$, tre istanze e budget $250D$, per 1\,056 run. Il pilot CEC seleziona sei funzioni rappresentative, tre semi e budget massimo $120\,000$ FE, con checkpoint a 40\,000, 80\,000 e 120\,000 FE, per 198 run. Questi profili sono destinati a validare il comportamento su più famiglie e a individuare problemi di integrazione o configurazione; i budget ridotti e la copertura parziale non consentono di sostituire i protocolli confirmatory.
+
+Il protocollo CEC completo usa tutte le 15 funzioni, 25 semi e $3\cdot10^6$ FE per run. I sei problemi del pilot non sono campionati per ottenere una media rappresentativa dell'intera suite; servono a coprire categorie differenti del testbed in una fase preliminare. Analogamente, il pilot BBOB e il profilo BBOB-LargeScale non devono essere aggregati a campagne con budget o istanze differenti.
+
+Con undici metodi, le campagne confirmatory complete comprendono 23\,760
+run metodo-problema per ciascuna suite COCO e 4\,125 run per CEC 2013 LSGO.
+Il carico totale pianificato è pari a 3.168 miliardi di FE per BBOB, 49.896
+miliardi per BBOB-LargeScale e 12.375 miliardi per CEC 2013 LSGO. Gli smoke
+test verificano solo integrazione, budget FE, serializzazione e resume; non
+sono utilizzati per classificare gli algoritmi. La valutazione COCO usa il post-processing ufficiale Observer/cocopp e le metriche runtime-to-target/ECDF; le misure di tempo reale raccolte dal driver sono riportate separatamente e non sostituiscono le FE-to-target. Nel presente manoscritto non sono ancora riportati risultati ottenuti con le suite esterne.

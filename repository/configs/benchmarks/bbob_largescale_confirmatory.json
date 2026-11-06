@@ -1,0 +1,22 @@
+{
+  "campaign_id": "cpso_bbob_largescale_confirmatory_v1",
+  "suite": "bbob-largescale",
+  "instances": "instances: 1-15",
+  "suite_options": "dimensions: 20,40,80,160,320,640 function_indices: 1-24",
+  "population_size": 40,
+  "budget_multiplier": 10000,
+  "seed": 20261105,
+  "methods": [
+    "cpso_continuous",
+    "pso_classic_gbest",
+    "pso_inertia_gbest",
+    "pso_constriction_gbest",
+    "pso_inertia_lbest_ring",
+    "pso_clpso",
+    "pso_slpso",
+    "pso_spso2011",
+    "pso_fips",
+    "pso_cso",
+    "pso_dms"
+  ]
+}

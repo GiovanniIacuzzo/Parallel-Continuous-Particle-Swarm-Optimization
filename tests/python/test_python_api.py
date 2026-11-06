@@ -44,11 +44,11 @@ def test_python_config_validation() -> None:
 
 
 def test_native_version_and_build_info() -> None:
-    assert native_version() == "0.7.1"
+    assert native_version() == "0.7.4"
     info = native_build_info()
     assert "compiler=" in info
     assert "cxx_standard=20" in info
-    assert "abi=6" in info
+    assert "abi=7" in info
 
 
 def test_serial_smoke_contract() -> None:

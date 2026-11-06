@@ -22,6 +22,8 @@ class CpsoConfig:
     topology: str = "global"
     grid_rows: int | None = None
     grid_columns: int | None = None
+    topology_degree: int = 4
+    topology_rewiring_probability: float = 0.15
 
     @property
     def dimension(self) -> int:
@@ -63,9 +65,17 @@ class CpsoConfig:
                 and 0.0 <= self.boundary_restitution <= 1.0):
             raise ValueError("boundary_restitution must lie in [0,1]")
         if not isinstance(self.topology, str) or self.topology not in {
-            "global", "ring", "grid_von_neumann"
+            "global", "ring", "grid_von_neumann", "wheel", "random",
+            "small_world", "scale_free"
         }:
-            raise ValueError("topology must be 'global', 'ring', or 'grid_von_neumann'")
+            raise ValueError(
+                "topology must be global, ring, grid_von_neumann, wheel, random, small_world, or scale_free"
+            )
+        if isinstance(self.topology_degree, bool) or not isinstance(self.topology_degree, int):
+            raise ValueError("topology_degree must be an integer")
+        if not (math.isfinite(self.topology_rewiring_probability)
+                and 0.0 <= self.topology_rewiring_probability <= 1.0):
+            raise ValueError("topology_rewiring_probability must lie in [0,1]")
         if self.topology == "grid_von_neumann":
             for name, value in (("grid_rows", self.grid_rows), ("grid_columns", self.grid_columns)):
                 if isinstance(value, bool) or not isinstance(value, int) or value < 2:
@@ -74,3 +84,16 @@ class CpsoConfig:
                 raise ValueError("grid_rows * grid_columns must equal population_size")
         elif self.grid_rows is not None or self.grid_columns is not None:
             raise ValueError("grid_rows/grid_columns may only be set for grid_von_neumann topology")
+        if self.topology == "wheel" and self.population_size < 2:
+            raise ValueError("wheel topology requires population_size >= 2")
+        if self.topology == "random":
+            if not 1 <= self.topology_degree < self.population_size:
+                raise ValueError("random topology requires 1 <= topology_degree < population_size")
+        if self.topology == "small_world":
+            if (self.population_size < 4 or self.topology_degree < 2
+                    or self.topology_degree >= self.population_size or self.topology_degree % 2 != 0):
+                raise ValueError("small_world requires even 2 <= topology_degree < population_size")
+        if self.topology == "scale_free":
+            if (self.topology_degree < 2 or self.topology_degree % 2 != 0
+                    or self.population_size < self.topology_degree // 2 + 1):
+                raise ValueError("scale_free requires even topology_degree >= 2 and population_size >= degree/2 + 1")

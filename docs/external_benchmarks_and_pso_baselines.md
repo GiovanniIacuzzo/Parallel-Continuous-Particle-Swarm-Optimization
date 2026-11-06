@@ -38,7 +38,7 @@ functions. The confirmatory configuration selects dimensions
 - 15 instances per function/dimension;
 - population 40;
 - project-selected budget `10,000 * D` FE per problem and method;
-- seven algorithms (CPSO plus six discrete-time, continuous-space PSO baselines).
+- eleven algorithms (CPSO plus ten discrete-time, continuous-space PSO baselines).
 
 Configuration: `configs/benchmarks/bbob_confirmatory.json`. The intermediate
 configuration `bbob_preconfirmatory.json` uses 24 functions, dimensions 2, 5
@@ -58,7 +58,7 @@ on permuted block-diagonal transformations. The official suite dimensions are
 - 15 instances per function/dimension;
 - population 40;
 - project-selected budget `10,000 * D` FE per problem and method;
-- seven algorithms (CPSO plus six discrete-time, continuous-space PSO baselines).
+- eleven algorithms (CPSO plus ten discrete-time, continuous-space PSO baselines).
 
 Configuration: `configs/benchmarks/bbob_largescale_confirmatory.json`.
 The intermediate configuration `bbob_largescale_preconfirmatory.json` selects
@@ -85,9 +85,9 @@ random numbers across the native C++ and NumPy random-number generators.
 
 The smoke configuration selects a reduced subset and budget. It is an
 integration check only. Full confirmatory configurations each contain
-`24 * 6 * 15 * 7 = 15,120` method-problem runs. For BBOB, the sum of selected
-dimensions is 80, corresponding to 2.016 billion FE over all methods. For
-BBOB-LargeScale, the sum is 1,260, corresponding to 31.752 billion FE. These
+`24 * 6 * 15 * 11 = 23,760` method-problem runs. For BBOB, the sum of selected
+dimensions is 80, corresponding to 3.168 billion FE over all methods. For
+BBOB-LargeScale, the sum is 1,260, corresponding to 49.896 billion FE. These
 costs should be considered before running the full campaigns.
 
 ## CEC 2013 Large-Scale Global Optimization
@@ -108,10 +108,10 @@ Configuration: `configs/benchmarks/cec2013_confirmatory.json`. The
 pre-confirmatory configuration `cec2013_preconfirmatory.json` selects functions
 F1-F5, five seeds and the first official checkpoint budget of 120,000 FE.
 This is an initial broad-scale pilot, not the complete CEC protocol. The full
-configuration is 2,625 method-function-seed runs and 7.875 billion FE across
-seven methods. The objective functions are expected to return non-finite values when
+configuration is 4,125 method-function-seed runs and 12.375 billion FE across
+eleven methods. The objective functions are expected to return non-finite values when
 queried outside their bounds in some wrappers; the present study applies the
-same explicit clamp-and-restitution boundary map to all seven algorithms. This
+same explicit clamp-and-restitution boundary map to all eleven algorithms. This
 is a project-level algorithmic convention, not a property of the benchmark
 functions themselves, and must be disclosed when presenting results.
 
@@ -125,11 +125,13 @@ function-bound wrappers such as `Benchmark(fid).get_info()/eval()`.
 ## Discrete-PSO reference baselines
 
 The reference variants are independent Python/NumPy implementations in
-`python/cpso_serial/pso_baselines.py`. They are included as search-quality
-comparators; they are not claims to implement every detail of SPSO-2007 or
-SPSO-2011. Let `x_i`, `v_i`, `p_i` and `s_i` denote particle position,
-velocity, personal best and social attractor. Random values are independent
-and coordinate-wise uniform on [0,1].
+`python/cpso_serial/pso_baselines.py` and `python/cpso_serial/pso_advanced.py`.
+They are serial search-quality comparators; their objective callbacks are not
+used to claim speedup from the native parallel execution modes. Let `x_i`,
+`v_i`, `p_i` and `s_i` denote particle position, velocity, personal best and
+social attractor. Algorithm-specific update laws and randomization are
+summarized below. The four classical variants are explicit baselines, whereas
+SPSO-2011, FIPS, CSO and DMS-PSO have their own documented update mechanisms.
 
 ### 1. Classic global-best PSO
 
@@ -227,38 +229,82 @@ reproduction. See Cheng and Jin (2015), DOI
 `10.1016/j.ins.2014.08.039`.
 
 
+
+### 7. SPSO-2011
+
+SPSO-2011 uses an adaptive directed random informant graph and a geometric
+hypersphere update. The default uses `K=3` random outgoing informant links per
+particle plus self-information, `w=1/(2 ln 2)` and `c=0.5+ln 2`. Its gravity
+centre is `g=x+c(p+l-2x)/3`, with the specified two-point case when `l=p`.
+The default hypersphere sampler uses a uniform direction and uniform radius.
+Initial velocity is uniform between the lower-bound displacement and
+upper-bound displacement in a normalized search box; an out-of-box component
+is clipped and its velocity component multiplied by `-0.5`. See
+`docs/stage_c_pso_baselines.md` and Clerc's SPSO description for the exact
+implementation convention.
+
+### 8. Fully Informed PSO (FIPS)
+
+FIPS sums independent random attraction terms from every member of the
+neighborhood. The current baseline fixes the neighborhood to the two adjacent
+particles in a periodic ring and uses `phi=4.1` with Clerc's constriction
+factor. This is a deliberately specified FIPS/ring configuration, not a
+claim that FIPS is tied to only one topology.
+
+### 9. Competitive Swarm Optimizer (CSO)
+
+CSO randomly forms pairs; the winner is retained and the loser learns from
+the winner, its previous velocity and the previous population mean. The
+implementation uses `phi=0.1`, zero initial velocity and an even population.
+Only the losers are evaluated after initialization, so each complete
+competition generation consumes `N/2` FE. All histories and checkpoints are
+indexed by actual FE, not an assumed full-generation counter. The project
+boundary projection/restitution is an explicitly disclosed adaptation.
+
+### 10. Dynamic Multi-Swarm PSO (DMS-PSO)
+
+DMS-PSO partitions the population into small groups, uses the current group's
+best personal-best as the social attractor, and randomly regroups the full
+population every five generations. The implementation uses target group size
+three, linearly decreasing inertia `0.9 -> 0.2`, and merges a final singleton
+remainder into the preceding group. It is the basic regrouping method without
+a local-search or cooperative-learning extension.
+
 ### Common initialization, update and FE conventions
 
-All six discrete-time, continuous-space PSO methods use the same population size, search bounds,
-problem/seed label and exact FE budget. The native CPSO also uses the same
-population and FE budget. SL-PSO initializes its displacement to zero; the
-other PSO methods use the configured initial-velocity fraction. The seed is passed into each
-algorithm's own random-number generator; identical initial coordinates are
-not guaranteed across C++ and NumPy implementations. Initialization consumes
-exactly `N` objective evaluations. Subsequent updates use a frozen generation snapshot. Confirmatory budgets are
-configured as multiples of `N`, so no partial generation is needed in the
-external campaigns.
+All ten discrete-time, continuous-space PSO methods use the same population
+size, search bounds, problem/seed label and exact FE budget as the native CPSO.
+The seed is passed into each algorithm's own random-number generator; identical
+initial coordinates are not guaranteed across C++ and NumPy implementations.
+Initialization consumes exactly `N` objective evaluations. Subsequent updates
+use a frozen generation snapshot, except that CSO updates/evaluates only the
+loser of each pair, and therefore advances by `N/2` FE per complete competition
+generation. Histories and checkpoints are indexed by actual FE. Confirmatory
+budgets are configured as multiples of `N`, so all methods can consume the exact
+same total FE budget.
 
-All methods use uniform initialization within the benchmark box. The classical
-PSO methods and CLPSO sample initial velocity components uniformly from the
-configured fraction of each coordinate width (0.1 by default); SL-PSO starts
-with zero displacement, as in its social-learning formulation. All methods use
-the same project boundary transformation: clamp a position to the violated
-bound and reverse the outward velocity with restitution 0.5. The native CPSO
+All methods initialize positions uniformly within the benchmark box. The classical
+PSO methods, CLPSO, FIPS and DMS-PSO sample initial velocity components uniformly
+from the configured fraction of each coordinate width (0.1 by default); SL-PSO
+and CSO start with zero displacement; SPSO-2011 uses its own normalized-box
+initialization.
+The shared project boundary transformation is used by the methods that do not
+require an algorithm-specific boundary rule. SPSO-2011 uses its standard
+coordinatewise clip and half-velocity reversal. CSO uses the project
+clamp-and-restitution adaptation, which is declared in its metadata. The native CPSO
 uses continuous-time analytic propagation between objective observations; the
 discrete variants use their own velocity/displacement update equations. Equal
 FE budget is guaranteed, but the algorithms' internal update laws are not made
 mathematically equivalent.
 
 The `classic_gbest`, `inertia_gbest`, `constriction_gbest` and
-`inertia_lbest_ring` labels identify explicit classical implementations in this
-repository. They should not be relabelled as a fully standardized SPSO-2007 or
-SPSO-2011 implementation without separately implementing and testing the
-respective standard's initialization, neighborhood, random sampling and
-boundary details. CLPSO and SL-PSO follow their cited learning mechanisms but
-use the common project boundary map and fixed-population FE protocol; these
-choices are reported explicitly. Neither is claimed to be the universal current
-state of the art across every continuous or large-scale optimization task.
+`inertia_lbest_ring` labels identify explicit classical implementations, not
+formal SPSO standards. SPSO-2011 is implemented as a separate variant with its
+standard geometric update and default informant scheme, but no bitwise match
+with third-party software is claimed. CLPSO, SL-PSO, FIPS, CSO and DMS-PSO
+retain the implementation adaptations documented in `docs/stage_c_pso_baselines.md`.
+The ten-method set is representative, not exhaustive SOTA across continuous
+optimization.
 
 ## Installation and commands
 
@@ -298,6 +344,6 @@ resumable by run key; COCO observer data must be preserved alongside it.
 - The external CEC wrapper was not installed; its adapter and driver were
   tested with controlled stubs, not real CEC objective functions.
 - No external benchmark results are included in this repository snapshot.
-- The custom-objective C ABI is version 6 and serial-only by design.
+- The custom-objective C ABI is version 7 and serial-only by design.
 - The external quality campaigns do not establish speedup of CPSO's parallel
   execution architectures.

@@ -37,6 +37,11 @@ struct Config {
     TopologyKind topology{TopologyKind::GlobalBest};
     std::size_t grid_rows{0};
     std::size_t grid_columns{0};
+    // Shared structural parameters for graph-based topologies:
+    // random: target expected degree; small-world: ring degree (even);
+    // scale-free: 2*m preferential-attachment degree parameter.
+    std::size_t topology_degree{4};
+    double topology_rewiring_probability{0.15};
 };
 
 struct IslandConfig {

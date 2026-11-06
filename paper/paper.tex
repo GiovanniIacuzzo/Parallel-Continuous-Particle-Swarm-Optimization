@@ -100,7 +100,7 @@
 \newcommand{\Jfun}{\mathcal{J}}
 
 % --- Titolo e Autori ---
-\title{Architetture parallele per una formulazione continua della Particle Swarm Optimization}
+\title{Semantiche di esecuzione e architetture parallele per una formulazione continua della Particle Swarm Optimization}
 
 \author{
   \textbf{Giovanni Giuseppe Iacuzzo}\textsuperscript{1,*} \\
@@ -119,7 +119,7 @@
 
 % --- Abstract ---
 \begin{abstract}
-La Particle Swarm Optimization continua (CPSO) descrive l'evoluzione di una particella mediante una dinamica differenziale propagata in forma analitica. La sua parallelizzazione richiede di specificare quando vengono osservate le traiettorie e quando le informazioni personali e sociali diventano disponibili. Questo lavoro definisce e implementa cinque modalità di esecuzione: un riferimento seriale sincrono, master--slave, particle-parallel sincrona, asincrona event-driven e a isole. Le prime due architetture parallele sincrone sono progettate per preservare la semantica del riferimento, mentre le ultime due introducono differenti dinamiche di aggiornamento e scambio dell'informazione. Sono considerate tre topologie sociali (globale, anello e griglia toroidale di von Neumann). Il protocollo interno analizza sei funzioni in dimensione 30 e 100 e, separatamente, il costo dell'esecutore mediante un carico sintetico. Il software include inoltre driver seriali per COCO BBOB, COCO BBOB-LargeScale e CEC 2013 LSGO, confrontati a budget FE fissato con sei baseline PSO discrete (gbest classica, inerzia, costrizione, lbest ad anello, CLPSO e SL-PSO). Questi benchmark esterni costituiscono un livello di valutazione distinto e non misurano lo scaling delle architetture parallele. Il manoscritto presenta la specificazione operativa e i protocolli; le campagne esterne e interne definitive e la verifica integrale di fedeltà al testo sorgente sono ancora da completare.
+La parallelizzazione della Particle Swarm Optimization (PSO) non è una scelta puramente implementativa: a seconda del punto in cui si introducono sincronizzazione, pubblicazione degli aggiornamenti e migrazione, essa può preservare la traiettoria del metodo seriale oppure definire una dinamica di ricerca differente. Questo lavoro studia cinque modalità di esecuzione di una formulazione continua della PSO (CPSO), implementate in un motore CPU a memoria condivisa: seriale sincrona, master--slave sincrona, particle-parallel sincrona, asincrona event-driven e a isole. Per le due modalità sincrone parallele il contratto di aggiornamento è costruito per preservare la traiettoria seriale; per le modalità asincrona e a isole la variazione della dinamica è oggetto esplicito dell'analisi. Il software implementa sette topologie di comunicazione tra particelle: global-best, ring, von Neumann, wheel, random connessa, small-world e scale-free. La campagna architetturale principale studia le tre topologie canoniche global-best, ring e von Neumann; una campagna complementare estende il confronto a tutte e sette. Il protocollo interno utilizza sei funzioni analitiche deterministiche in dimensione 30 e 100, mentre la misurazione dello scaling è separata e usa un carico sintetico controllabile. Un livello esterno confronta la CPSO con dieci baseline PSO discrete in spazio continuo su COCO BBOB, BBOB-LargeScale e CEC 2013 LSGO, a budget di valutazioni della funzione obiettivo (FE) abbinato. Il manoscritto specifica problema, architetture, motivazioni bibliografiche e protocolli riproducibili; i risultati confirmatory sono deliberatamente lasciati da inserire dopo l'esecuzione delle campagne e non vengono anticipati.
 \end{abstract}
 
 \noindent\textbf{Parole chiave:} Particle Swarm Optimization; PSO a tempo continuo; parallelizzazione; algoritmi sincroni e asincroni; modelli a isole; equivalenza algoritmica; analisi sperimentale.
@@ -129,14 +129,21 @@ La Particle Swarm Optimization continua (CPSO) descrive l'evoluzione di una part
 \label{sec:introduction}
 \input{sections/section_1_introduction.tex}
 \FloatBarrier
-
+\input{sections/section_2_related_work.tex}
+\FloatBarrier
 \input{sections/section_2_model_and_semantics.tex}
 \FloatBarrier
 \input{sections/section_3_experimental_protocol.tex}
 \FloatBarrier
+\input{sections/section_4_results.tex}
+\FloatBarrier
+\input{sections/section_5_discussion.tex}
+\FloatBarrier
+\input{sections/section_6_conclusions.tex}
+\FloatBarrier
 
 \section*{Disponibilità di dati e codice}
-Il codice sorgente e le configurazioni sperimentali sono inclusi nella repository di sviluppo associata al manoscritto. La campagna definitiva non è ancora stata eseguita integralmente; pertanto, al momento non sono disponibili dataset completi di risultati grezzi né un archivio persistente associato a questa versione. Eventuali risultati parziali o smoke test non sono utilizzati come evidenza scientifica nel manoscritto.
+Il codice sorgente e le configurazioni sperimentali sono inclusi nella repository di sviluppo associata al manoscritto. Le configurazioni confirmatory sono definite nella repository; alla data di questa versione non sono ancora state eseguite integralmente. I pilot locali saranno etichettati come esplorativi e non sostituiranno i risultati confirmatory. I dati grezzi, i manifest e le figure verranno associati alla revisione del manoscritto che li discuterà.
 
 
 % =============================================================

@@ -1,17 +1,17 @@
 # Repository audit — CPSO parallel project
 
-**Data:** 5 novembre 2026  
-**Versione di sviluppo:** 0.7.1  
-**C ABI nativo:** 6  
+**Data:** 6 novembre 2026  
+**Versione di sviluppo:** 0.7.4  
+**C ABI nativo:** 7  
 **Base:** repository derivata dall'archivio `repository(5).zip`; l'archivio originale non è stato modificato.
 
 ## 1. Stato generale
 
 La repository contiene un motore C++20 per la CPSO continua, interfaccia Python `ctypes`, cinque modalità di esecuzione su memoria condivisa, tre topologie sociali, campagne interne riproducibili e un livello separato per benchmark esterni e baseline PSO a tempo discreto in spazio continuo.
 
-Il livello esterno comprende adapter COCO `bbob`, COCO `bbob-largescale` e CEC 2013 LSGO; sei baseline NumPy (quattro varianti classiche, CLPSO e SL-PSO); driver per smoke, pre-confirmatory e confirmatory; contabilità FE; checkpoint JSONL; manifest di provenienza e resume vincolato da hash di configurazione, codice, build e dipendenze.
+Il livello esterno comprende adapter COCO `bbob`, COCO `bbob-largescale` e CEC 2013 LSGO; dieci baseline NumPy (quattro varianti classiche, CLPSO, SL-PSO, SPSO-2011, FIPS, CSO e DMS-PSO); driver per smoke, pre-confirmatory e confirmatory; contabilità FE; checkpoint JSONL; manifest di provenienza e resume vincolato da hash di configurazione, codice, build e dipendenze.
 
-L'implementazione esterna è esclusivamente seriale. Il callback C ABI 6 non presume che i wrapper Python/Cython siano thread-safe e non può essere impiegato con master--slave, particle-parallel, asynchronous o islands. Le campagne esterne comparano qualità a budget FE fissato; non misurano lo scaling delle architetture native.
+L'implementazione esterna è esclusivamente seriale. Il callback C ABI 7 non presume che i wrapper Python/Cython siano thread-safe e non può essere impiegato con master--slave, particle-parallel, asynchronous o islands. Le campagne esterne comparano qualità a budget FE fissato; non misurano lo scaling delle architetture native.
 
 ## 2. Verifiche effettivamente eseguite in questo sviluppo
 
@@ -21,10 +21,10 @@ Ambiente locale: Linux x86_64, GNU C++ 14.2, CMake Release, Python 3.13, NumPy e
 |---|---:|
 | Configurazione e build CMake Release | Superata |
 | CTest | 1/1 test target superato |
-| Suite Python completa | 83/83 test superati |
+| Suite Python completa | 111/111 test superati |
 | `compileall` su package, esperimenti e test | Superato |
 | Custom objective C ABI: contabilità FE e propagazione eccezioni | Superato |
-| Sei varianti PSO: determinismo, FE esatti e storie monotone | Superato |
+| Dieci varianti PSO: determinismo, FE esatti e storie monotone | Superato |
 | Driver COCO simulato: esecuzione, FE parity, JSONL e resume | Superato |
 | Driver CEC simulato in 1000D: run, checkpoint FE e resume | Superato |
 | Preflight COCO: dimensioni, selettori, conteggi e divisibilità FE | Superato |
@@ -33,7 +33,7 @@ Ambiente locale: Linux x86_64, GNU C++ 14.2, CMake Release, Python 3.13, NumPy e
 | Campagna CPSO seriale/sincrona smoke | 195/195 run completate; equivalenza esatta verificata |
 | Smoke di tutte le architetture (seriale, asynchronous, islands e sync parallel) | 27/27 run completate |
 | Pilot asynchronous/islands | Dry-run valido: 720 run pianificate |
-| Integrazione PSO/CEC-style in D=1000 | 7 metodi, 400 FE ciascuno; superata |
+| Integrazione PSO/CEC-style in D=1000 | 11 metodi, 400 FE ciascuno; superata |
 | Compilazione LaTeX + BibTeX | Superata; PDF di lavoro di 7 pagine |
 | Rendering e controllo visivo del PDF | Superato |
 
@@ -43,17 +43,17 @@ La suite sanitizer non è stata rieseguita dopo l'aggiunta del livello benchmark
 
 ## 3. Componenti aggiunti e modificati
 
-### 3.1 Callback obiettivo seriale e ABI 6
+### 3.1 Callback obiettivo seriale e ABI 7
 
 - Aggiunto `CpsoObjectiveCallback` e `cpso_run_custom_serial` al C ABI.
 - La funzione C++ richiama il callback in modo sincrono durante la valutazione della particella.
 - Il wrapper Python converte il vettore in una sequenza immutabile, intercetta le eccezioni e le ripropaga dopo il ritorno dal C ABI; nessuna eccezione Python attraversa il confine C.
 - Le callback personalizzate sono rifiutate per ogni modalità diversa da `serial` e non possono essere combinate con `sphere_work`.
-- Il progetto è versionato `0.7.1`, il C ABI `6`; la versione nativa è generata dalla variabile CMake del progetto.
+- Il progetto è versionato `0.7.4`, il C ABI `7`; la versione nativa è generata dalla variabile CMake del progetto.
 
 ### 3.2 Baseline PSO
 
-Sono implementate sei varianti indipendenti dal motore CPSO:
+Sono implementate dieci varianti indipendenti dal motore CPSO:
 
 1. `classic_gbest`: PSO global-best classica, `c1=c2=2`, `w=1`, velocity cap `0.2` della larghezza del dominio.
 2. `inertia_gbest`: global-best con `c1=c2=2.05`, inerzia lineare `0.9 -> 0.4` e stesso velocity cap.
@@ -61,8 +61,12 @@ Sono implementate sei varianti indipendenti dal motore CPSO:
 4. `inertia_lbest_ring`: inerzia lineare e informazione locale sul miglior personale in un anello periodico di raggio uno.
 5. `clpso`: Comprehensive Learning PSO, con un exemplar per coordinata, probabilità di apprendimento dipendente dalla particella e refresh dopo sette generazioni senza miglioramento del personal best.
 6. `slpso`: Social Learning PSO, con ordinamento worst-to-best, dimostratori migliori per coordinata e influenza della media dello swarm dipendente dalla dimensione.
+7. `spso2011`: informant topology random, centro di gravità e campionamento ipersferico SPSO-2011.
+8. `fips_ring`: Fully Informed PSO con tutti i due vicini in anello e fattore di costrizione.
+9. `cso`: Competitive Swarm Optimizer con competizioni a coppie e aggiornamento dei perdenti.
+10. `dms_pso`: Dynamic Multi-Swarm PSO con sottosciami casuali e raggruppamento periodico.
 
-Le quattro varianti classiche e CLPSO usano aggiornamenti sincroni a generazioni, inizializzazione uniforme entro i limiti, mappa di vincolo comune con restituzione `0.5`, seed esplicito e contatore FE; SL-PSO inizializza invece lo spostamento a zero come da formulazione. CLPSO usa exemplar per coordinata e refresh del learning set; SL-PSO ordina lo swarm worst-to-best e usa dimostratori migliori e influenza sociale dipendente dalla dimensione. Le sei implementazioni sono baseline di riferimento trasparenti; non sono presentate come una rassegna esaustiva dello stato dell’arte né come implementazioni certificate SPSO-2007/2011.
+Le quattro varianti classiche e CLPSO usano aggiornamenti sincroni a generazioni, inizializzazione uniforme entro i limiti, mappa di vincolo comune con restituzione `0.5`, seed esplicito e contatore FE; SL-PSO inizializza invece lo spostamento a zero come da formulazione. CLPSO usa exemplar per coordinata e refresh del learning set; SL-PSO ordina lo swarm worst-to-best e usa dimostratori migliori e influenza sociale dipendente dalla dimensione. Le dieci implementazioni sono baseline di riferimento trasparenti; non sono presentate come una rassegna esaustiva dello stato dell’arte né come implementazioni certificate SPSO-2007/2011.
 
 Il CPSO nativo mantiene la propria derivazione RNG C++ per particella, mentre le baseline usano NumPy. Lo stesso identificatore problema-seme viene associato ai metodi per consentire il pairing delle repliche; non sono garantite coordinate iniziali identiche né common random numbers tra generatori differenti.
 
@@ -74,7 +78,7 @@ Il CPSO nativo mantiene la propria derivazione RNG C++ per particella, mentre le
 | COCO BBOB-LargeScale | F1–F2, D20/40, 1 istanza, `20D` | 8 funzioni selezionate, D20/80/320/640, 3 istanze, `250D` | F1–F24, D20/40/80/160/320/640, 15 istanze, `10000D` |
 | CEC 2013 LSGO | F1, 1 seme, 400 FE | F1–F5, 5 semi, 120.000 FE | F1–F15, 25 semi, 3.000.000 FE |
 
-Le tre suite comparano CPSO continuo e sei baseline PSO a tempo discreto in spazio continuo: sette metodi in totale. Ogni campagna impone budget FE divisibile per la popolazione. CEC registra checkpoint a 120.000, 600.000 e 3.000.000 FE nel protocollo confirmatory.
+Le tre suite comparano CPSO continuo e dieci baseline PSO a tempo discreto in spazio continuo: undici metodi in totale. Ogni campagna impone budget FE divisibile per la popolazione. CEC registra checkpoint a 120.000, 600.000 e 3.000.000 FE nel protocollo confirmatory.
 
 Il preflight BBOB interpreta selettori COCO espliciti, calcola problemi/run/FE totali e rifiuta preventivamente budget non divisibili per la popolazione. I driver creano suite/observer indipendenti per metodo, confrontano il contatore FE del benchmark con quello dell'ottimizzatore e scrivono record JSONL sincronizzati.
 
@@ -82,17 +86,17 @@ I manifest esterni registrano hash della configurazione e dei sorgenti rilevanti
 
 ### 3.4 Costi delle campagne complete
 
-Con sette metodi, i piani confirmatory completi richiedono:
+Con undici metodi, i piani confirmatory completi richiedono:
 
-- BBOB: 15.120 run e 2,016 miliardi di FE;
-- BBOB-LargeScale: 15.120 run e 31,752 miliardi di FE;
-- CEC 2013 LSGO: 2.625 run e 7,875 miliardi di FE.
+- BBOB: 23.760 run e 3,168 miliardi di FE;
+- BBOB-LargeScale: 23.760 run e 49,896 miliardi di FE;
+- CEC 2013 LSGO: 4.125 run e 12,375 miliardi di FE.
 
 Sono campagne onerose, soprattutto BBOB-LargeScale e CEC. La sequenza raccomandata è smoke con pacchetti ufficiali, subset pre-confirmatory, verifica di storage e tempi, quindi campagne confermative. I numeri di FE rappresentano conti di pianificazione, non lavoro già eseguito.
 
 ### 3.5 Manoscritto
 
-Il sorgente LaTeX ora documenta anche i protocolli esterni e le sei baseline PSO a tempo discreto in spazio continuo. La bibliografia include COCO, BBOB-LargeScale, CEC 2013, PSO con inerzia e fattore di costrizione. Il PDF compila e il rendering è stato ispezionato; resta una bozza senza risultati esterni o interni definitivi, discussione conclusiva o evidenza inferenziale.
+Il sorgente LaTeX ora documenta anche i protocolli esterni e le dieci baseline PSO a tempo discreto in spazio continuo. La bibliografia include COCO, BBOB-LargeScale, CEC 2013, PSO con inerzia e fattore di costrizione. Il PDF compila e il rendering è stato ispezionato; resta una bozza senza risultati esterni o interni definitivi, discussione conclusiva o evidenza inferenziale.
 
 ## 4. Architettura che deve rimanere separata
 
@@ -124,7 +128,7 @@ Nessuna campagna esterna, né la campagna interna definitiva da 9.360 run, è st
 
 ### D. Baseline e validità comparativa
 
-Le sei baseline sono algoritmi PSO a tempo discreto in spazio continuo: quattro varianti canoniche parametrizzate, CLPSO e SL-PSO. Non implementano integralmente SPSO-2007/2011 né costituiscono da sole una rassegna esaustiva dello stato dell’arte. I metodi condividono popolazione, bounds, seed label e FE; non condividono necessariamente gli stati iniziali o le sequenze casuali perché usano generatori diversi. Questa scelta è documentata. Un eventuale confronto con implementazioni ufficiali SPSO richiederà adapter dedicati e una verifica dei dettagli standardizzati.
+Le dieci baseline PSO a tempo discreto in spazio continuo comprendono quattro varianti canoniche parametrizzate, CLPSO, SL-PSO, SPSO-2011, FIPS, CSO e DMS-PSO. Le scelte di implementazione e gli adattamenti di confine/population sono esplicitati in docs/stage_c_pso_baselines.md; la raccolta non costituisce una rassegna esaustiva dello stato dell’arte. I metodi condividono popolazione, bounds, seed label e FE; non condividono necessariamente gli stati iniziali o le sequenze casuali perché usano generatori diversi. Questa scelta è documentata. Un eventuale confronto con implementazioni ufficiali SPSO richiederà adapter dedicati e una verifica dei dettagli standardizzati.
 
 Per CEC, la mappa clamp/restitution 0.5 è una scelta del progetto applicata a tutti i metodi. Non è una proprietà del benchmark. Va mantenuta esplicita nelle pubblicazioni e può essere oggetto di un'analisi di sensibilità.
 
@@ -152,12 +156,12 @@ L'archivio non include la storia Git. La repository aggiornata deve essere impor
 
 ## 7. Giudizio
 
-**Implementazione:** la repository ora include il motore CPSO, sei baseline PSO, tre adapter/suite esterni, preflight dei budget, checkpoint e manifest di provenienza. Le verifiche locali automatizzate sono superate.
+**Implementazione:** la repository ora include il motore CPSO, dieci baseline PSO, tre adapter/suite esterni, preflight dei budget, checkpoint e manifest di provenienza. Le verifiche locali automatizzate sono superate.
 
 **Validazione scientifica:** non è ancora chiusa. La fedeltà alla formulazione sorgente, l'esecuzione con le librerie ufficiali e le campagne effettive rimangono prerequisiti prima di formulare conclusioni comparative o di preparare una submission.
 
 
-## Integrazione benchmark/PSO — versione 0.7.1
+## Integrazione benchmark/PSO — versione 0.7.4
 
 - Aggiunta la baseline CLPSO (Liang et al., 2006) con exemplar per coordinata,
   refresh del learning set e snapshot di generazione.
@@ -166,9 +170,18 @@ L'archivio non include la storia Git. La repository aggiornata deve essere impor
   influenza sociale dipendenti dalla dimensione. La popolazione resta fissata
   dalla campagna per garantire parità FE; questa scelta differisce dal default
   dimension-dependent dell'articolo ed è registrata nei metadati.
-- La suite di confronto comprende ora CPSO continuo e sei varianti PSO a tempo discreto in spazio continuo
+- La suite di confronto comprende ora CPSO continuo e dieci varianti PSO a tempo discreto in spazio continuo
   (quattro baseline classiche, CLPSO e SL-PSO). Nessuna è dichiarata come
   universalmente SOTA; SL-PSO è una baseline specifica per problemi scalabili.
 - Aggiunte configurazioni di smoke e pilot per CPSO sincrono, asynchronous e islands.
 - L'analisi delle campagne tratta l'equivalenza esatta dei metodi sincroni come
   verifica deterministica e non forza un test di Friedman degenere sui pareggi.
+
+
+## Stage C — baseline PSO estese (0.7.4)
+
+Stage C aggiunge quattro varianti indipendenti al livello NumPy seriale: SPSO-2011, FIPS su anello a due vicini, Competitive Swarm Optimizer e Dynamic Multi-Swarm PSO. Il set esterno contiene CPSO più dieci baseline PSO. Gli algoritmi sono comparati per qualità a parità di FE; la callback Python resta seriale e non misura lo speedup dei backend paralleli nativi.
+
+La versione SPSO-2011 è stata allineata alla descrizione standard di Clerc: grafo random informant diretto con auto-informazione, centro geometrico, campionamento ipersferico predefinito a direzione e raggio uniformi, inizializzazione di velocità relativa ai limiti e riflessione a metà velocità sulle componenti fuori dominio. Le implementazioni FIPS, CSO e DMS-PSO dichiarano esplicitamente topologia e adattamenti del trattamento dei vincoli. Vedere `docs/stage_c_pso_baselines.md`.
+
+Le configurazioni `*_stageC_smoke.json` includono tutti gli undici metodi; le configurazioni Stage C pilot BBOB e CEC sono separate dalle configurazioni storiche. I smoke test sono controlli d'integrazione e non supportano ranking scientifici. Le campagne confirmatory complete non sono state eseguite in questo sviluppo.

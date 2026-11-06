@@ -10,8 +10,16 @@ from .config import CpsoConfig
 from .result import CpsoResult
 
 
-_ABI_VERSION = 6
-_TOPOLOGY_IDS = {"global": 0, "ring": 1, "grid_von_neumann": 2}
+_ABI_VERSION = 7
+_TOPOLOGY_IDS = {
+    "global": 0,
+    "ring": 1,
+    "grid_von_neumann": 2,
+    "wheel": 3,
+    "random": 4,
+    "small_world": 5,
+    "scale_free": 6,
+}
 _BENCHMARK_IDS = {
     "sphere": 1,
     "rastrigin": 2,
@@ -60,6 +68,8 @@ class _CConfig(ctypes.Structure):
         ("grid_rows", ctypes.c_int),
         ("grid_columns", ctypes.c_int),
         ("objective_work_iterations", ctypes.c_uint64),
+        ("topology_degree", ctypes.c_int),
+        ("topology_rewiring_probability", ctypes.c_double),
     ]
 
 
@@ -254,6 +264,8 @@ def _run(
         grid_rows=config.grid_rows or 0,
         grid_columns=config.grid_columns or 0,
         objective_work_iterations=work_iterations,
+        topology_degree=config.topology_degree,
+        topology_rewiring_probability=config.topology_rewiring_probability,
     )
     execution = _CExecutionConfig(
         abi_version=_ABI_VERSION,

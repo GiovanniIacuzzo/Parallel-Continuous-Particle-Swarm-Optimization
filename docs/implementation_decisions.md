@@ -246,3 +246,12 @@ equivalence is checked on built-in analytic objectives. `sphere_work` is used
 only as a synthetic execution-cost instrument. External COCO/CEC adapters
 remain serial objective-callback comparisons and are not used to infer native
 parallel speedup.
+
+
+## Stage C — extended PSO comparators and project version 0.7.4
+
+Project/package version is 0.7.4; native C ABI remains version 7. No C ABI surface was changed by Stage C. Four algorithms were added to the serial NumPy benchmark layer: SPSO-2011, FIPS on a fixed degree-two ring, CSO, and basic DMS-PSO. The external comparison therefore contains CPSO plus ten PSO variants. Their formulas, parameters, population constraints, boundary policies and FE semantics are documented in `docs/stage_c_pso_baselines.md`.
+
+The SPSO-2011 implementation was specifically corrected to follow the standard geometric centre, its `l_i=p_i` special case, directed adaptive random informants, uniform-direction/uniform-radius default hypersphere sample, normalized-box initial velocity and coordinatewise half-velocity boundary reversal. The update is generation-synchronous and deterministic for a fixed NumPy seed, but it is not asserted to be bitwise-identical to third-party SPSO code.
+
+All external objective callbacks remain serial. Stage C adds algorithmic quality comparators only; it does not change or extend the native CPSO parallel execution semantics.

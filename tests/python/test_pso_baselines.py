@@ -246,3 +246,125 @@ def test_slpso_is_repeatable_and_requires_at_least_two_particles():
     )
     tiny_result = minimize_pso(sphere, tiny, method="slpso")
     assert tiny_result.function_evaluations == 4
+
+
+@pytest.mark.parametrize("method", ["spso2011", "fips_ring", "cso", "dms_pso"])
+def test_stage_c_methods_consume_exact_fe_budget_and_keep_bounds(method):
+    calls = []
+
+    def bounded_sphere(point):
+        calls.append(tuple(point))
+        assert all(-5.0 <= value <= 5.0 for value in point)
+        return sum(value * value for value in point)
+
+    result = minimize_pso(bounded_sphere, make_config(budget=800, seed=404), method=method)
+    assert result.function_evaluations == len(calls) == 800
+    assert result.history_evaluations[0] == 40
+    assert result.history_evaluations[-1] == 800
+    assert all(b > a for a, b in zip(result.history_evaluations, result.history_evaluations[1:]))
+    assert all(b <= a for a, b in zip(result.best_history, result.best_history[1:]))
+    assert math.isfinite(result.best_value)
+    assert all(math.isfinite(value) for value in result.best_position)
+
+
+@pytest.mark.parametrize("method", ["spso2011", "fips_ring", "cso", "dms_pso"])
+def test_stage_c_methods_are_deterministic_for_fixed_seed(method):
+    config = make_config(budget=800, seed=991)
+    first = minimize_pso(sphere, config, method=method)
+    second = minimize_pso(sphere, config, method=method)
+    assert first.best_value == second.best_value
+    assert first.best_position == second.best_position
+    assert first.best_history == second.best_history
+    assert first.history_evaluations == second.history_evaluations
+
+
+def test_spso2011_metadata_matches_reference_parameterization():
+    metadata = pso_method_metadata("spso2011", make_config())
+    assert metadata["inertia_max"] == pytest.approx(1.0 / (2.0 * math.log(2.0)))
+    assert metadata["cognitive"] == pytest.approx(0.5 + math.log(2.0))
+    assert metadata["spso_informants"] == 3
+    assert metadata["spso_hypersphere_sampling"] == "uniform-direction-uniform-radius (SPSO-2011 default)"
+
+
+def test_fips_uses_ring_all_neighbor_constriction():
+    metadata = pso_method_metadata("fips_ring", make_config())
+    assert metadata["fips_phi"] == pytest.approx(4.1)
+    assert metadata["fips_neighbors"] == 2
+    assert metadata["constriction_factor"] == pytest.approx(0.7298437881283576)
+    assert "all-neighbor" in str(metadata["topology"])
+
+
+def test_cso_requires_even_population_and_uses_half_population_evaluations():
+    odd = PSOConfig(
+        lower_bounds=(-1.0,), upper_bounds=(1.0,),
+        population_size=9, max_evaluations=90, seed=2,
+    )
+    with pytest.raises(ValueError, match="even population_size"):
+        minimize_pso(sphere, odd, method="cso")
+    result = minimize_pso(sphere, make_config(budget=800, seed=2), method="cso")
+    assert result.function_evaluations == 800
+    assert all(
+        right - left == 20
+        for left, right in zip(result.history_evaluations, result.history_evaluations[1:])
+    )
+
+
+def test_dms_dynamic_regrouping_partitions_all_particles_without_singletons():
+    from cpso_serial.pso_advanced import _dynamic_groups
+    import numpy as np
+
+    groups = _dynamic_groups(40, 3, np.random.default_rng(12))
+    flattened = [int(value) for group in groups for value in group]
+    assert sorted(flattened) == list(range(40))
+    assert len(flattened) == len(set(flattened))
+    assert min(len(group) for group in groups) >= 2
+    assert max(len(group) for group in groups) <= 4
+
+
+def test_stage_c_controls_reject_invalid_values():
+    with pytest.raises(ValueError, match="fips_phi"):
+        PSOConfig(lower_bounds=(-1.0,), upper_bounds=(1.0,), population_size=8,
+                  max_evaluations=80, fips_phi=4.0).validate()
+    with pytest.raises(ValueError, match="cso_phi"):
+        PSOConfig(lower_bounds=(-1.0,), upper_bounds=(1.0,), population_size=8,
+                  max_evaluations=80, cso_phi=-0.1).validate()
+
+
+def test_spso2011_adaptive_random_informant_graph_has_self_links_and_expected_edge_count():
+    import numpy as np
+    from cpso_serial.pso_advanced import _spso2011_informants
+
+    first = _spso2011_informants(40, 3, np.random.default_rng(123))
+    second = _spso2011_informants(40, 3, np.random.default_rng(123))
+    assert len(first) == 40
+    assert sum(len(neighborhood) for neighborhood in first) == 40 * 4
+    for index, neighborhood in enumerate(first):
+        assert index in neighborhood
+        assert np.all((neighborhood >= 0) & (neighborhood < 40))
+    assert all(np.array_equal(a, b) for a, b in zip(first, second))
+
+
+def test_method_specific_population_controls_do_not_reject_unrelated_baselines():
+    small = PSOConfig(
+        lower_bounds=(-1.0,), upper_bounds=(1.0,),
+        population_size=2, max_evaluations=4, seed=11,
+        spso_informants=3, dms_subswarm_size=3,
+    )
+    # Advanced-method defaults must not prevent a small-population gbest run.
+    assert minimize_pso(sphere, small, method="classic_gbest").function_evaluations == 4
+
+    too_many_informants = PSOConfig(
+        lower_bounds=(-1.0,), upper_bounds=(1.0,),
+        population_size=3, max_evaluations=6, seed=11,
+        spso_informants=4,
+    )
+    with pytest.raises(ValueError, match="spso_informants cannot exceed population_size"):
+        minimize_pso(sphere, too_many_informants, method="spso2011")
+
+    too_large_group = PSOConfig(
+        lower_bounds=(-1.0,), upper_bounds=(1.0,),
+        population_size=4, max_evaluations=8, seed=11,
+        dms_subswarm_size=4,
+    )
+    with pytest.raises(ValueError, match="dms_subswarm_size must be smaller"):
+        minimize_pso(sphere, too_large_group, method="dms_pso")

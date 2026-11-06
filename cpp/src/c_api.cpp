@@ -5,6 +5,7 @@
 #include "cpso/optimizer.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <exception>
@@ -14,9 +15,9 @@
 #include <vector>
 
 namespace {
-constexpr std::uint32_t kAbiVersion = 6U;
+constexpr std::uint32_t kAbiVersion = 7U;
 #ifndef CPSO_PROJECT_VERSION
-#define CPSO_PROJECT_VERSION "0.7.0"
+#define CPSO_PROJECT_VERSION "0.7.4"
 #endif
 constexpr const char* kVersion = CPSO_PROJECT_VERSION;
 
@@ -34,6 +35,10 @@ cpso::TopologyKind to_topology(const int id) {
         case CPSO_TOPOLOGY_GLOBAL_BEST: return cpso::TopologyKind::GlobalBest;
         case CPSO_TOPOLOGY_RING: return cpso::TopologyKind::Ring;
         case CPSO_TOPOLOGY_GRID_VON_NEUMANN: return cpso::TopologyKind::GridVonNeumann;
+        case CPSO_TOPOLOGY_WHEEL: return cpso::TopologyKind::Wheel;
+        case CPSO_TOPOLOGY_RANDOM_CONNECTED: return cpso::TopologyKind::RandomConnected;
+        case CPSO_TOPOLOGY_SMALL_WORLD: return cpso::TopologyKind::SmallWorld;
+        case CPSO_TOPOLOGY_SCALE_FREE: return cpso::TopologyKind::ScaleFree;
         default: throw std::invalid_argument("Unknown topology_id");
     }
 }
@@ -146,6 +151,15 @@ int run_impl(
             throw std::invalid_argument("history_out capacity is too small for the selected architecture");
         }
 
+        if (config->topology_degree < 1) {
+            throw std::invalid_argument("topology_degree must be positive");
+        }
+        if (!std::isfinite(config->topology_rewiring_probability)
+            || config->topology_rewiring_probability < 0.0
+            || config->topology_rewiring_probability > 1.0) {
+            throw std::invalid_argument("topology_rewiring_probability must lie in [0,1]");
+        }
+
         cpso::Config cpp_config;
         cpp_config.lower_bounds.assign(config->lower_bounds, config->lower_bounds + dimension);
         cpp_config.upper_bounds.assign(config->upper_bounds, config->upper_bounds + dimension);
@@ -162,6 +176,8 @@ int run_impl(
         cpp_config.topology = to_topology(config->topology_id);
         cpp_config.grid_rows = static_cast<std::size_t>(config->grid_rows);
         cpp_config.grid_columns = static_cast<std::size_t>(config->grid_columns);
+        cpp_config.topology_degree = static_cast<std::size_t>(config->topology_degree);
+        cpp_config.topology_rewiring_probability = config->topology_rewiring_probability;
 
         cpso::Objective objective;
         if (custom_objective != nullptr) {

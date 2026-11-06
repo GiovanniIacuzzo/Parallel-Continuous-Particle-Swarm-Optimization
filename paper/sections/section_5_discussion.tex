@@ -1,0 +1,40 @@
+\section{Discussione}
+\label{sec:discussion}
+
+La discussione sarà organizzata intorno alla distinzione fra equivalenza
+semantica e prestazione dell'esecutore. Per le modalità sincrone, ogni
+accelerazione dovrà essere interpretata alla luce del controllo di traiettoria
+esatta e del costo della funzione obiettivo. Per asincronia e isole, le
+variazioni della qualità saranno discusse come effetti di una diversa dinamica
+di aggiornamento e comunicazione, non come accelerazioni del medesimo
+algoritmo.
+
+\subsection{Implicazioni per la parallelizzazione CPSO}
+
+Da completare con il rapporto fra granularità del lavoro, overhead di
+scheduling, sincronizzazione, dimensione della popolazione e costo della
+valutazione. Il confronto con PAPSO, le implementazioni CPU/GPU e i recenti
+lavori multicore dovrà essere qualitativo e contestualizzato, senza confrontare
+tempi assoluti ottenuti su hardware, algoritmi o protocolli differenti.
+
+\subsection{Ruolo delle topologie e della migrazione}
+
+Da completare distinguendo qualità, densità/connettività, grado medio, costo
+della selezione dei vicini e frequenza delle comunicazioni. In assenza di un
+disegno degree-matched, non attribuire causalmente le differenze alla sola
+geometria del grafo.
+
+\subsection{Confronto con le baseline e validità esterna}
+
+Da completare discutendo gli esiti per famiglia di benchmark e meccanismo PSO.
+Il confronto rimane limitato alle dieci baseline PSO implementate e non
+permette conclusioni di superiorità rispetto a CMA-ES, differential evolution
+o all'intero stato dell'arte dell'ottimizzazione continua.
+
+\subsection{Minacce alla validità e limiti}
+
+Da documentare: numero di funzioni e unità statistiche; hardware locale
+fanless e variabilità termica; differenze di generatore casuale e
+inizializzazione fra implementazioni; adattamenti delle baseline per FE parity;
+callback Python seriali nei benchmark esterni; differenze fra pilot locale e
+campagne HPC; generalizzazione a obiettivi costosi, GPU e sistemi distribuiti.

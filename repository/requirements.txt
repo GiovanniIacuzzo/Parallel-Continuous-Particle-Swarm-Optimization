@@ -1,0 +1,6 @@
+# Optional analysis and test environment. The ctypes wrapper itself uses stdlib only.
+numpy>=1.23
+matplotlib>=3.7
+scipy>=1.10
+psutil>=5.9
+pytest>=7.0

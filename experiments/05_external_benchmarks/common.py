@@ -21,6 +21,10 @@ METHODS = {
     "pso_inertia_lbest_ring": ("pso", "inertia_lbest_ring"),
     "pso_clpso": ("pso", "clpso"),
     "pso_slpso": ("pso", "slpso"),
+    "pso_spso2011": ("pso", "spso2011"),
+    "pso_fips": ("pso", "fips_ring"),
+    "pso_cso": ("pso", "cso"),
+    "pso_dms": ("pso", "dms_pso"),
 }
 
 
@@ -60,7 +64,7 @@ def collect_external_provenance(config_path: Path) -> dict[str, Any]:
         except importlib.metadata.PackageNotFoundError:
             packages[distribution] = None
     return {
-        "project_version": "0.7.1",
+        "project_version": "0.7.4",
         "config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
         "source_code_sha256": source_hash.hexdigest(),
         "platform": {
@@ -77,7 +81,7 @@ def collect_external_provenance(config_path: Path) -> dict[str, Any]:
         "native": {
             "version": native_version(),
             "build_info": native_build_info(),
-            "c_abi": 6,
+            "c_abi": 7,
         },
         "packages": packages,
         "thread_environment": {key: os.environ.get(key) for key in _THREAD_ENVIRONMENT},
@@ -236,6 +240,11 @@ def run_method(
         velocity_limit_fraction=0.2,
         boundary_restitution=0.5,
         ring_radius=1,
+        spso_informants=3,
+        fips_phi=4.1,
+        cso_phi=0.1,
+        dms_subswarm_size=3,
+        dms_regroup_interval=5,
     )
     return minimize_pso(objective, pso_config, method=str(variant))
 

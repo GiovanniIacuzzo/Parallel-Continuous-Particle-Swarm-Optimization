@@ -19,8 +19,10 @@ struct IslandState {
     IslandState(
         const std::size_t local_population,
         const Config& config,
-        const std::size_t dimension)
-        : topology(config.topology, local_population),
+        const std::size_t dimension,
+        const std::uint64_t topology_seed)
+        : topology(config.topology, local_population, 0U, 0U, topology_seed,
+                   config.topology_degree, config.topology_rewiring_probability),
           particles(local_population),
           pending_positions(local_population, std::vector<double>(dimension)),
           pending_velocities(local_population, std::vector<double>(dimension)),
@@ -90,7 +92,7 @@ Result minimize_islands(
     }
     if (config.topology == TopologyKind::GridVonNeumann) {
         throw std::invalid_argument(
-            "Grid particle topology is not supported inside islands; use global or ring");
+            "Grid particle topology is not supported inside islands; use a graph topology");
     }
     if (island_config.migration_topology != MigrationTopology::Ring
         && island_config.migration_topology != MigrationTopology::FullyConnected) {
@@ -105,7 +107,9 @@ Result minimize_islands(
     std::vector<IslandState> islands;
     islands.reserve(island_config.island_count);
     for (std::size_t island = 0; island < island_config.island_count; ++island) {
-        islands.emplace_back(local_population, config, dimension);
+        const std::uint64_t island_topology_seed = config.seed
+            ^ (0xD1B54A32D192ED03ULL * static_cast<std::uint64_t>(island + 1U));
+        islands.emplace_back(local_population, config, dimension, island_topology_seed);
     }
     const double island_topology_setup_seconds =
         std::chrono::duration<double>(Clock::now() - topology_start).count();

@@ -1,112 +1,57 @@
-# Synchronous particle-social topologies
+# Particle communication topologies
 
-Version 0.4.0 adds three particle-level social topologies to the existing
-synchronous CPSO engine. The population size, initialization, per-particle RNG
-streams, frozen-oscillator propagator, inertia schedule, bounds map, observation
-interval, objective-evaluation budget, and synchronous commit semantics are
-shared by all three variants. Only the social attractor supplied to a particle
-changes.
+**Implementation version:** 0.7.3  
+**Scope:** static, undirected, particle-level social graphs in the shared-memory CPSO engine.
 
-## Definitions
+This document describes the graph used to choose each particle's social attractor. It is distinct from (i) the execution backend (serial, master--slave, particle-parallel, asynchronous, or islands) and (ii) the island-to-island migration graph. Every particle neighborhood includes the particle itself. Graphs are constructed once per run, are immutable during that run, and use deterministic topology seeds independent of the particle-level random streams.
 
-Let particle `i` have personal-best state `(p_i, f_i)`, where `p_i` is its
-best-known position and `f_i` its objective value. All neighborhood leader
-selections are made from a frozen snapshot at the beginning of a generation;
-no particle can observe a personal-best update produced in the same generation.
+## Implemented topology families
 
-### Global-best
+| Identifier | Definition | Main parameterization | Connectivity |
+|---|---|---|---|
+| `global` | Complete graph / global-best information | None | Connected |
+| `ring` | Periodic radius-one ring | None | Connected |
+| `grid_von_neumann` | Toroidal 2-D grid, four orthogonal neighbors | `grid_rows * grid_columns = N` | Connected |
+| `wheel` | Canonical PSO focal-particle wheel: one focal particle adjacent to all peripheral particles; no peripheral-to-peripheral edges | Randomly relabelled focal particle | Connected |
+| `random` | Erdős--Rényi-like `G(N,p)` sample followed by random bridges between connected components | `p = d_target/(N-1)`; default target degree 4 | Connected by construction |
+| `small_world` | Watts--Strogatz rewiring of a periodic ring lattice | Even `k=4`, rewiring probability `beta=0.15` by default | Not forcibly repaired after rewiring |
+| `scale_free` | Barabási--Albert preferential attachment | `m=2` by default (`topology_degree=2m=4`) | Connected by construction |
 
-Every particle uses the incumbent population-wide best personal-best position.
-The incumbent is updated only on strict objective improvement. Equal values do
-not replace its position. This deliberately preserves the 0.3.0 global-best
-reference's tie/update semantics.
+The wheel identifier follows the hub-and-spoke PSO neighborhood described in the particle-swarm topology literature; it is **not** the graph-theoretic wheel with a peripheral cycle. The focal role is randomly relabelled on each seeded graph so that particle index zero is not privileged across all seeds.
 
-### Periodic ring
+The connected-random construction is deliberately described as **ER-like with bridge augmentation**. It first samples each undirected edge independently with probability `p=d_target/(N-1)`. If the sampled graph is disconnected, random inter-component edges are added until it is connected. This is not an exact sample from `G(N,p)` conditioned on connectedness, and the final mean degree can be slightly above the target.
 
-For a population of size `N`, particles are indexed on a periodic ring. The
-neighborhood is
-
-`N_i = {(i-1) mod N, i, (i+1) mod N}`.
-
-It is the radius-one ring, includes the particle itself, and removes duplicate
-indices for `N=1` and `N=2`. The social attractor is the personal-best position
-with minimum objective value in `N_i`. Equal values are resolved by choosing
-the smallest particle index.
-
-### Toroidal von-Neumann grid
-
-The population is placed row-major on an `R x C` periodic grid, with `R*C=N`.
-The neighborhood contains the particle itself and its four orthogonal
-neighbors (up, down, left, right), with periodic wrap-around in both
-coordinates. Both grid dimensions must be at least two. Duplicate indices are
-removed, which matters for grids with a row or column of length two. The social attractor is the best personal
-best in this set; ties use the smallest particle index.
-
-This is specifically a von-Neumann neighborhood, not a Moore neighborhood:
-diagonal cells are not included.
+The small-world graph follows the Watts--Strogatz ring-lattice rewiring mechanism. Rewiring preserves the number of edges but can produce a disconnected graph for some seeds; connectivity is not repaired, because doing so would alter the specified Watts--Strogatz model. The scale-free graph uses preferential attachment to an initial clique of `m+1` nodes, with each subsequent node attaching to `m` distinct existing nodes. At the finite population sizes used here, “scale-free” identifies the Barabási--Albert construction; it is not a statistical claim that a fitted power law has been demonstrated.
 
 ## Configuration
 
-C++:
-
-```cpp
-config.topology = cpso::TopologyKind::GlobalBest;
-config.topology = cpso::TopologyKind::Ring;
-config.topology = cpso::TopologyKind::GridVonNeumann;
-config.grid_rows = 5;
-config.grid_columns = 8; // must multiply to population_size
-```
-
-Python:
+Python examples:
 
 ```python
-CpsoConfig(..., topology="global")
-CpsoConfig(..., topology="ring")
-CpsoConfig(
-    ..., population_size=40, topology="grid_von_neumann",
-    grid_rows=5, grid_columns=8,
+from cpso_serial import CpsoConfig
+
+base = dict(lower_bounds=(-5.0,) * 30, upper_bounds=(5.0,) * 30,
+            population_size=64, iterations=200, seed=47001)
+
+cfg_wheel = CpsoConfig(**base, topology="wheel")
+cfg_random = CpsoConfig(**base, topology="random", topology_degree=4)
+cfg_small_world = CpsoConfig(
+    **base, topology="small_world", topology_degree=4,
+    topology_rewiring_probability=0.15,
 )
+cfg_scale_free = CpsoConfig(**base, topology="scale_free", topology_degree=4)
 ```
 
-Grid dimensions are mandatory for grid topology and forbidden for the other
-topologies. Both dimensions must be at least two and their product must equal
-the population size. Prime population sizes cannot form a non-degenerate 2D
-grid under this definition.
+`topology_degree` has topology-specific meaning: target expected degree for the connected-random graph; initial ring degree `k` for Watts--Strogatz; twice the attachment count (`2m`) for Barabási--Albert. For the wheel it is unused. Von-Neumann grid dimensions are mandatory for `grid_von_neumann` and forbidden for other topologies. The current island backend does not accept a von-Neumann inner-island topology; it accepts the graph-based families subject to minimum local-population constraints.
 
-## Deterministic comparison protocol
+## Reproducibility and fair comparison
 
-For algorithmic comparisons, run all topologies with the same:
+For each paired topology comparison, hold fixed the benchmark, dimension, population, CPSO coefficients, time step, boundary rule, observation schedule, evaluation budget, and run seed. The graph is generated from a deterministic topology seed derived from the run seed. Particle streams remain assigned by particle index. Thus, topology effects are paired at the run level, while graph-specific randomness is reproducible.
 
-- objective and search bounds;
-- dimension and population size;
-- CPSO parameters and observation interval;
-- seed set and total function-evaluation budget.
+The seven graph families do **not** have identical degree distributions: global is dense; ring and wheel are sparse but structurally different; the toroidal grid has degree four; random, small-world, and scale-free use approximately four-neighbor sparse constructions (with graph-specific degree variation). The experiment therefore compares canonical communication structures as complete graph families; it does not identify a pure “shape-only” effect independent of degree. Reports must include the construction parameters and should avoid attributing every observed difference to a single graph statistic.
 
-Each seed is run under all three topologies. The social graph is deterministic,
-and each particle retains the same seed-derived RNG stream across topologies.
-In 0.4.0, streams are initialized from the separate run-seed and particle-ID
-words via `std::seed_seq`; this corrects the cross-run stream collisions
-possible under the previous XOR-based derivation. Therefore 0.4.0 results are
-not bitwise comparable to 0.3.0 even for the global-best topology.
-The resulting trajectories are nevertheless expected to differ because the
-social attractors differ. This is an algorithmic comparison, not a hardware
-speedup experiment.
+For a fixed topology, seed, configuration, and deterministic objective, serial, master--slave, and particle-parallel synchronous execution must retain exactly the same trajectory. Changing the topology is an algorithmic change and is not expected to preserve the trajectory. The asynchronous and island backends also alter information timing or population structure; their results must not be labelled as speedup of the same serial trajectory.
 
-The serial and master--slave executors must produce exactly equal results for
-a fixed topology, seed, configuration, and deterministic thread-safe
-objective. Changing the topology is not expected to preserve results.
+## Sources and scope of novelty
 
-## Implementation boundaries
-
-- Particle-level topology is independent of the executor (serial or
-  master--slave).
-- The topology is fixed for the complete run in this release.
-- There is no particle migration, island model, asynchronous update, adaptive
-  neighborhood, or time-varying communication graph.
-- Global-best, ring, and grid are not asserted to have equal convergence
-  properties; this must be evaluated empirically.
-- Global-best stores one shared list of all particle indices, rather than N
-  duplicated neighborhoods. Ring/grid store only their bounded-size local
-  neighborhoods. The optimizer records one-time topology construction and
-  accumulated per-generation social-selection times separately; total
-  end-to-end wall time remains the primary runtime measure.
+The comparison follows established PSO communication structures and network-generation models: early PSO work on neighborhood topologies, the Watts--Strogatz small-world construction, and Barabási--Albert preferential attachment. Scale-free interactions have also been studied directly in PSO. The present work does not claim the graph families themselves as new; its focus is their controlled integration and evaluation within the continuous-PSO parallel execution framework.

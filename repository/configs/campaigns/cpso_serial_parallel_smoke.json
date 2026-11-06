@@ -1,0 +1,174 @@
+{
+  "campaign_id": "cpso_serial_parallel_smoke_v071",
+  "title": "Synchronous CPSO equivalence and execution-scaling smoke campaign",
+  "schedule_seed": 20261106,
+  "stages": [
+    {
+      "id": "01_exact_quality_equivalence",
+      "kind": "quality",
+      "purpose": "Check exact trajectory, best-position, history and FE equivalence of synchronous native parallel backends against serial CPSO.",
+      "studies": [
+        {
+          "id": "six_native_benchmarks_d10_d30",
+          "study": {
+            "benchmarks": [
+              "sphere",
+              "rastrigin",
+              "rosenbrock",
+              "ackley",
+              "griewank",
+              "salomon"
+            ],
+            "dimensions": [
+              10,
+              30
+            ],
+            "population_size": 32,
+            "iterations": 12,
+            "seeds": [
+              101,
+              202,
+              303
+            ],
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "quality"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "02_synthetic_cost_scaling",
+      "kind": "performance",
+      "purpose": "Smoke-check paired wall-time collection for exact-equivalent synchronous backends; sphere_work is a synthetic cost instrument, not a benchmark-quality function.",
+      "studies": [
+        {
+          "id": "sphere_work_d30_population32",
+          "study": {
+            "benchmarks": [
+              "sphere_work"
+            ],
+            "dimensions": [
+              30
+            ],
+            "population_size": 32,
+            "iterations": 12,
+            "seeds": [
+              401,
+              402,
+              403
+            ],
+            "work_iterations": 512,
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

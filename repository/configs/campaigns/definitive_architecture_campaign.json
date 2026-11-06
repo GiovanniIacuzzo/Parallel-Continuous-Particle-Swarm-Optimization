@@ -1,0 +1,1316 @@
+{
+  "campaign_id": "cpso_architecture_campaign_v1",
+  "title": "Confirmatory study of CPSO parallel execution architectures",
+  "schedule_seed": 20261105,
+  "study_notes": {
+    "design": "Paired seeds within benchmark \u00d7 dimension problem instances; 30 independent seeds for search-quality stages and 10 for timing stage.",
+    "fixed_quality_budget": "N=64, K=500, FE=N(K+1)=32064 for every method including islands.",
+    "fixed_scaling_budget": "K=80, FE=N(K+1), with N=64 or 128.",
+    "quality_target": "Predeclared target 1e-8 for functions with global optimum 0; ERT is censored at budget for unsuccessful runs.",
+    "worker_counts": "1,2,4,8; reduce these in the JSON configuration if the target host has fewer available logical CPUs.",
+    "suite_scope": "Built-in analytic functions are architecture-study benchmarks only. sphere_work is a synthetic timing instrument and must not be counted as a standard optimization benchmark.",
+    "external_suite_gate": "Before a final journal submission, integrate/version-pin COCO/BBOB and CEC 2013 LSGO with native objective adapters and validate official FE accounting. This campaign does not claim external-suite results."
+  },
+  "stages": [
+    {
+      "id": "01_topology_effect",
+      "kind": "quality",
+      "purpose": "Isolate global, ring and von-Neumann grid social-information effects under serial synchronous execution.",
+      "studies": [
+        {
+          "id": "topology_quality",
+          "study": {
+            "benchmarks": [
+              "sphere",
+              "rastrigin",
+              "rosenbrock",
+              "ackley",
+              "griewank",
+              "salomon"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 500,
+            "seeds": [
+              11001,
+              11002,
+              11003,
+              11004,
+              11005,
+              11006,
+              11007,
+              11008,
+              11009,
+              11010,
+              11011,
+              11012,
+              11013,
+              11014,
+              11015,
+              11016,
+              11017,
+              11018,
+              11019,
+              11020,
+              11021,
+              11022,
+              11023,
+              11024,
+              11025,
+              11026,
+              11027,
+              11028,
+              11029,
+              11030
+            ],
+            "success_target_default": 1e-08,
+            "success_targets": {
+              "sphere": 1e-08,
+              "rastrigin": 1e-08,
+              "rosenbrock": 1e-08,
+              "ackley": 1e-08,
+              "griewank": 1e-08,
+              "salomon": 1e-08
+            },
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "serial_ring",
+                "architecture": "serial",
+                "topology": "ring"
+              },
+              {
+                "name": "serial_grid",
+                "architecture": "serial",
+                "topology": "grid_von_neumann",
+                "grid_shape": [
+                  8,
+                  8
+                ]
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "serial_ring",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "serial_grid",
+              "reference": "serial_global",
+              "metric": "quality"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "02_asynchronous_dynamics",
+      "kind": "quality",
+      "purpose": "Separate asynchronous event semantics from worker-count effects for global, ring and grid neighborhoods.",
+      "studies": [
+        {
+          "id": "async_quality",
+          "study": {
+            "benchmarks": [
+              "sphere",
+              "rastrigin",
+              "rosenbrock",
+              "ackley",
+              "griewank",
+              "salomon"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 500,
+            "seeds": [
+              11001,
+              11002,
+              11003,
+              11004,
+              11005,
+              11006,
+              11007,
+              11008,
+              11009,
+              11010,
+              11011,
+              11012,
+              11013,
+              11014,
+              11015,
+              11016,
+              11017,
+              11018,
+              11019,
+              11020,
+              11021,
+              11022,
+              11023,
+              11024,
+              11025,
+              11026,
+              11027,
+              11028,
+              11029,
+              11030
+            ],
+            "success_target_default": 1e-08,
+            "success_targets": {
+              "sphere": 1e-08,
+              "rastrigin": 1e-08,
+              "rosenbrock": 1e-08,
+              "ackley": 1e-08,
+              "griewank": 1e-08,
+              "salomon": 1e-08
+            },
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "serial_ring",
+                "architecture": "serial",
+                "topology": "ring"
+              },
+              {
+                "name": "serial_grid",
+                "architecture": "serial",
+                "topology": "grid_von_neumann",
+                "grid_shape": [
+                  8,
+                  8
+                ]
+              },
+              {
+                "name": "async_global_w1",
+                "architecture": "asynchronous",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "async_global_w4",
+                "architecture": "asynchronous",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "async_ring_w1",
+                "architecture": "asynchronous",
+                "topology": "ring",
+                "workers": 1
+              },
+              {
+                "name": "async_ring_w4",
+                "architecture": "asynchronous",
+                "topology": "ring",
+                "workers": 4
+              },
+              {
+                "name": "async_grid_w1",
+                "architecture": "asynchronous",
+                "topology": "grid_von_neumann",
+                "grid_shape": [
+                  8,
+                  8
+                ],
+                "workers": 1
+              },
+              {
+                "name": "async_grid_w4",
+                "architecture": "asynchronous",
+                "topology": "grid_von_neumann",
+                "grid_shape": [
+                  8,
+                  8
+                ],
+                "workers": 4
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "async_global_w1",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "async_global_w4",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "async_ring_w1",
+              "reference": "serial_ring",
+              "metric": "quality"
+            },
+            {
+              "method": "async_ring_w4",
+              "reference": "serial_ring",
+              "metric": "quality"
+            },
+            {
+              "method": "async_grid_w1",
+              "reference": "serial_grid",
+              "metric": "quality"
+            },
+            {
+              "method": "async_grid_w4",
+              "reference": "serial_grid",
+              "metric": "quality"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "03_island_dynamics",
+      "kind": "quality",
+      "purpose": "Study island count, local social topology, migration topology and migration period at fixed total population and FE budget.",
+      "studies": [
+        {
+          "id": "island_quality",
+          "study": {
+            "benchmarks": [
+              "sphere",
+              "rastrigin",
+              "rosenbrock",
+              "ackley",
+              "griewank",
+              "salomon"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 500,
+            "seeds": [
+              11001,
+              11002,
+              11003,
+              11004,
+              11005,
+              11006,
+              11007,
+              11008,
+              11009,
+              11010,
+              11011,
+              11012,
+              11013,
+              11014,
+              11015,
+              11016,
+              11017,
+              11018,
+              11019,
+              11020,
+              11021,
+              11022,
+              11023,
+              11024,
+              11025,
+              11026,
+              11027,
+              11028,
+              11029,
+              11030
+            ],
+            "success_target_default": 1e-08,
+            "success_targets": {
+              "sphere": 1e-08,
+              "rastrigin": 1e-08,
+              "rosenbrock": 1e-08,
+              "ackley": 1e-08,
+              "griewank": 1e-08,
+              "salomon": 1e-08
+            },
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "serial_ring",
+                "architecture": "serial",
+                "topology": "ring"
+              },
+              {
+                "name": "island_global_m2_no_migration",
+                "architecture": "islands",
+                "topology": "global",
+                "islands": 2,
+                "workers": 2,
+                "migration_interval": 0,
+                "migration_topology": "ring"
+              },
+              {
+                "name": "island_global_m4_no_migration",
+                "architecture": "islands",
+                "topology": "global",
+                "islands": 4,
+                "workers": 4,
+                "migration_interval": 0,
+                "migration_topology": "ring"
+              },
+              {
+                "name": "island_global_m8_no_migration",
+                "architecture": "islands",
+                "topology": "global",
+                "islands": 8,
+                "workers": 8,
+                "migration_interval": 0,
+                "migration_topology": "ring"
+              },
+              {
+                "name": "island_global_m4_ring_mig05",
+                "architecture": "islands",
+                "topology": "global",
+                "islands": 4,
+                "workers": 4,
+                "migration_interval": 5,
+                "migration_topology": "ring"
+              },
+              {
+                "name": "island_global_m4_ring_mig20",
+                "architecture": "islands",
+                "topology": "global",
+                "islands": 4,
+                "workers": 4,
+                "migration_interval": 20,
+                "migration_topology": "ring"
+              },
+              {
+                "name": "island_global_m4_ring_mig50",
+                "architecture": "islands",
+                "topology": "global",
+                "islands": 4,
+                "workers": 4,
+                "migration_interval": 50,
+                "migration_topology": "ring"
+              },
+              {
+                "name": "island_global_m4_full_mig20",
+                "architecture": "islands",
+                "topology": "global",
+                "islands": 4,
+                "workers": 4,
+                "migration_interval": 20,
+                "migration_topology": "fully_connected"
+              },
+              {
+                "name": "island_ring_m4_no_migration",
+                "architecture": "islands",
+                "topology": "ring",
+                "islands": 4,
+                "workers": 4,
+                "migration_interval": 0,
+                "migration_topology": "ring"
+              },
+              {
+                "name": "island_ring_m4_ring_mig20",
+                "architecture": "islands",
+                "topology": "ring",
+                "islands": 4,
+                "workers": 4,
+                "migration_interval": 20,
+                "migration_topology": "ring"
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "island_global_m2_no_migration",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "island_global_m4_no_migration",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "island_global_m8_no_migration",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "island_global_m4_ring_mig20",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "island_global_m4_ring_mig05",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "island_global_m4_full_mig20",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "island_global_m4_ring_mig50",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "island_ring_m4_no_migration",
+              "reference": "serial_ring",
+              "metric": "quality"
+            },
+            {
+              "method": "island_ring_m4_ring_mig20",
+              "reference": "serial_ring",
+              "metric": "quality"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "04_strong_scaling",
+      "kind": "performance",
+      "purpose": "Measure strong scaling of exact-equivalent synchronous execution architectures under controlled objective costs.",
+      "studies": [
+        {
+          "id": "n64_work0000",
+          "study": {
+            "benchmarks": [
+              "sphere_work"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 80,
+            "seeds": [
+              22001,
+              22002,
+              22003,
+              22004,
+              22005,
+              22006,
+              22007,
+              22008,
+              22009,
+              22010
+            ],
+            "work_iterations": 0,
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "ms_global_w4",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "ms_global_w8",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 8
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w4",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "pp_global_w8",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 8
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            }
+          ]
+        },
+        {
+          "id": "n64_work0512",
+          "study": {
+            "benchmarks": [
+              "sphere_work"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 80,
+            "seeds": [
+              22001,
+              22002,
+              22003,
+              22004,
+              22005,
+              22006,
+              22007,
+              22008,
+              22009,
+              22010
+            ],
+            "work_iterations": 512,
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "ms_global_w4",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "ms_global_w8",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 8
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w4",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "pp_global_w8",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 8
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            }
+          ]
+        },
+        {
+          "id": "n64_work4096",
+          "study": {
+            "benchmarks": [
+              "sphere_work"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 80,
+            "seeds": [
+              22001,
+              22002,
+              22003,
+              22004,
+              22005,
+              22006,
+              22007,
+              22008,
+              22009,
+              22010
+            ],
+            "work_iterations": 4096,
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "ms_global_w4",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "ms_global_w8",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 8
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w4",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "pp_global_w8",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 8
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            }
+          ]
+        },
+        {
+          "id": "n128_work0000",
+          "study": {
+            "benchmarks": [
+              "sphere_work"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 128,
+            "iterations": 80,
+            "seeds": [
+              22001,
+              22002,
+              22003,
+              22004,
+              22005,
+              22006,
+              22007,
+              22008,
+              22009,
+              22010
+            ],
+            "work_iterations": 0,
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "ms_global_w4",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "ms_global_w8",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 8
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w4",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "pp_global_w8",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 8
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            }
+          ]
+        },
+        {
+          "id": "n128_work0512",
+          "study": {
+            "benchmarks": [
+              "sphere_work"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 128,
+            "iterations": 80,
+            "seeds": [
+              22001,
+              22002,
+              22003,
+              22004,
+              22005,
+              22006,
+              22007,
+              22008,
+              22009,
+              22010
+            ],
+            "work_iterations": 512,
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "ms_global_w4",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "ms_global_w8",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 8
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w4",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "pp_global_w8",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 8
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            }
+          ]
+        },
+        {
+          "id": "n128_work4096",
+          "study": {
+            "benchmarks": [
+              "sphere_work"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 128,
+            "iterations": 80,
+            "seeds": [
+              22001,
+              22002,
+              22003,
+              22004,
+              22005,
+              22006,
+              22007,
+              22008,
+              22009,
+              22010
+            ],
+            "work_iterations": 4096,
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "ms_global_w4",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "ms_global_w8",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 8
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w4",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "pp_global_w8",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 8
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w8",
+              "reference": "serial_global",
+              "metric": "runtime"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

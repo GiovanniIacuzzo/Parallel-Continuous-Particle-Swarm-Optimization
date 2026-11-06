@@ -59,6 +59,7 @@ def test_run_method_exposes_all_pso_reference_variants():
     assert set(METHODS) == {
         "cpso_continuous", "pso_classic_gbest", "pso_inertia_gbest",
         "pso_constriction_gbest", "pso_inertia_lbest_ring", "pso_clpso", "pso_slpso",
+        "pso_spso2011", "pso_fips", "pso_cso", "pso_dms",
     }
     for method in METHODS:
         result = run_method(
@@ -318,8 +319,8 @@ def test_external_campaign_manifest_is_pinned_and_rejects_incompatible_resume(tm
     plan = {"campaign_id": "one", "suite": "bbob", "methods": ["cpso_continuous"]}
     write_campaign_manifest(manifest_path, plan, config)
     first = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert first["provenance"]["project_version"] == "0.7.1"
-    assert first["provenance"]["native"]["c_abi"] == 6
+    assert first["provenance"]["project_version"] == "0.7.4"
+    assert first["provenance"]["native"]["c_abi"] == 7
     assert len(first["provenance"]["source_code_sha256"]) == 64
 
     # An unchanged manifest is accepted without rewriting it.
@@ -349,3 +350,22 @@ def test_bbob_preflight_counts_runs_and_rejects_incompatible_fe_budgets():
             "bbob-largescale", "instances: 1", "dimensions: 20 function_indices: 1",
             budget_multiplier=1, population_size=40, method_count=5,
         )
+
+
+def test_stage_c_configs_include_all_eleven_methods_with_expected_run_counts():
+    expected_methods = set(METHODS)
+    bbob_smoke = json.loads((ROOT / "configs/benchmarks/bbob_stageC_smoke.json").read_text())
+    bbob_pilot = json.loads((ROOT / "configs/benchmarks/bbob_stageC_pilot.json").read_text())
+    bbob_ls_smoke = json.loads((ROOT / "configs/benchmarks/bbob_largescale_stageC_smoke.json").read_text())
+    cec_smoke = json.loads((ROOT / "configs/benchmarks/cec2013_stageC_smoke.json").read_text())
+    cec_pilot = json.loads((ROOT / "configs/benchmarks/cec2013_stageC_pilot.json").read_text())
+
+    for config in (bbob_smoke, bbob_pilot, bbob_ls_smoke, cec_smoke, cec_pilot):
+        assert set(config["methods"]) == expected_methods
+        assert len(config["methods"]) == 11
+
+    assert len(bbob_smoke["methods"]) * 12 == 132
+    assert len(bbob_pilot["methods"]) * 70 == 770
+    assert len(bbob_ls_smoke["methods"]) * 12 == 132
+    assert len(cec_smoke["methods"]) * 1 == 11
+    assert len(cec_pilot["methods"]) * 6 * 3 == 198

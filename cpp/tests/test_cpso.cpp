@@ -4,6 +4,7 @@
 #include "cpso/random_stream.hpp"
 #include "cpso/topology.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -224,6 +225,89 @@ void test_particle_random_stream_derivation() {
         threw = true;
     }
     require(threw, "Particle stream IDs must be one-based");
+}
+
+
+void require_undirected_connected(const cpso::ParticleTopology& topology, const std::string& label) {
+    const std::size_t n = topology.population_size();
+    std::vector<bool> visited(n, false);
+    std::vector<std::size_t> queue{0U};
+    visited[0] = true;
+    for (std::size_t cursor = 0; cursor < queue.size(); ++cursor) {
+        const std::size_t node = queue[cursor];
+        const auto& neighbors = topology.neighbors(node);
+        require(std::is_sorted(neighbors.begin(), neighbors.end()), label + ": neighborhoods must be sorted");
+        require(std::find(neighbors.begin(), neighbors.end(), node) != neighbors.end(),
+                label + ": every neighborhood must contain its own particle");
+        require(std::adjacent_find(neighbors.begin(), neighbors.end()) == neighbors.end(),
+                label + ": neighborhoods must not contain duplicate indices");
+        for (const std::size_t neighbor : neighbors) {
+            if (neighbor == node) {
+                continue;
+            }
+            const auto& reverse = topology.neighbors(neighbor);
+            require(std::find(reverse.begin(), reverse.end(), node) != reverse.end(),
+                    label + ": graph must be undirected");
+            if (!visited[neighbor]) {
+                visited[neighbor] = true;
+                queue.push_back(neighbor);
+            }
+        }
+    }
+    require(queue.size() == n, label + ": graph must be connected");
+}
+
+void test_extended_topology_families() {
+    const cpso::ParticleTopology wheel(cpso::TopologyKind::Wheel, 8U);
+    require_undirected_connected(wheel, "wheel");
+    std::vector<std::size_t> wheel_degrees;
+    for (std::size_t i = 0; i < 8U; ++i) {
+        wheel_degrees.push_back(wheel.neighbors(i).size() - 1U);
+    }
+    std::sort(wheel_degrees.begin(), wheel_degrees.end());
+    require(wheel_degrees.back() == 7U,
+            "PSO wheel must contain one focal particle adjacent to every peripheral particle");
+    require(std::count(wheel_degrees.begin(), wheel_degrees.end(), 1U) == 7,
+            "PSO wheel peripheral nodes must connect only to the focal particle");
+
+    const cpso::ParticleTopology random_a(cpso::TopologyKind::RandomConnected, 40U, 0U, 0U, 12345U, 4U);
+    const cpso::ParticleTopology random_b(cpso::TopologyKind::RandomConnected, 40U, 0U, 0U, 12345U, 4U);
+    require_undirected_connected(random_a, "random-connected");
+    for (std::size_t i = 0; i < 40U; ++i) {
+        require(random_a.neighbors(i) == random_b.neighbors(i),
+                "Random topology must be deterministic for a fixed topology seed");
+    }
+
+    const cpso::ParticleTopology small_world_ring(
+        cpso::TopologyKind::SmallWorld, 12U, 0U, 0U, 77U, 4U, 0.0);
+    require_undirected_connected(small_world_ring, "small-world beta=0");
+    require(small_world_ring.neighbors(0U) == std::vector<std::size_t>({0U, 1U, 2U, 10U, 11U}),
+            "Watts-Strogatz beta=0 must recover a degree-four periodic ring lattice");
+    const cpso::ParticleTopology small_world(
+        cpso::TopologyKind::SmallWorld, 40U, 0U, 0U, 991U, 4U, 0.2);
+    std::size_t small_world_degree_sum = 0U;
+    for (std::size_t i = 0; i < 40U; ++i) {
+        require(std::find(small_world.neighbors(i).begin(), small_world.neighbors(i).end(), i)
+                    != small_world.neighbors(i).end(),
+                "Small-world neighborhoods must include self");
+        small_world_degree_sum += small_world.neighbors(i).size() - 1U;
+    }
+    require(small_world_degree_sum == 40U * 4U,
+            "Watts-Strogatz rewiring must preserve the total number of undirected edges");
+
+    const cpso::ParticleTopology scale_free(cpso::TopologyKind::ScaleFree, 40U, 0U, 0U, 2026U, 4U);
+    const cpso::ParticleTopology scale_free_replay(cpso::TopologyKind::ScaleFree, 40U, 0U, 0U, 2026U, 4U);
+    require_undirected_connected(scale_free, "scale-free");
+    std::vector<std::size_t> scale_free_degrees;
+    for (std::size_t i = 0; i < 40U; ++i) {
+        scale_free_degrees.push_back(scale_free.neighbors(i).size() - 1U);
+        require(scale_free.neighbors(i) == scale_free_replay.neighbors(i),
+                "Scale-free topology must be deterministic for a fixed seed");
+    }
+    const auto [minimum_degree, maximum_degree] = std::minmax_element(
+        scale_free_degrees.begin(), scale_free_degrees.end());
+    require(*maximum_degree > *minimum_degree,
+            "Scale-free topology should have a non-uniform degree distribution");
 }
 
 void test_topology_neighborhoods() {
@@ -559,6 +643,10 @@ void test_particle_parallel_exact_equivalence() {
         cpso::TopologyKind::GlobalBest,
         cpso::TopologyKind::Ring,
         cpso::TopologyKind::GridVonNeumann,
+        cpso::TopologyKind::Wheel,
+        cpso::TopologyKind::RandomConnected,
+        cpso::TopologyKind::SmallWorld,
+        cpso::TopologyKind::ScaleFree,
     };
     for (const cpso::TopologyKind topology : topologies) {
         cpso::Config config = base;
@@ -726,6 +814,7 @@ int main() {
         test_master_slave_equivalence();
         test_particle_random_stream_derivation();
         test_topology_neighborhoods();
+        test_extended_topology_families();
         test_topology_validation();
         test_topology_optimizer_and_parallel_equivalence();
         test_master_slave_parallel_initial_evaluations();

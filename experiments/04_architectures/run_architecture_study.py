@@ -210,7 +210,10 @@ def validate_study(study: dict[str, Any]) -> None:
         names.add(name)
         if architecture not in SUPPORTED_ARCHITECTURES:
             raise ValueError(f"Unsupported architecture {architecture!r}; choose from {sorted(SUPPORTED_ARCHITECTURES)}")
-        if topology not in ("global", "ring", "grid_von_neumann"):
+        if topology not in (
+            "global", "ring", "grid_von_neumann", "wheel", "random",
+            "small_world", "scale_free",
+        ):
             raise ValueError(f"Unsupported particle topology {topology!r}")
         if architecture == "serial":
             serial_topologies.add(topology)
@@ -231,11 +234,21 @@ def validate_study(study: dict[str, Any]) -> None:
             if isinstance(workers, bool) or not isinstance(workers, int) or not 1 <= workers <= island_count:
                 raise ValueError(f"Method {name}: workers must lie in [1,islands]")
             if topology == "grid_von_neumann":
-                raise ValueError("The current island backend supports global/ring inner topology, not a grid")
+                raise ValueError("The current island backend does not support a grid inner topology")
             if int(study["population_size"]) % island_count != 0:
                 raise ValueError(f"Method {name}: population_size must divide evenly across islands")
-            if int(study["population_size"]) // island_count < 2:
+            local_population = int(study["population_size"]) // island_count
+            if local_population < 2:
                 raise ValueError(f"Method {name}: each island must contain at least two particles")
+            degree = int(method.get("topology_degree", study.get("topology_degree", 4)))
+            if topology == "wheel" and local_population < 2:
+                raise ValueError(f"Method {name}: wheel inner topology requires at least two particles per island")
+            if topology == "random" and not 1 <= degree < local_population:
+                raise ValueError(f"Method {name}: random inner topology requires 1 <= degree < island population")
+            if topology == "small_world" and not 2 <= degree < local_population:
+                raise ValueError(f"Method {name}: small-world inner topology degree must be smaller than island population")
+            if topology == "scale_free" and local_population < degree // 2 + 1:
+                raise ValueError(f"Method {name}: scale-free inner topology has too few particles per island")
             if method.get("migration_topology", "ring") not in {"ring", "fully_connected"}:
                 raise ValueError(f"Method {name}: migration_topology must be ring or fully_connected")
             migration_interval = method.get("migration_interval", 0)
@@ -308,6 +321,10 @@ def make_cpso_config(study: dict[str, Any], benchmark: str, dimension: int, seed
         topology=topology,
         grid_rows=rows,
         grid_columns=columns,
+        topology_degree=int(method.get("topology_degree", study.get("topology_degree", 4))),
+        topology_rewiring_probability=float(
+            method.get("topology_rewiring_probability", study.get("topology_rewiring_probability", 0.15))
+        ),
     )
 
 
@@ -350,6 +367,8 @@ def method_record(method: dict[str, Any]) -> dict[str, Any]:
         "island_count": int(method.get("islands", 1)),
         "migration_interval": int(method.get("migration_interval", 0)),
         "migration_topology": method.get("migration_topology", "none"),
+        "topology_degree": int(method.get("topology_degree", 4)),
+        "topology_rewiring_probability": float(method.get("topology_rewiring_probability", 0.15)),
     }
 
 
@@ -524,7 +543,12 @@ def execute_study(study: dict[str, Any], output: Path, no_plots: bool = False,
             result = invoke_method(config, benchmark, method, work_iterations)
             validate_result(result, config.population_size, config.iterations, method)
             target = float(target_map.get(benchmark, target_default))
-            record = result_to_record(study_hash, benchmark, dimension, seed, method, result, target)
+            recorded_method = {
+                **method,
+                "topology_degree": config.topology_degree,
+                "topology_rewiring_probability": config.topology_rewiring_probability,
+            }
+            record = result_to_record(study_hash, benchmark, dimension, seed, recorded_method, result, target)
             record["run_wall_seconds_driver"] = time.perf_counter() - started
             stream.write(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n")
             stream.flush()
@@ -589,7 +613,8 @@ def materialize_tables(records: list[dict[str, Any]], output: Path) -> None:
     run_fields = [
         "run_key", "benchmark", "dimension", "population_size", "iterations", "seed",
         "method", "architecture", "topology", "workers", "island_count", "migration_interval",
-        "migration_topology", "best_value", "success_target", "success", "evaluations_to_target",
+        "migration_topology", "topology_degree", "topology_rewiring_probability",
+        "best_value", "success_target", "success", "evaluations_to_target",
         "function_evaluations", "elapsed_seconds", "evaluation_wall_seconds", "propagation_wall_seconds",
         "topology_setup_seconds", "social_selection_seconds", "initialization_seconds",
         "propagation_worker_seconds", "evaluation_worker_seconds", "migration_seconds",

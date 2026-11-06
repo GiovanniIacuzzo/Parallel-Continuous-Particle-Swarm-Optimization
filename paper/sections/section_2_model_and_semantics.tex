@@ -1,0 +1,85 @@
+\section{Modello matematico e semantica operativa}
+\label{sec:model}
+
+\subsection{Stato della particella e dinamica a coefficienti congelati}
+
+Sia $N$ il numero di particelle e $D$ la dimensione dello spazio decisionale. Per la particella $i$ allo step osservativo $k$ indichiamo con $x_i^k,v_i^k\in\mathbb{R}^D$ posizione e velocità, con $p_i^k$ la posizione del migliore personale e con $s_i^k$ il leader sociale determinato dalla topologia scelta. Il valore obiettivo è $J(x)$. Il modello implementato aggiorna la dinamica su intervalli di durata $\Delta t$ nei quali coefficienti casuali, memoria personale, informazione sociale e parametro di inerzia restano congelati.
+
+Per ogni particella e intervallo vengono estratti due scalari $r_{1,i}^k,r_{2,i}^k\in[0,1)$. Poniamo
+\begin{equation}
+  a_i^k=c_1r_{1,i}^k,\qquad b_i^k=c_2r_{2,i}^k,
+  \qquad q_i^k=a_i^k+b_i^k,
+  \label{eq:frozen-coefficients}
+\end{equation}
+e definiamo $F_i^k=a_i^kp_i^k+b_i^ks_i^k$. Per ogni coordinata $j$ la traiettoria locale soddisfa
+\begin{equation}
+  \ddot{x}_{i,j}(t)+(1-\mu_k)\dot{x}_{i,j}(t)
+  +q_i^kx_{i,j}(t)=F_{i,j}^k,
+  \quad t\in[0,\Delta t],
+  \label{eq:cpso-frozen-ode}
+\end{equation}
+con condizioni iniziali $x_{i,j}(0)=x_{i,j}^k$ e $\dot{x}_{i,j}(0)=v_{i,j}^k$. Gli scalari casuali sono condivisi da tutte le coordinate della stessa particella nello stesso intervallo, secondo la convenzione del modello verificato e implementato.
+
+Quando $q_i^k>0$, l'equilibrio della dinamica congelata è $x_{i,j}^{\mathrm{eq}}=F_{i,j}^k/q_i^k$. La parte omogenea ha equazione caratteristica
+\begin{equation}
+  \lambda^2+(1-\mu_k)\lambda+q_i^k=0,
+  \qquad \alpha_k=\frac{1-\mu_k}{2}.
+  \label{eq:characteristic}
+\end{equation}
+Il propagatore $\Phi_{\Delta t}$ è valutato analiticamente nei regimi sottosmorzato, criticamente smorzato e sovrasmorzato; il caso $q_i^k=0$ è trattato separatamente. Non viene impiegato un integratore temporale numerico per approssimare la traiettoria all'interno dell'intervallo. La funzione obiettivo è valutata soltanto all'estremo $t=\Delta t$.
+
+Per una run con $K$ aggiornamenti, il parametro di inerzia varia secondo
+\begin{equation}
+  \mu_k=\mu_{\max}-(\mu_{\max}-\mu_{\min})\frac{k}{K-1},
+  \qquad k=0,\ldots,K-1,
+  \label{eq:inertia-schedule}
+\end{equation}
+quando $K>1$; per $K\leq1$ viene utilizzato $\mu_{\max}$. Le posizioni iniziali sono campionate uniformemente e indipendentemente per coordinata nell'intervallo ammissibile. Le velocità iniziali seguono
+\begin{equation}
+  v_{i,j}^0\sim U\!\left[-\rho(u_j-\ell_j),\\
+                          \rho(u_j-\ell_j)\right],
+  \label{eq:initial-velocity}
+\end{equation}
+con $\rho$ pari al parametro \texttt{initial\_velocity\_fraction}.
+
+\subsection{Vincoli, memoria e topologia sociale}
+
+La soluzione analitica viene seguita da una mappa discreta di gestione dei vincoli. Se una coordinata oltrepassa il limite inferiore $\ell_j$, la posizione viene proiettata su $\ell_j$ e una velocità uscente viene sostituita con $-e v_{i,j}$; il caso del limite superiore $u_j$ è simmetrico. Il coefficiente $e\in[0,1]$ è il parametro di restituzione. Questa mappa è una regola algoritmica applicata agli estremi degli intervalli, non una condizione al contorno dell'ODE. Non vengono rilevati attraversamenti multipli all'interno dello stesso intervallo: la posizione intermedia della traiettoria analitica non viene monitorata.
+
+Il miglior personale è aggiornato soltanto in presenza di miglioramento stretto,
+\begin{equation}
+  p_i^{k+1}=\begin{cases}
+    x_i^{k+1},&J(x_i^{k+1})<J(p_i^k),\\
+    p_i^k,&\text{altrimenti}.
+  \end{cases}
+  \label{eq:personal-best}
+\end{equation}
+I pareggi nella selezione di un leader sociale sono risolti scegliendo l'indice di particella minore. Le sette topologie implementate sono: (i) globale, nella quale tutte le particelle condividono il migliore personale dell'intera popolazione; (ii) anello periodico di raggio uno; (iii) griglia toroidale di von Neumann, con sé stessa e i quattro vicini ortogonali; (iv) wheel PSO hub-and-spoke, con un solo focal particle collegato a tutte le altre particelle e senza archi tra i nodi periferici; (v) grafo random connesso ER-like, ottenuto campionando gli archi con probabilità $p=d_{\mathrm{target}}/(N-1)$ e aggiungendo archi ponte tra componenti se necessario; (vi) small-world di Watts--Strogatz, costruito da un reticolo ad anello di grado $k=4$ con rewiring indipendente di probabilità $\beta=0.15$; (vii) grafo scale-free di Barab\'asi--Albert, generato a partire da una clique iniziale di $m+1$ nodi con attachment preferenziale $m=2$. Le costruzioni richiamano modelli consolidati di rete e topologia PSO \citep{Kennedy1999Topology,ErdosRenyi1959,WattsStrogatz1998,BarabasiAlbert1999,LiuScaleFreePSO2014}. Il grafo random è connesso per costruzione dopo l'aggiunta degli archi ponte; il small-world non viene riparato se il rewiring lo rende disconnesso. I grafi sono generati una volta per run da un seme dedicato e restano statici. Le topologie hanno profili di grado differenti e il confronto è quindi tra famiglie canoniche complete, non un effetto causale della sola forma del grafo a grado medio fissato. La griglia richiede $RC=N$ e dimensioni almeno pari a due; non è attualmente ammessa come topologia interna del modello a isole.
+
+\subsection{Semantica sincrona e proprietà di equivalenza}
+
+In una generazione sincrona, tutti i leader sociali vengono selezionati dallo stesso snapshot $P^k=(p_1^k,\ldots,p_N^k)$. I propagatori e le valutazioni obiettivo possono essere eseguiti in qualunque ordine perché ciascun risultato è scritto nello slot associato alla particella. Gli stati personali e globali sono poi aggiornati in ordine deterministico degli indici. Master--slave parallelizza soltanto le valutazioni obiettivo; particle-parallel parallelizza anche inizializzazione e propagazione delle particelle, mantenendo lo snapshot sociale congelato e il commit ordinato.
+
+\begin{proposition}[Invarianza rispetto alla schedulazione sincrona]
+\label{prop:synchronous-equivalence}
+Si considerino una configurazione e un seme fissati. Si assumano: (i) funzione obiettivo deterministica e priva di effetti collaterali, thread-safe quando invocata in parallelo; (ii) stato pseudocasuale assegnato a ciascuna particella e consumato esclusivamente da essa; (iii) selezione dei leader dallo stesso snapshot pre-generazione; (iv) identiche mappe di propagazione, gestione dei vincoli, regole di miglioramento e tie-breaking; (v) commit deterministico in ordine di indice. Allora le esecuzioni seriale, master--slave e particle-parallel producono la stessa sequenza di stati osservati, degli incumbent e dei valori best-so-far, a meno delle differenze dovute a un diverso ambiente floating-point o a una diversa implementazione della funzione obiettivo.
+\end{proposition}
+
+\begin{proof}
+All'inizializzazione, ogni particella usa lo stream pseudocasuale associato al proprio indice e genera quindi lo stesso stato iniziale nelle tre esecuzioni. Supponiamo per induzione che, all'inizio della generazione $k$, posizioni, velocità, migliori personali e stati pseudocasuali coincidano. La selezione sociale dipende soltanto dallo snapshot comune $P^k$ e dalla stessa topologia, perciò ogni particella riceve il medesimo attrattore. Lo stream privato della particella produce la stessa coppia $(r_{1,i}^k,r_{2,i}^k)$, indipendentemente dal thread che ne esegue il lavoro. La stessa mappa analitica e la stessa mappa dei vincoli producono dunque la medesima posizione candidata; la deterministica funzione obiettivo restituisce lo stesso valore. Le computazioni per particelle diverse non modificano lo stato condiviso prima del commit e i risultati vengono scritti in posizioni indicizzate. Il commit, eseguito con il medesimo ordine e le medesime regole di confronto, genera gli stessi migliori personali e lo stesso incumbent globale. Gli stream pseudocasuali hanno consumato lo stesso numero di estrazioni e restano allineati. Lo stato completo all'inizio di $k+1$ coincide, chiudendo il passo induttivo.
+\end{proof}
+
+La proposizione esplicita il contratto algoritmico che motiva il test di equivalenza implementativo. In aritmetica floating-point fissata e usando la stessa libreria di obiettivo, il progetto verifica l'uguaglianza esatta dei risultati osservati. Non ne segue equivalenza per funzioni obiettivo non deterministiche, non thread-safe, o per esecuzioni su compilatori e architetture floating-point differenti.
+
+\subsection{Semantica asincrona e a isole}
+
+Nell'architettura event-driven, dopo l'inizializzazione viene inserito in una coda un evento $(i,0)$ per ciascuna particella. Un evento $(i,k)$ legge sotto mutex il migliore personale della particella e l'attrattore sociale corrente, propaga e valuta il candidato, pubblica immediatamente un eventuale miglioramento e reinserisce $(i,k+1)$ nella coda, se richiesto. Una particella non ha due eventi simultaneamente in volo: il successivo evento viene inserito soltanto dopo il completamento del precedente. Non esiste tuttavia una barriera globale di generazione; con più worker, l'ordine di completamento e quindi gli snapshot sociali osservati può dipendere dalla schedulazione.
+
+Nel modello a isole la popolazione totale $N$ è divisa in $M$ sottopopolazioni uguali. Ogni isola esegue una generazione sincrona indipendente. Quando è previsto un evento di migrazione, gli incumbent di tutte le isole vengono copiati in uno snapshot immutabile; solo dopo aver costruito tale snapshot sono applicate le sostituzioni. La migrazione ad anello invia l'incumbent dell'isola precedente, mentre quella fully-connected seleziona il migliore incumbent tra le altre isole. L'immigrato sostituisce il peggiore migliore personale solo se strettamente migliore e la velocità del destinatario viene azzerata. Un emigrante possiede già il proprio valore obiettivo, pertanto la migrazione non aumenta il numero di valutazioni.
+
+Tutte le modalità mantengono il budget complessivo
+\begin{equation}
+  N_{\mathrm{FE}}=N(K+1),
+  \label{eq:fe-budget}
+\end{equation}
+comprensivo della valutazione iniziale di ogni particella. Le storie sincrone sono registrate a ogni generazione; quella asincrona dopo ogni evento di aggiornamento e include esplicitamente l'asse delle valutazioni. Per costruzione, le modalità asincrone e a isole sono algoritmi con dinamiche differenti e il loro rapporto di tempo con il riferimento non viene denominato speedup parallelo.

@@ -1,0 +1,225 @@
+{
+  "campaign_id": "cpso_dynamics_pilot_v071",
+  "title": "Asynchronous and island CPSO dynamics pilot under matched FE budgets",
+  "schedule_seed": 20261108,
+  "study_notes": {
+    "design": "Pilot only: five seeds per function-dimension pair, six built-in objectives, D=30/100, N=64 and 200 update iterations.",
+    "fixed_budget": "FE=N*(iterations+1)=12,864 for every run.",
+    "semantics": "Asynchronous and island methods intentionally change the update dynamics; compare quality distributions against the matching serial topology, not exact trajectories.",
+    "scope": "This is a pre-confirmatory pilot. It does not replace the 30-seed definitive study."
+  },
+  "stages": [
+    {
+      "id": "01_asynchronous_quality",
+      "kind": "quality",
+      "purpose": "Measure how event-driven updates and worker count affect quality under the same FE budget, separately for global and ring social information.",
+      "studies": [
+        {
+          "id": "async_global_and_ring_d30_d100",
+          "study": {
+            "benchmarks": [
+              "sphere",
+              "rastrigin",
+              "rosenbrock",
+              "ackley",
+              "griewank",
+              "salomon"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 200,
+            "seeds": [
+              41001,
+              41002,
+              41003,
+              41004,
+              41005
+            ],
+            "success_target_default": 1e-08,
+            "check_equivalence": false,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "async_global_w2",
+                "architecture": "asynchronous",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "async_global_w4",
+                "architecture": "asynchronous",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "serial_ring",
+                "architecture": "serial",
+                "topology": "ring"
+              },
+              {
+                "name": "async_ring_w2",
+                "architecture": "asynchronous",
+                "topology": "ring",
+                "workers": 2
+              },
+              {
+                "name": "async_ring_w4",
+                "architecture": "asynchronous",
+                "topology": "ring",
+                "workers": 4
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "async_global_w2",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "async_global_w4",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "async_ring_w2",
+              "reference": "serial_ring",
+              "metric": "quality"
+            },
+            {
+              "method": "async_ring_w4",
+              "reference": "serial_ring",
+              "metric": "quality"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "02_island_quality",
+      "kind": "quality",
+      "purpose": "Measure island count, migration interval/topology and within-island social topology against serial global/ring references under the same FE budget.",
+      "studies": [
+        {
+          "id": "island_migration_and_topology_d30_d100",
+          "study": {
+            "benchmarks": [
+              "sphere",
+              "rastrigin",
+              "rosenbrock",
+              "ackley",
+              "griewank",
+              "salomon"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 200,
+            "seeds": [
+              41001,
+              41002,
+              41003,
+              41004,
+              41005
+            ],
+            "success_target_default": 1e-08,
+            "check_equivalence": false,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.7,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "serial_ring",
+                "architecture": "serial",
+                "topology": "ring"
+              },
+              {
+                "name": "island_global_m2_no_migration",
+                "architecture": "islands",
+                "topology": "global",
+                "islands": 2,
+                "workers": 2,
+                "migration_interval": 0,
+                "migration_topology": "ring"
+              },
+              {
+                "name": "island_global_m4_ring_mig20",
+                "architecture": "islands",
+                "topology": "global",
+                "islands": 4,
+                "workers": 4,
+                "migration_interval": 20,
+                "migration_topology": "ring"
+              },
+              {
+                "name": "island_global_m4_full_mig20",
+                "architecture": "islands",
+                "topology": "global",
+                "islands": 4,
+                "workers": 4,
+                "migration_interval": 20,
+                "migration_topology": "fully_connected"
+              },
+              {
+                "name": "island_ring_m4_ring_mig20",
+                "architecture": "islands",
+                "topology": "ring",
+                "islands": 4,
+                "workers": 4,
+                "migration_interval": 20,
+                "migration_topology": "ring"
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "island_global_m2_no_migration",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "island_global_m4_ring_mig20",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "island_global_m4_full_mig20",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "island_ring_m4_ring_mig20",
+              "reference": "serial_ring",
+              "metric": "quality"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

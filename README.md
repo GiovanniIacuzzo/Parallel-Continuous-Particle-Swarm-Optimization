@@ -40,7 +40,7 @@ retained for standard `cocopp` post-processing. CEC 2013 LSGO is accessed throug
 an optional third-party Python wrapper, which is not vendored. Review its
 license before installing or redistributing an environment containing it.
 
-The benchmark campaign compares seven algorithms under an exactly matched
+The benchmark campaign compares eleven algorithms under an exactly matched
 function-evaluation budget:
 
 - `cpso_continuous`: the native continuous-time CPSO implementation;
@@ -49,17 +49,20 @@ function-evaluation budget:
 - `pso_constriction_gbest`: constriction-factor global-best PSO;
 - `pso_inertia_lbest_ring`: inertia-weight local-best PSO on a periodic ring;
 - `pso_clpso`: comprehensive-learning PSO with per-coordinate pbest exemplars;
-- `pso_slpso`: social-learning PSO designed for scalable/large-scale optimization.
+- `pso_slpso`: social-learning PSO designed for scalable/large-scale optimization;
+- `pso_spso2011`: SPSO-2011 informant topology and hypersphere update;
+- `pso_fips`: fully informed PSO on a periodic degree-two ring;
+- `pso_cso`: competitive swarm optimizer with pairwise winner/loser learning;
+- `pso_dms`: dynamic multi-swarm PSO with periodic random regrouping.
 
-The first four PSO variants are transparent classical reference baselines;
-CLPSO and SL-PSO are literature-derived comparators for multimodal and
-large-scale search, respectively. This is a representative comparison set,
-not a claim that the methods form a universal or exhaustive current SOTA set.
+The four classical variants provide transparent reference baselines;
+CLPSO, SL-PSO, SPSO-2011, FIPS, CSO and DMS-PSO add literature-derived
+learning, neighborhood, competition and multi-swarm mechanisms. This is a
+representative comparison set, not a universal or exhaustive current SOTA set.
 The SL-PSO implementation uses the project-fixed population to preserve equal
 FE accounting, rather than the paper's dimension-dependent population default.
-Both literature-derived methods retain the shared project boundary map. Update
-laws, parameter choices, randomization and boundary handling are recorded in
-`docs/external_benchmarks_and_pso_baselines.md`. Methods share population,
+Algorithm-specific and project-adapted boundary rules are recorded in
+`docs/stage_c_pso_baselines.md` and `docs/external_benchmarks_and_pso_baselines.md`. Methods share population,
 search bounds, deterministic problem/seed key and exact FE budget; algorithmic
 random streams and initial coordinates are not forced to match.
 
@@ -147,9 +150,10 @@ The smoke configurations are integration checks only; they are not suitable
 for ranking algorithms or drawing scientific conclusions. Start with a smaller
 pre-confirmatory subset and pin the external package versions before launching
 any confirmatory campaign. The BBOB and BBOB-Large-Scale configurations each
-contain 15,120 method-problem runs at the selected full suite settings. CEC
-2013 LSGO contains 2,625 method-function-seed runs and 7.875 billion total FE
-across the seven methods. These are substantial compute campaigns: do not launch
+contain 23,760 method-problem runs at the selected full suite settings. CEC
+2013 LSGO contains 4,125 method-function-seed runs and 12.375 billion total FE
+across the eleven methods. The corresponding FE totals are 3.168 billion for
+BBOB and 49.896 billion for BBOB-LargeScale. These are substantial compute campaigns: do not launch
 them until the smoke tests, package environment, storage capacity and run-time
 budget have been checked.
 
@@ -204,8 +208,9 @@ optimization-quality tables.
 ## Scope and scientific limitations
 
 The current native engine exposes six analytic objectives and one separately
-marked synthetic `sphere_work` objective. External suite adapters and six
-reference PSO baselines are implemented in a separate serial evaluation layer;
+marked synthetic `sphere_work` objective. External suite adapters and ten
+reference PSO variants (including SPSO-2011, FIPS, CSO and DMS-PSO) are
+implemented in a separate serial evaluation layer;
 this does not make the native parallel execution backends compatible with
 arbitrary Python objectives. COCO/CEC runs compare search quality at matched FE
 budgets, not parallel wall-time speedup. No external benchmark results are
@@ -221,7 +226,7 @@ reproduction.
 
 ## Package and ABI versions
 
-Project/package version: `0.7.1`. Native C ABI version: `6`. The ABI 6
+Project/package version: `0.7.4`. Native C ABI version: `7`. The ABI 7
 addition provides a custom serial objective callback; it is deliberately
 restricted to the serial execution architecture. The version numbers are
 separate and are checked when the Python wrapper loads the native library.
@@ -231,3 +236,24 @@ architecture study and the newly specified external benchmark protocol. It
 does not contain definitive external benchmark results or conclusions. The
 project license is intentionally unset until the rights holder confirms it;
 see `docs/license_status.md`.
+
+## Stage C — extended PSO comparison
+
+The Stage C pilots use all eleven methods (CPSO plus ten PSO-derived
+comparators). They are separate from the older smoke/pre-confirmatory configs:
+
+```bash
+PYTHONPATH=python python experiments/05_external_benchmarks/run_bbob.py \
+  --config configs/benchmarks/bbob_stageC_smoke.json --dry-run
+PYTHONPATH=python python experiments/05_external_benchmarks/run_bbob.py \
+  --config configs/benchmarks/bbob_largescale_stageC_smoke.json --dry-run
+PYTHONPATH=python python experiments/05_external_benchmarks/run_cec2013_lsgo.py \
+  --config configs/benchmarks/cec2013_stageC_smoke.json --dry-run
+```
+
+After preflight, run the same commands without `--dry-run` and provide an
+explicit `--output` directory. Only after all three real smoke campaigns pass,
+run `bbob_stageC_pilot.json`, `cec2013_stageC_pilot.json`, and the broader
+`bbob_largescale_preconfirmatory.json` campaign. The methods, update laws,
+constraints and parameter policies are documented in
+`docs/stage_c_pso_baselines.md`.

@@ -1,0 +1,139 @@
+\section{Risultati sperimentali}
+\label{sec:results}
+
+Questa sezione sarà compilata dopo l'esecuzione delle campagne. I pilot locali
+servono a verificare le pipeline e a formulare ipotesi; le conclusioni
+confermative saranno basate sui risultati ottenuti con i protocolli e le
+configurazioni congelati. Ogni tabella deve riportare il numero di run
+complete, le FE effettive, i seed e le funzioni incluse; i risultati non
+completi non devono essere aggregati come se fossero una campagna conclusa.
+
+\subsection{Equivalenza delle modalità sincrone}
+\label{sec:results-equivalence}
+
+Da riportare: percentuale di run appaiate con identità esatta di best value,
+posizione e cronologia best-so-far; eventuali mismatch, loro riproducibilità e
+causa. L'esito deve essere verificato per master--slave e particle-parallel a
+ciascun numero di worker. Non è sufficiente confrontare soltanto il valore
+finale.
+
+\IfFileExists{figures/internal_pilots/fig_01_synchronous_equivalence.pdf}{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_01_synchronous_equivalence.pdf}
+  \caption{Controllo dell'equivalenza esatta tra esecutori sincroni.}
+  \label{fig:synchronous-equivalence}
+\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: \texttt{fig\_01\_synchronous\_equivalence.pdf}.}}}
+
+\subsection{Scaling e costo dell'esecutore}
+\label{sec:results-scaling}
+
+Da riportare: tempi appaiati, speedup, efficienza parallela e intervalli di
+incertezza per master--slave e particle-parallel. Separare i tre livelli di
+costo della funzione obiettivo (nessun lavoro aggiuntivo, carico intermedio e
+carico elevato) e le dimensioni/population size previste. I tempi assoluti
+sono riferiti esclusivamente alla macchina descritta nel manifest.
+
+\IfFileExists{figures/internal_pilots/fig_02_strong_scaling.pdf}{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_02_strong_scaling.pdf}
+  \caption{Strong scaling degli esecutori CPSO sincroni.}
+  \label{fig:strong-scaling}
+\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: \texttt{fig\_02\_strong\_scaling.pdf}.}}}
+
+\IfFileExists{figures/internal_pilots/fig_03_parallel_efficiency.pdf}{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_03_parallel_efficiency.pdf}
+  \caption{Efficienza parallela per i backend sincroni.}
+  \label{fig:parallel-efficiency}
+\end{figure}}{}
+
+\subsection{Aggiornamento asincrono}
+\label{sec:results-async}
+
+Da riportare: qualità best-so-far e successo a budget FE fissato, distribuzione
+dei tempi, sensibilità al numero di worker e alla topologia sociale. Il
+confronto con il seriale è algoritmico, non uno speedup a traiettoria invariata.
+
+\IfFileExists{figures/internal_pilots/fig_05_asynchronous_quality.pdf}{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_05_asynchronous_quality.pdf}
+  \caption{Confronto esplorativo della qualità per la modalità event-driven.}
+  \label{fig:asynchronous-quality}
+\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: \texttt{fig\_05\_asynchronous\_quality.pdf}.}}}
+
+\subsection{Architettura a isole}
+\label{sec:results-islands}
+
+Da riportare: confronto FE-matched al variare di numero di isole, topologia
+intra-isola e politica di migrazione; quota di migrazioni accettate e costi di
+comunicazione, se disponibili. Distinguere l'effetto della decomposizione da
+quello della migrazione.
+
+\IfFileExists{figures/internal_pilots/fig_06_island_quality.pdf}{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_06_island_quality.pdf}
+  \caption{Confronto esplorativo della qualità nel modello a isole.}
+  \label{fig:island-quality}
+\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: \texttt{fig\_06\_island\_quality.pdf}.}}}
+
+\subsection{Espansione alle sette topologie}
+\label{sec:results-topologies}
+
+Da riportare: qualità per funzione e dimensione, ranghi aggregati con unità
+statistiche corrette, costo della selezione sociale e verifica dell'equivalenza
+tra esecutori sincroni per topologia. La campagna a sette topologie non è
+confusa con la campagna architetturale principale a tre topologie.
+
+\IfFileExists{figures/internal_pilots/fig_08_current_topology_quality.pdf}{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_08_current_topology_quality.pdf}
+  \caption{Confronto delle sette famiglie topologiche nel pilot dedicato.}
+  \label{fig:seven-topologies}
+\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: \texttt{fig\_08\_current\_topology\_quality.pdf}.}}}
+
+\subsection{Benchmark esterni: COCO BBOB e BBOB-LargeScale}
+\label{sec:results-bbob}
+
+Per ogni suite saranno riportate le ECDF e le misure runtime-to-target prodotte
+con il post-processing ufficiale COCO. Le tabelle accessorie con i ranghi
+finali sono descrittive e non sostituiscono le metriche anytime. I risultati
+BBOB standard e BBOB-LargeScale saranno analizzati separatamente.
+
+\IfFileExists{figures/external_pilots/rank_cpso_bbob_stageC_pilot_v1_final_best_value.pdf}{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/external_pilots/rank_cpso_bbob_stageC_pilot_v1_final_best_value.pdf}
+  \caption{Ranghi finali appaiati nel pilot COCO BBOB; analisi descrittiva.}
+  \label{fig:bbob-pilot-ranks}
+\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: report COCO/cocopp e ranghi descrittivi BBOB.}}}
+
+\subsection{Benchmark esterno: CEC 2013 LSGO}
+\label{sec:results-cec}
+
+Da riportare: andamento best-so-far ai checkpoint FE, statistiche per funzione,
+mediane aggregate e confronti appaiati. I risultati del pilot a sei funzioni,
+tre semi e 120\,000 FE saranno esplicitamente descritti come preliminari; le
+conclusioni sulla suite richiederanno tutte le funzioni, i seed e il budget
+confirmatory.
+
+\IfFileExists{figures/external_pilots/rank_cpso_cec2013_stageC_pilot_v1_best_at_120000_FE.pdf}{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/external_pilots/rank_cpso_cec2013_stageC_pilot_v1_best_at_120000_FE.pdf}
+  \caption{Ranghi al checkpoint finale del pilot CEC 2013 LSGO.}
+  \label{fig:cec-pilot-ranks}
+\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: riepilogo CEC ai checkpoint FE.}}}
+
+\subsection{Sintesi dei risultati}
+\label{sec:results-summary}
+
+Questa sottosezione conterrà una sintesi delle risposte alle RQ1--RQ5,
+separando invarianti dimostrate e verificate, osservazioni empiriche e ipotesi
+non supportate. Non saranno formulate graduatorie universali sulla base dei
+soli pilot locali.
