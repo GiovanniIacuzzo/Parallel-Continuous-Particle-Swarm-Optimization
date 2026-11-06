@@ -19,6 +19,8 @@ METHODS = {
     "pso_inertia_gbest": ("pso", "inertia_gbest"),
     "pso_constriction_gbest": ("pso", "constriction_gbest"),
     "pso_inertia_lbest_ring": ("pso", "inertia_lbest_ring"),
+    "pso_clpso": ("pso", "clpso"),
+    "pso_slpso": ("pso", "slpso"),
 }
 
 
@@ -58,7 +60,7 @@ def collect_external_provenance(config_path: Path) -> dict[str, Any]:
         except importlib.metadata.PackageNotFoundError:
             packages[distribution] = None
     return {
-        "project_version": "0.7.0",
+        "project_version": "0.7.1",
         "config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
         "source_code_sha256": source_hash.hexdigest(),
         "platform": {

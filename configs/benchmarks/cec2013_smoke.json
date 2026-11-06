@@ -16,6 +16,8 @@
     "pso_classic_gbest",
     "pso_inertia_gbest",
     "pso_constriction_gbest",
-    "pso_inertia_lbest_ring"
+    "pso_inertia_lbest_ring",
+    "pso_clpso",
+    "pso_slpso"
   ]
 }

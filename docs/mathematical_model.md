@@ -218,8 +218,8 @@ exceed wall time. They must not be substituted for elapsed wall time.
   Rosenbrock, Ackley, Griewank, and Salomon. `sphere_work` is only a synthetic
   execution-cost instrument and is not an optimization benchmark result.
 - External COCO/BBOB, BBOB-Large-Scale and CEC 2013 LSGO benchmark drivers,
-  together with four discrete-PSO quality baselines, are implemented in a
-  separate serial evaluation layer. They do not alter the native parallel
+  together with six discrete-time, continuous-search-space PSO quality
+  baselines, are implemented in a separate serial evaluation layer. They do not alter the native parallel
   execution architectures. Actual runs with the external benchmark packages
   are still required. Cooperative co-evolution, MPI and GPU backends are not
   implemented.

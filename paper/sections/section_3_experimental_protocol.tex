@@ -105,8 +105,8 @@ mappa di vincolo comune del presente studio applica il clipping alla frontiera
 e la restituzione della velocità con coefficiente $0.5$. Questa è una scelta
 operativa uniforme dei metodi, non una proprietà intrinseca delle funzioni CEC.
 
-I metodi confrontati sono la CPSO continua nativa e quattro baseline discrete
-implementate separatamente in NumPy. La prima baseline è una PSO global-best
+I metodi confrontati sono la CPSO continua nativa e sei baseline PSO a tempo
+discreto in spazio continuo implementate separatamente in NumPy. La prima baseline è una PSO global-best
 classica, con $c_1=c_2=2$ e velocità inerziale non pesata
 \citep{Kennedy1995}. La seconda utilizza un coefficiente di inerzia lineare da
 $0.9$ a $0.4$, con $c_1=c_2=2.05$ \citep{ShiEberhart1998}. La terza applica il
@@ -120,23 +120,64 @@ con $c_1=c_2=2.05$ \citep{Clerc2002}. La quarta utilizza la stessa inerzia
 lineare della seconda ma sostituisce l'informazione globale con il miglior
 personale in un vicinato ad anello periodico di raggio uno
 \citep{KennedyMendes2002}. Le prime tre baseline usano l'informazione
-global-best.
+global-best. La quinta baseline è il Comprehensive Learning PSO (CLPSO)
+\citep{Liang2006CLPSO}: ogni coordinata apprende dal personal best di un
+esemplare selezionato mediante torneo, con probabilità specifica della
+particella $P_{c,i}=0.05+0.45[\exp(10i/(N-1))-1]/[\exp(10)-1]$,
+$i=0,\ldots,N-1$. L'aggiornamento utilizza $c=1.49445$, inerzia lineare da
+$0.9$ a $0.4$, limite di velocità pari a $0.2$ della larghezza del dominio e
+rinnovo degli esemplari dopo sette generazioni senza miglioramento del personal
+best. Il ciclo CLPSO è implementato per generazioni con uno snapshot congelato di
+posizioni e personal best; ciò evita che l'ordine di valutazione induca una
+dinamica asincrona non dichiarata. Per garantire un trattamento comune dei
+vincoli viene adottata la medesima mappa clamp--restitution usata dagli altri
+metodi, scelta che viene dichiarata come convenzione del presente protocollo.
 
-Tutti e cinque i metodi condividono dimensione della popolazione, dominio,
-frazione iniziale della velocità e budget FE esatto. Le campagne confermative
-utilizzano $N=40$ e budget multipli di $N$, cosicché il costo di inizializzazione
-è di $N$ valutazioni e ogni batch successivo contiene $N$ aggiornamenti. I
-semi sono determinati da una funzione hash stabile dell'identificatore del
-problema e del seme di campagna. Lo stesso identificatore di seme è associato a
-ogni metodo per consentire l'appaiamento statistico, ma ciò non implica
-coordinate iniziali identiche: CPSO C++ e PSO NumPy utilizzano generatori
-casuali differenti. Le baseline sono implementazioni di riferimento esplicite
-e non vengono etichettate come riproduzioni complete degli standard SPSO-2007 o
-SPSO-2011.
+La sesta baseline è SL-PSO (Social Learning PSO)
+\citep{ChengJin2015SLPSO}, concepita per problemi scalabili. Il gruppo viene
+ordinato dal peggiore al migliore; ogni particella, eccetto la migliore, può
+apprendere da dimostratori con fitness migliore. Con indice di rango
+$i=0,\ldots,N-2$, dimensione $D$, $M=100$, $\alpha=0.5$ e $\beta=0.01$,
+la probabilità di apprendimento e il fattore di influenza sociale sono
+
+\begin{equation}
+ P_i=\left(1-\frac{i}{N}\right)^{\alpha\log(\lceil D/M\rceil)},
+ \qquad \gamma=\beta\frac{D}{M}.
+ \label{eq:slpso-learning}
+\end{equation}
+
+Quando l'apprendimento è attivato, ogni coordinata sceglie indipendentemente un
+dimostratore migliore e aggiorna lo spostamento secondo
+
+\begin{equation}
+ \Delta x_{i,j}^{t+1}=r_1\Delta x_{i,j}^{t}
+ +r_2(x_{k(i,j),j}^{t}-x_{i,j}^{t})
+ +r_3\gamma(\bar{x}_{j}^{t}-x_{i,j}^{t}),
+ \label{eq:slpso-update}
+\end{equation}
+
+con $r_1,r_2,r_3\sim U(0,1)$ e $\bar{x}^{t}$ media della popolazione. La
+popolazione è mantenuta fissa per garantire la parità FE con gli altri metodi;
+ciò differisce dalla raccomandazione originale $M+\lceil D/10\rceil$ e viene
+registrato come adattamento sperimentale. Anche SL-PSO utilizza la mappa comune
+di gestione dei vincoli.
+
+Tutti e sette i metodi condividono dimensione della popolazione, dominio e
+budget FE esatto. SL-PSO inizializza lo spostamento a zero, mentre le altre
+baseline PSO usano la frazione iniziale dichiarata nella configurazione.
+Tutti gli aggiornamenti sono costruiti da uno snapshot di generazione. Le
+campagne confermative utilizzano $N=40$ e budget multipli di $N$, cosicché il
+costo di inizializzazione è di $N$ valutazioni e il budget FE è identico per
+tutti i metodi. I semi sono determinati da una funzione hash stabile
+dell'identificatore del problema e del seme di campagna. Lo stesso identificatore
+di seme è associato a ogni metodo per consentire l'appaiamento statistico, ma
+ciò non implica coordinate iniziali identiche: CPSO C++ e PSO NumPy utilizzano
+generatori casuali differenti. Le baseline non vengono etichettate come
+riproduzioni complete degli standard SPSO-2007 o SPSO-2011.
 
 Le campagne complete sono onerose: ciascuna delle due suite COCO comprende
-10\,800 run metodo-problema; CEC 2013 LSGO comprende 1\,875 run e 5.625
-miliardi di valutazioni complessive sui cinque metodi. Gli smoke test verificano
+15\,120 run metodo-problema; CEC 2013 LSGO comprende 2\,625 run e 7.875
+miliardi di valutazioni complessive sui sette metodi. Gli smoke test verificano
 solo l'integrazione, il budget FE, la serializzazione e il resume; non sono
 utilizzati per classificare gli algoritmi. Nel presente manoscritto non sono
 ancora riportati risultati ottenuti con le suite esterne.

@@ -58,7 +58,7 @@ def test_run_method_enforces_equal_fe_budget_and_custom_cpsp_api():
 def test_run_method_exposes_all_pso_reference_variants():
     assert set(METHODS) == {
         "cpso_continuous", "pso_classic_gbest", "pso_inertia_gbest",
-        "pso_constriction_gbest", "pso_inertia_lbest_ring",
+        "pso_constriction_gbest", "pso_inertia_lbest_ring", "pso_clpso", "pso_slpso",
     }
     for method in METHODS:
         result = run_method(
@@ -318,7 +318,7 @@ def test_external_campaign_manifest_is_pinned_and_rejects_incompatible_resume(tm
     plan = {"campaign_id": "one", "suite": "bbob", "methods": ["cpso_continuous"]}
     write_campaign_manifest(manifest_path, plan, config)
     first = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert first["provenance"]["project_version"] == "0.7.0"
+    assert first["provenance"]["project_version"] == "0.7.1"
     assert first["provenance"]["native"]["c_abi"] == 6
     assert len(first["provenance"]["source_code_sha256"]) == 64
 

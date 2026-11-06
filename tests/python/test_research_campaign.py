@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -122,8 +123,8 @@ def test_quality_analysis_uses_function_families_as_inferential_units(tmp_path):
 
 
 def test_environment_metadata_is_non_identifying_and_contains_build_context():
-    metadata = collect_environment_metadata(native_version="0.7.0", native_build_info="test-build")
-    assert metadata["native"]["version"] == "0.7.0"
+    metadata = collect_environment_metadata(native_version="0.7.1", native_build_info="test-build")
+    assert metadata["native"]["version"] == "0.7.1"
     assert metadata["native"]["build_info"] == "test-build"
     assert "logical_count" in metadata["cpu"]
     assert "packages" in metadata
@@ -317,3 +318,34 @@ def test_architecture_study_rejects_non_integer_grid_shape():
         assert "two integer values" in str(exc)
     else:
         raise AssertionError("non-integer grid shape was not rejected")
+
+
+def test_quality_analysis_marks_exactly_tied_architectures_as_degenerate(tmp_path):
+    functions = ["sphere", "rastrigin", "rosenbrock", "ackley", "griewank", "salomon"]
+    methods = ["serial", "master_slave", "particle_parallel"]
+    study_item = {
+        "id": "exact_equivalence_test",
+        "study": {"methods": [{"name": name} for name in methods]},
+        "comparisons": [
+            {"method": method, "reference": "serial", "metric": "quality"}
+            for method in methods[1:]
+        ],
+    }
+    records = []
+    for family_index, function in enumerate(functions):
+        for dimension in (10, 30):
+            for seed in (101, 202, 303):
+                value = float(family_index + dimension / 100.0 + seed / 10000.0)
+                for method in methods:
+                    records.append({
+                        "benchmark": function, "dimension": dimension, "seed": seed,
+                        "method": method, "best_value": value,
+                    })
+    _, ranks, friedman = _analyze_quality_study(
+        {"id": "exact_equivalence_stage"}, study_item, records, tmp_path
+    )
+    assert len(ranks) == 3
+    assert all(row["average_rank"] == 2.0 for row in ranks)
+    assert len(friedman) == 1
+    assert friedman[0]["friedman_status"] == "all_methods_tied_no_inferential_test"
+    assert math.isnan(friedman[0]["friedman_p_block_permutation"])

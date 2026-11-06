@@ -38,7 +38,7 @@ functions. The confirmatory configuration selects dimensions
 - 15 instances per function/dimension;
 - population 40;
 - project-selected budget `10,000 * D` FE per problem and method;
-- five algorithms (CPSO plus four discrete PSO baselines).
+- seven algorithms (CPSO plus six discrete-time, continuous-space PSO baselines).
 
 Configuration: `configs/benchmarks/bbob_confirmatory.json`. The intermediate
 configuration `bbob_preconfirmatory.json` uses 24 functions, dimensions 2, 5
@@ -58,7 +58,7 @@ on permuted block-diagonal transformations. The official suite dimensions are
 - 15 instances per function/dimension;
 - population 40;
 - project-selected budget `10,000 * D` FE per problem and method;
-- five algorithms.
+- seven algorithms (CPSO plus six discrete-time, continuous-space PSO baselines).
 
 Configuration: `configs/benchmarks/bbob_largescale_confirmatory.json`.
 The intermediate configuration `bbob_largescale_preconfirmatory.json` selects
@@ -85,9 +85,9 @@ random numbers across the native C++ and NumPy random-number generators.
 
 The smoke configuration selects a reduced subset and budget. It is an
 integration check only. Full confirmatory configurations each contain
-`24 * 6 * 15 * 5 = 10,800` method-problem runs. For BBOB, the sum of selected
-dimensions is 80, corresponding to 1.44 billion FE over all methods. For
-BBOB-LargeScale, the sum is 1,260, corresponding to 22.68 billion FE. These
+`24 * 6 * 15 * 7 = 15,120` method-problem runs. For BBOB, the sum of selected
+dimensions is 80, corresponding to 2.016 billion FE over all methods. For
+BBOB-LargeScale, the sum is 1,260, corresponding to 31.752 billion FE. These
 costs should be considered before running the full campaigns.
 
 ## CEC 2013 Large-Scale Global Optimization
@@ -108,10 +108,10 @@ Configuration: `configs/benchmarks/cec2013_confirmatory.json`. The
 pre-confirmatory configuration `cec2013_preconfirmatory.json` selects functions
 F1-F5, five seeds and the first official checkpoint budget of 120,000 FE.
 This is an initial broad-scale pilot, not the complete CEC protocol. The full
-configuration is 1,875 method-function-seed runs and 5.625 billion FE across
-five methods. The objective functions are expected to return non-finite values when
+configuration is 2,625 method-function-seed runs and 7.875 billion FE across
+seven methods. The objective functions are expected to return non-finite values when
 queried outside their bounds in some wrappers; the present study applies the
-same explicit clamp-and-restitution boundary map to all five algorithms. This
+same explicit clamp-and-restitution boundary map to all seven algorithms. This
 is a project-level algorithmic convention, not a property of the benchmark
 functions themselves, and must be disclosed when presenting results.
 
@@ -176,31 +176,89 @@ from 0.9 to 0.4, and a periodic ring neighborhood of radius one. Each particle
 is attracted to the best personal-best point in its neighborhood. The velocity
 cap is `0.2 * (upper-lower)`.
 
+### 5. Comprehensive-learning PSO (CLPSO)
+
+CLPSO uses per-coordinate exemplars selected by pairwise tournaments over
+personal-best values. The learning probability is
+
+\[
+P_{c,i}=0.05+0.45\frac{\exp(10i/(N-1))-1}{\exp(10)-1},
+\qquad i=0,\ldots,N-1,
+\]
+
+with acceleration 1.49445, inertia decreasing from 0.9 to 0.4, velocity cap
+0.2 times the coordinate width, and exemplar refresh after seven consecutive
+generations without personal-best improvement. The implementation uses a
+frozen generation snapshot; this prevents accidental asynchronous information
+flow. The common project boundary map is an explicit adaptation and is not
+claimed to reproduce every boundary convention of the original study. See
+Liang et al. (2006), DOI `10.1109/TEVC.2005.857610`.
+
+### 6. Social-learning PSO (SL-PSO)
+
+SL-PSO (Cheng and Jin, 2015) sorts the swarm from worst to best. Every particle
+except the best may learn from demonstrators with better current fitness. With
+rank \(i=0,\ldots,N-2\), dimension \(D\), reference size \(M=100\),
+\(\alpha=0.5\), and \(\beta=0.01\), the learning probability and
+social-influence factor are
+
+\[
+P_i=\left(1-\frac{i}{N}\right)^{\alpha\log(\lceil D/M\rceil)},
+\qquad \gamma=\beta\frac{D}{M}.
+\]
+
+When learning is activated, each coordinate independently chooses a better
+ranked demonstrator and the displacement is updated as
+
+\[
+\Delta x_{i,j}^{t+1}=r_1\Delta x_{i,j}^{t}
++r_2(x_{k(i,j),j}^{t}-x_{i,j}^{t})
++r_3\gamma(\bar{x}_{j}^{t}-x_{i,j}^{t}),
+\]
+
+where \(r_1,r_2,r_3\sim U(0,1)\), and \(\bar{x}^{t}\) is the current
+swarm mean. If learning is not activated, the particle is unchanged. The best
+particle is not an imitator. The code uses the same fixed population across
+methods to preserve exact FE parity; the paper's recommended population
+\(M+\lceil D/10\rceil\) is therefore not used in this matched-population
+comparison. The project also applies its common clamp-and-restitution boundary
+map. This adaptation is disclosed rather than presented as a byte-for-byte
+reproduction. See Cheng and Jin (2015), DOI
+`10.1016/j.ins.2014.08.039`.
+
+
 ### Common initialization, update and FE conventions
 
-All five methods use the same population size, search bounds, initial-velocity
-fraction, problem/seed label and exact FE budget. The seed is passed into each
+All six discrete-time, continuous-space PSO methods use the same population size, search bounds,
+problem/seed label and exact FE budget. The native CPSO also uses the same
+population and FE budget. SL-PSO initializes its displacement to zero; the
+other PSO methods use the configured initial-velocity fraction. The seed is passed into each
 algorithm's own random-number generator; identical initial coordinates are
 not guaranteed across C++ and NumPy implementations. Initialization consumes
-exactly `N` objective evaluations. Subsequent updates are synchronous and
-use a frozen generation snapshot. Confirmatory budgets are configured as
-multiples of `N`, so no partial generation is needed in the external campaigns.
+exactly `N` objective evaluations. Subsequent updates use a frozen generation snapshot. Confirmatory budgets are
+configured as multiples of `N`, so no partial generation is needed in the
+external campaigns.
 
-All methods use uniform initialization within the benchmark box, initial
-velocity components sampled uniformly from `[-0.1, 0.1]` times the coordinate
-width, and the same boundary transformation: clamp the position to the
-violated bound and reverse the outward velocity with restitution 0.5. The
-native CPSO uses a continuous-time analytic propagation between objective
-observations; the four discrete variants use the velocity-position equations
-above. Equal FE budget is guaranteed, but the algorithms' internal update
-laws are not made mathematically equivalent.
+All methods use uniform initialization within the benchmark box. The classical
+PSO methods and CLPSO sample initial velocity components uniformly from the
+configured fraction of each coordinate width (0.1 by default); SL-PSO starts
+with zero displacement, as in its social-learning formulation. All methods use
+the same project boundary transformation: clamp a position to the violated
+bound and reverse the outward velocity with restitution 0.5. The native CPSO
+uses continuous-time analytic propagation between objective observations; the
+discrete variants use their own velocity/displacement update equations. Equal
+FE budget is guaranteed, but the algorithms' internal update laws are not made
+mathematically equivalent.
 
 The `classic_gbest`, `inertia_gbest`, `constriction_gbest` and
-`inertia_lbest_ring` labels identify the explicit implementations in this
+`inertia_lbest_ring` labels identify explicit classical implementations in this
 repository. They should not be relabelled as a fully standardized SPSO-2007 or
 SPSO-2011 implementation without separately implementing and testing the
 respective standard's initialization, neighborhood, random sampling and
-boundary details.
+boundary details. CLPSO and SL-PSO follow their cited learning mechanisms but
+use the common project boundary map and fixed-population FE protocol; these
+choices are reported explicitly. Neither is claimed to be the universal current
+state of the art across every continuous or large-scale optimization task.
 
 ## Installation and commands
 

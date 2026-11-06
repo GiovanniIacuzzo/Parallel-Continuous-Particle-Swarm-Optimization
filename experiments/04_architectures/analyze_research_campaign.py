@@ -440,26 +440,38 @@ def _analyze_quality_study(
                 "n_independent_function_families": len(function_families),
                 "average_rank": average_rank,
             })
-        try:
-            result = stats.friedmanchisquare(*[
-                [row[index] for row in score_matrix] for index in range(len(method_names))
-            ])
-            q_stat = _friedman_statistic(rank_matrix)
-            p_friedman = float(result.pvalue)  # asymptotic reference only
-            p_friedman_permutation = _friedman_permutation_p(
-                rank_matrix,
-                seed=20261105 + sum(ord(ch) for ch in stage["id"] + study_item["id"]),
-                replicates=20000,
-            )
-            n_blocks = len(function_families)
-            n_methods = len(method_names)
-            denominator = (n_blocks * (n_methods - 1)) - q_stat
-            iman_davenport_f = (
-                ((n_blocks - 1) * q_stat) / denominator if denominator > 0 else math.inf
-            )
-            iman_p = float(stats.f.sf(iman_davenport_f, n_methods - 1, (n_methods - 1) * (n_blocks - 1)))
-        except ValueError:
-            q_stat = p_friedman = p_friedman_permutation = iman_davenport_f = iman_p = math.nan
+        all_methods_tied = all(
+            len(set(float(value) for value in row)) == 1 for row in score_matrix
+        )
+        status = "all_methods_tied_no_inferential_test" if all_methods_tied else "ok"
+        if all_methods_tied:
+            # An exact synchronous-equivalence study has no stochastic ranking
+            # contrast to test. Preserve descriptive average ranks, but do not
+            # manufacture a p-value from a degenerate Friedman statistic.
+            q_stat = p_friedman = p_friedman_permutation = math.nan
+            iman_davenport_f = iman_p = math.nan
+        else:
+            try:
+                result = stats.friedmanchisquare(*[
+                    [row[index] for row in score_matrix] for index in range(len(method_names))
+                ])
+                q_stat = _friedman_statistic(rank_matrix)
+                p_friedman = float(result.pvalue)  # asymptotic reference only
+                p_friedman_permutation = _friedman_permutation_p(
+                    rank_matrix,
+                    seed=20261105 + sum(ord(ch) for ch in stage["id"] + study_item["id"]),
+                    replicates=20000,
+                )
+                n_blocks = len(function_families)
+                n_methods = len(method_names)
+                denominator = (n_blocks * (n_methods - 1)) - q_stat
+                iman_davenport_f = (
+                    ((n_blocks - 1) * q_stat) / denominator if denominator > 0 else math.inf
+                )
+                iman_p = float(stats.f.sf(iman_davenport_f, n_methods - 1, (n_methods - 1) * (n_blocks - 1)))
+            except ValueError:
+                q_stat = p_friedman = p_friedman_permutation = iman_davenport_f = iman_p = math.nan
+                status = "test_not_computable"
         friedman_rows.append({
             "stage": stage["id"],
             "study": study_item["id"],
@@ -469,6 +481,7 @@ def _analyze_quality_study(
             "friedman_p_asymptotic": p_friedman,
             "friedman_p_block_permutation": p_friedman_permutation,
             "friedman_permutation_replicates": 20000,
+            "friedman_status": status,
             "iman_davenport_F": iman_davenport_f,
             "iman_davenport_p": iman_p,
         })
@@ -683,11 +696,15 @@ def analyze_campaign_directory(
             else:
                 speedup_rows.extend(_analyze_performance_study(stage, study_item, records))
 
-    omnibus_p = [float(row["friedman_p"]) for row in friedman_rows if math.isfinite(float(row["friedman_p"]))]
+    omnibus_p = [
+        float(row["friedman_p_block_permutation"])
+        for row in friedman_rows
+        if math.isfinite(float(row["friedman_p_block_permutation"]))
+    ]
     omnibus_adjusted = holm_adjust(omnibus_p)
     adjusted_index = 0
     for row in friedman_rows:
-        value = float(row["friedman_p"])
+        value = float(row["friedman_p_block_permutation"])
         if math.isfinite(value):
             row["friedman_p_holm_campaign"] = omnibus_adjusted[adjusted_index]
             adjusted_index += 1

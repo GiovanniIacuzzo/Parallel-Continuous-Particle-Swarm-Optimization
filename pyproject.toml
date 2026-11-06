@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cpso-parallel"
-version = "0.7.0"
+version = "0.7.1"
 description = "Continuous PSO engine with synchronous, asynchronous, and island parallel architectures"
 requires-python = ">=3.10"
 authors = [{name = "CPSO research project"}]

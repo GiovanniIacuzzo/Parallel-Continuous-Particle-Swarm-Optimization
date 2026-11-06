@@ -199,8 +199,50 @@ resume behavior. The official `coco-experiment` and CEC wrapper packages were
 not installed in the offline environment, so real-suite execution remains a
 release gate. The commonly used CEC wrapper is GPL-3.0; its code is not vendored.
 
-The four discrete PSO implementations are explicit reference algorithms, not
+The six discrete-time, continuous-space PSO implementations are explicit reference algorithms, not
 full standardized SPSO-2007/2011 implementations. Their randomization,
 initialization, velocity caps, constriction parameters, local-best neighborhood
 and boundary map are recorded in
 `docs/external_benchmarks_and_pso_baselines.md`.
+
+
+## External algorithm-comparison extension — project 0.7.1
+
+Project/package version 0.7.1 adds a literature-derived CLPSO baseline alongside
+the four previously implemented classical PSO baselines. The implementation
+uses per-coordinate personal-best exemplars, the particle-dependent learning
+probability, two-way tournament selection, refresh gap 7, acceleration 1.49445,
+and a linearly decreasing inertia weight from 0.9 to 0.4, following Liang et
+al. (2006). The project retains its common bounded-domain clamp/restitution
+policy and documents this as a protocol-level adaptation. CLPSO runs a
+sequential particle sweep; it must not be described as a synchronous
+generation-snapshot method. All external algorithms retain exactly matched FE
+budgets.
+
+Two campaign configurations were added for internal execution studies:
+`cpso_serial_parallel_smoke.json` checks exact CPSO trajectory equivalence and
+smoke-level timing collection; `cpso_serial_parallel_pilot.json` expands the
+quality-equivalence and synthetic strong-scaling studies. These use the
+existing research campaign runner and do not duplicate its implementation.
+
+
+## PSO baselines and CPSO architecture pilot — project 0.7.1
+
+The external algorithm comparison now contains the four explicit classical
+PSO baselines, CLPSO (Liang et al., 2006) and SL-PSO (Cheng and Jin, 2015).
+CLPSO selects personal-best exemplars per coordinate using tournaments and
+updates from a frozen generation snapshot. SL-PSO orders the current swarm
+worst-to-best and learns from better-ranked demonstrators, with the
+dimension-dependent probability and social-influence formulas from the cited
+paper. For equal FE comparisons, the project fixes the population across
+methods instead of using SL-PSO's recommended dimension-dependent population
+size; this deviation is stored in run metadata and described in the protocol.
+Both learning variants use the common project boundary handling, also
+disclosed as a project convention.
+
+The architecture smoke/pilot configurations compare native serial CPSO with
+synchronous master-slave and particle-parallel execution. Exact quality
+equivalence is checked on built-in analytic objectives. `sphere_work` is used
+only as a synthetic execution-cost instrument. External COCO/CEC adapters
+remain serial objective-callback comparisons and are not used to infer native
+parallel speedup.
