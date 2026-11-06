@@ -69,7 +69,7 @@ python experiments/05_external_benchmarks/run_bbob.py \
   --config configs/benchmarks/bbob_largescale_smoke.json
 ```
 
-The BBOB smoke commands compare native serial CPSO with the six discrete-time, continuous-space PSO
+The BBOB smoke commands compare native serial CPSO with the ten discrete-time, continuous-space PSO
 reference methods at matched FE budgets. They do not compare parallel CPSO
 architectures; the external Python/Cython objective callback is serial-only.
 The internal architecture campaign above is the source for parallel scaling.

@@ -199,7 +199,7 @@ resume behavior. The official `coco-experiment` and CEC wrapper packages were
 not installed in the offline environment, so real-suite execution remains a
 release gate. The commonly used CEC wrapper is GPL-3.0; its code is not vendored.
 
-The six discrete-time, continuous-space PSO implementations are explicit reference algorithms, not
+The ten discrete-time, continuous-space PSO implementations are explicit reference algorithms, not
 full standardized SPSO-2007/2011 implementations. Their randomization,
 initialization, velocity caps, constriction parameters, local-best neighborhood
 and boundary map are recorded in

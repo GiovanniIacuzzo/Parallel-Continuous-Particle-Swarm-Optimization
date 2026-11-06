@@ -1,5 +1,0 @@
-# Optional CEC 2013 LSGO adapter.
-# Review the third-party cec2013lsgo wrapper license (GPL-3.0 in the
-# commonly used upstream distribution) before installing/redistributing.
-numpy>=1.23
-cec2013lsgo

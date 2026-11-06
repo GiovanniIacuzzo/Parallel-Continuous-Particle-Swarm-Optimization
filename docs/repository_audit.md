@@ -1,187 +1,133 @@
-# Repository audit — CPSO parallel project
+# Audit della repository — CPSO parallelo
 
 **Data:** 6 novembre 2026  
-**Versione di sviluppo:** 0.7.4  
+**Versione software:** 0.7.4  
 **C ABI nativo:** 7  
-**Base:** repository derivata dall'archivio `repository(5).zip`; l'archivio originale non è stato modificato.
+**Base esaminata:** archivio `repository(6).zip`, aggiornato con il protocollo sperimentale locale, la revisione del manoscritto e il post-processing esterno.  
+**Perimetro di questo audit:** stato software e sperimentale. La formulazione matematica CPSO è considerata verificata e congelata nel progetto; non viene riaperta in questa fase.
 
 ## 1. Stato generale
 
-La repository contiene un motore C++20 per la CPSO continua, interfaccia Python `ctypes`, cinque modalità di esecuzione su memoria condivisa, tre topologie sociali, campagne interne riproducibili e un livello separato per benchmark esterni e baseline PSO a tempo discreto in spazio continuo.
+La repository contiene un motore CPSO continuo C++20, un'interfaccia Python `ctypes`, cinque modalità native di esecuzione, sette topologie sociali, dieci baseline PSO a tempo discreto, adapter per COCO BBOB/BBOB-LargeScale e CEC 2013 LSGO, runner per campagne riproducibili e strumenti di analisi/post-processing.
 
-Il livello esterno comprende adapter COCO `bbob`, COCO `bbob-largescale` e CEC 2013 LSGO; dieci baseline NumPy (quattro varianti classiche, CLPSO, SL-PSO, SPSO-2011, FIPS, CSO e DMS-PSO); driver per smoke, pre-confirmatory e confirmatory; contabilità FE; checkpoint JSONL; manifest di provenienza e resume vincolato da hash di configurazione, codice, build e dipendenze.
+Le cinque modalità native sono:
 
-L'implementazione esterna è esclusivamente seriale. Il callback C ABI 7 non presume che i wrapper Python/Cython siano thread-safe e non può essere impiegato con master--slave, particle-parallel, asynchronous o islands. Le campagne esterne comparano qualità a budget FE fissato; non misurano lo scaling delle architetture native.
+| Modalità | Semantica | Scopo sperimentale |
+|---|---|---|
+| `serial` | Generazioni sincrone | Riferimento deterministico |
+| `master_slave` | Valutazioni obiettivo parallele, commit sincrono | Efficienza senza cambiare la traiettoria |
+| `particle_parallel` | Propagazione/valutazione parallela, commit deterministico | Efficienza senza cambiare la traiettoria |
+| `asynchronous` | Aggiornamenti event-driven | Studio di una dinamica asincrona distinta |
+| `islands` | Sottopopolazioni con migrazione | Studio di decomposizione e comunicazione |
 
-## 2. Verifiche effettivamente eseguite in questo sviluppo
+Le sette topologie implementate sono global-best, ring, von Neumann, wheel, random connected, Watts–Strogatz small-world e Barabási–Albert scale-free. La campagna architetturale principale usa tre topologie canoniche; una campagna distinta estende lo studio alle sette. Questa distinzione è intenzionale e deve essere mantenuta anche nei risultati.
 
-Ambiente locale: Linux x86_64, GNU C++ 14.2, CMake Release, Python 3.13, NumPy e Matplotlib installati.
+Le dieci baseline PSO sono classic global-best, inertia-weight global-best, constriction-factor, inertia-weight local-best ring, CLPSO, SL-PSO, SPSO-2011, FIPS, Competitive Swarm Optimizer e Dynamic Multi-Swarm PSO. Le campagne esterne confrontano quindi undici metodi in totale, CPSO incluso. Il set è una selezione rappresentativa per famiglie e meccanismi PSO, non una dichiarazione di copertura esaustiva dello stato dell'arte degli ottimizzatori continui.
+
+## 2. Verifiche software eseguite nell'aggiornamento
 
 | Verifica | Esito |
 |---|---:|
 | Configurazione e build CMake Release | Superata |
 | CTest | 1/1 test target superato |
-| Suite Python completa | 111/111 test superati |
-| `compileall` su package, esperimenti e test | Superato |
-| Custom objective C ABI: contabilità FE e propagazione eccezioni | Superato |
-| Dieci varianti PSO: determinismo, FE esatti e storie monotone | Superato |
-| Driver COCO simulato: esecuzione, FE parity, JSONL e resume | Superato |
-| Driver CEC simulato in 1000D: run, checkpoint FE e resume | Superato |
-| Preflight COCO: dimensioni, selettori, conteggi e divisibilità FE | Superato |
-| Dry-run di tutte le configurazioni COCO/CEC | Superato |
-| Dry-run non invasivi | Superato |
-| Campagna CPSO seriale/sincrona smoke | 195/195 run completate; equivalenza esatta verificata |
-| Smoke di tutte le architetture (seriale, asynchronous, islands e sync parallel) | 27/27 run completate |
-| Pilot asynchronous/islands | Dry-run valido: 720 run pianificate |
-| Integrazione PSO/CEC-style in D=1000 | 11 metodi, 400 FE ciascuno; superata |
-| Compilazione LaTeX + BibTeX | Superata; PDF di lavoro di 7 pagine |
-| Rendering e controllo visivo del PDF | Superato |
+| Suite Python completa | 114/114 test superati |
+| Test del post-processore esterno | Inclusi nella suite; superati |
+| Dry-run campagna smoke sincrona | 195 run pianificate |
+| Dry-run pilot sincrono | 1.400 run pianificate |
+| Dry-run pilot asynchronous/islands | 720 run pianificate |
+| Dry-run pilot espansione topologica | 1.050 run pianificate |
+| Dry-run BBOB Stage C | 770 run pianificate |
+| Dry-run BBOB-LargeScale smoke | 132 run pianificate |
+| Dry-run BBOB-LargeScale pre-confirmatory | 1.056 run pianificate |
+| Dry-run CEC smoke | 11 run pianificate |
+| Dry-run CEC Stage C | 198 run pianificate |
+| Compilazione LaTeX e bibliografia | Superata; PDF aggiornato generato |
+| Controllo riferimenti LaTeX | Nessuna citazione o reference non risolta |
+| Controllo visivo PDF | Nessun overflow critico; restano solo warning minori di underfull |
 
-**Limite della verifica:** i test driver end-to-end usano oggetti COCO/CEC simulati controllati. In questo ambiente offline non sono stati installati `coco-experiment`, `cocopp` o il wrapper CEC; nessun problema ufficiale BBOB/BBOB-LargeScale/CEC è stato valutato. Non sono quindi disponibili risultati esterni e non si afferma di aver completato smoke test sulle librerie ufficiali.
+Le campagne di cui sopra sono state validate in modalità dry-run, non eseguite integralmente. L'ambiente di audit è Linux/GCC; la build macOS sul MacBook Air M2 dell'utente deve essere eseguita localmente seguendo `paper/MACBOOK_AIR_M2_RUNBOOK.md`.
 
-La suite sanitizer non è stata rieseguita dopo l'aggiunta del livello benchmark; i controlli ASan/UBSan e ThreadSanitizer precedenti riguardavano il nucleo già presente e non equivalgono a una certificazione generale di assenza di race condition.
+I test dei driver COCO/CEC eseguiti nell'ambiente di sviluppo verificano i contratti con fixture simulate. Non costituiscono uno smoke test sulle librerie ufficiali né una valutazione delle funzioni benchmark ufficiali. Nessuna campagna confirmatory completa è dichiarata completata.
 
-## 3. Componenti aggiunti e modificati
+## 3. Software implementato
 
-### 3.1 Callback obiettivo seriale e ABI 7
+### 3.1 Motore nativo e interfaccia
 
-- Aggiunto `CpsoObjectiveCallback` e `cpso_run_custom_serial` al C ABI.
-- La funzione C++ richiama il callback in modo sincrono durante la valutazione della particella.
-- Il wrapper Python converte il vettore in una sequenza immutabile, intercetta le eccezioni e le ripropaga dopo il ritorno dal C ABI; nessuna eccezione Python attraversa il confine C.
-- Le callback personalizzate sono rifiutate per ogni modalità diversa da `serial` e non possono essere combinate con `sphere_work`.
-- Il progetto è versionato `0.7.4`, il C ABI `7`; la versione nativa è generata dalla variabile CMake del progetto.
+- Motore C++20 con propagatore analitico CPSO e gestione della popolazione.
+- Backend seriale, master–slave, particle-parallel, asynchronous e islands.
+- Topologie statiche a sette famiglie.
+- RNG derivato per particella e gestione deterministica degli aggiornamenti sincroni.
+- ABI C versionata e wrapper Python `ctypes`.
+- Callback Python custom objective limitata alla modalità seriale: non viene assunta la thread-safety di callback Python nel motore parallelo.
 
-### 3.2 Baseline PSO
+La formulazione CPSO e le convenzioni operative adottate nel progetto sono considerate già verificate e congelate. Modifiche future al modello dovranno essere trattate come variazioni esplicite, versionate e accompagnate da regression test; non costituiscono un prerequisito del piano sperimentale corrente.
 
-Sono implementate dieci varianti indipendenti dal motore CPSO:
+### 3.2 Baseline e suite esterne
 
-1. `classic_gbest`: PSO global-best classica, `c1=c2=2`, `w=1`, velocity cap `0.2` della larghezza del dominio.
-2. `inertia_gbest`: global-best con `c1=c2=2.05`, inerzia lineare `0.9 -> 0.4` e stesso velocity cap.
-3. `constriction_gbest`: global-best con `c1=c2=2.05` e fattore di Clerc, senza velocity cap aggiuntivo.
-4. `inertia_lbest_ring`: inerzia lineare e informazione locale sul miglior personale in un anello periodico di raggio uno.
-5. `clpso`: Comprehensive Learning PSO, con un exemplar per coordinata, probabilità di apprendimento dipendente dalla particella e refresh dopo sette generazioni senza miglioramento del personal best.
-6. `slpso`: Social Learning PSO, con ordinamento worst-to-best, dimostratori migliori per coordinata e influenza della media dello swarm dipendente dalla dimensione.
-7. `spso2011`: informant topology random, centro di gravità e campionamento ipersferico SPSO-2011.
-8. `fips_ring`: Fully Informed PSO con tutti i due vicini in anello e fattore di costrizione.
-9. `cso`: Competitive Swarm Optimizer con competizioni a coppie e aggiornamento dei perdenti.
-10. `dms_pso`: Dynamic Multi-Swarm PSO con sottosciami casuali e raggruppamento periodico.
+Le dieci baseline sono implementazioni Python/NumPy distinte. Parametri, topologie, adattamenti e limiti di interpretazione sono documentati in `docs/stage_c_pso_baselines.md`. La callback esterna resta seriale: BBOB, BBOB-LargeScale e CEC confrontano la qualità a budget FE controllato, non misurano lo speedup dei backend nativi.
 
-Le quattro varianti classiche e CLPSO usano aggiornamenti sincroni a generazioni, inizializzazione uniforme entro i limiti, mappa di vincolo comune con restituzione `0.5`, seed esplicito e contatore FE; SL-PSO inizializza invece lo spostamento a zero come da formulazione. CLPSO usa exemplar per coordinata e refresh del learning set; SL-PSO ordina lo swarm worst-to-best e usa dimostratori migliori e influenza sociale dipendente dalla dimensione. Le dieci implementazioni sono baseline di riferimento trasparenti; non sono presentate come una rassegna esaustiva dello stato dell’arte né come implementazioni certificate SPSO-2007/2011.
+I benchmark esterni sono:
 
-Il CPSO nativo mantiene la propria derivazione RNG C++ per particella, mentre le baseline usano NumPy. Lo stesso identificatore problema-seme viene associato ai metodi per consentire il pairing delle repliche; non sono garantite coordinate iniziali identiche né common random numbers tra generatori differenti.
+- COCO BBOB: benchmark continuous single-objective con profili smoke, pilot, pre-confirmatory e confirmatory;
+- COCO BBOB-LargeScale: estensione ad alta dimensionalità, con profili dedicati;
+- CEC 2013 LSGO: suite large-scale con profili smoke, pilot e confirmatory.
 
-### 3.3 Benchmark e protocolli
+Per COCO, ECDF e runtime-to-target prodotti da `cocopp` sono l'analisi primaria. I riepiloghi a rango generati dal post-processore del progetto sono supplementari e non li sostituiscono.
 
-| Suite | Configurazione smoke | Pre-confirmatory | Confirmatory |
-|---|---|---|---|
-| COCO BBOB | F1–F3, D2–3, 2 istanze, `200D` | F1–F24, D2/5/10, 5 istanze, `2000D` | F1–F24, D2/3/5/10/20/40, 15 istanze, `10000D` |
-| COCO BBOB-LargeScale | F1–F2, D20/40, 1 istanza, `20D` | 8 funzioni selezionate, D20/80/320/640, 3 istanze, `250D` | F1–F24, D20/40/80/160/320/640, 15 istanze, `10000D` |
-| CEC 2013 LSGO | F1, 1 seme, 400 FE | F1–F5, 5 semi, 120.000 FE | F1–F15, 25 semi, 3.000.000 FE |
+### 3.3 Campagne interne
 
-Le tre suite comparano CPSO continuo e dieci baseline PSO a tempo discreto in spazio continuo: undici metodi in totale. Ogni campagna impone budget FE divisibile per la popolazione. CEC registra checkpoint a 120.000, 600.000 e 3.000.000 FE nel protocollo confirmatory.
+La campagna architetturale definitiva è articolata in quattro stage e prevede 9.360 run complessive:
 
-Il preflight BBOB interpreta selettori COCO espliciti, calcola problemi/run/FE totali e rifiuta preventivamente budget non divisibili per la popolazione. I driver creano suite/observer indipendenti per metodo, confrontano il contatore FE del benchmark con quello dell'ottimizzatore e scrivono record JSONL sincronizzati.
+- Stage 1: confronto delle topologie sincrone canoniche;
+- Stage 2: dinamica asynchronous;
+- Stage 3: architettura islands;
+- Stage 4: strong scaling su carico sintetico `sphere_work`.
 
-I manifest esterni registrano hash della configurazione e dei sorgenti rilevanti, versione e build nativa, versione Python, piattaforma, CPU disponibili, versioni dei pacchetti opzionali e variabili di threading. Il resume è rifiutato se manifest, sorgenti, configurazione, build, dipendenze o ambiente differiscono.
+Il protocollo complementare di espansione topologica usa sette topologie e ha un pilot da 1.050 run e una fase confirmatory da 3.150 run. I pilot sono già configurati per il Mac e sono descritti nel runbook.
 
-### 3.4 Costi delle campagne complete
+### 3.4 Post-processing
 
-Con undici metodi, i piani confirmatory completi richiedono:
+- `analysis/postprocess_publication_figures.py`: figure vettoriali per campagne interne.
+- `analysis/postprocess_external_benchmarks.py`: completezza delle campagne esterne, confronto a gruppi problema-seme completi, ranghi medi con gestione dei pari merito, bootstrap per cluster di funzione e figure PDF descrittive.
+- `cocopp`: generazione ufficiale di ECDF e runtime-to-target BBOB/BBOB-LargeScale.
 
-- BBOB: 23.760 run e 3,168 miliardi di FE;
-- BBOB-LargeScale: 23.760 run e 49,896 miliardi di FE;
-- CEC 2013 LSGO: 4.125 run e 12,375 miliardi di FE.
+Il post-processore esterno non inventa risultati: gruppi incompleti non entrano nei ranghi comparativi; il report di completezza ne conserva traccia. Per BBOB i ranghi finali restano secondari rispetto alla valutazione ufficiale COCO.
 
-Sono campagne onerose, soprattutto BBOB-LargeScale e CEC. La sequenza raccomandata è smoke con pacchetti ufficiali, subset pre-confirmatory, verifica di storage e tempi, quindi campagne confermative. I numeri di FE rappresentano conti di pianificazione, non lavoro già eseguito.
+## 4. Protocollo locale MacBook Air M2
 
-### 3.5 Manoscritto
+Il runbook `paper/MACBOOK_AIR_M2_RUNBOOK.md` definisce una sequenza eseguibile senza alterare i profili confirmatory:
 
-Il sorgente LaTeX ora documenta anche i protocolli esterni e le dieci baseline PSO a tempo discreto in spazio continuo. La bibliografia include COCO, BBOB-LargeScale, CEC 2013, PSO con inerzia e fattore di costrizione. Il PDF compila e il rendering è stato ispezionato; resta una bozza senza risultati esterni o interni definitivi, discussione conclusiva o evidenza inferenziale.
+1. build Release, CTest, pytest e smoke sincrono;
+2. pilot sincrono da 1.400 run;
+3. pilot asynchronous/islands da 720 run;
+4. espansione a sette topologie da 1.050 run;
+5. pilot COCO BBOB da 770 run;
+6. pilot CEC 2013 LSGO da 198 run, subordinato a dipendenza e licenza;
+7. BBOB-LargeScale pre-confirmatory da 1.056 run, facoltativo e più oneroso.
 
-## 4. Architettura che deve rimanere separata
+Sul Mac eseguire una campagna per volta, conservare metadati hardware/software e non modificare configurazioni, semi, popolazioni o budget FE a campagna avviata. I risultati locali sono preliminari ma comparabili all'interno dello stesso protocollo. Quando sarà disponibile l'HPC, ripetere prima le stesse configurazioni e i medesimi identificatori problema/seme; confrontare i tempi solo all'interno della stessa macchina, non in valore assoluto tra Mac e HPC.
 
-| Modalità nativa | Comportamento | Relazione col seriale |
-|---|---|---|
-| `serial` | Generazioni sincrone | Riferimento |
-| `master_slave` | Parallelizza valutazioni obiettivo | Traiettoria identica richiesta e testata |
-| `particle_parallel` | Parallelizza inizializzazione/propagazione e valutazioni | Traiettoria identica richiesta e testata |
-| `asynchronous` | Event-driven | Dinamica differente; multiworker schedule-dependent |
-| `islands` | Sottopopolazioni con migrazione | Dinamica differente |
+## 5. Manoscritto
 
-La valutazione esterna richiama solo il riferimento `serial`. Non deve essere usata per concludere che il parallelismo nativo sia più veloce di altri algoritmi; qualità e tempo di callback Python non sono una misura di scaling comparabile.
+`paper/paper.tex` e le sezioni incluse descrivono il problema sperimentale, lo stato dell'arte, le cinque modalità, le sette topologie, la campagna principale a tre topologie, l'espansione complementare a sette, le dieci baseline e le tre suite esterne. Sono predisposte le sezioni risultati, discussione e conclusioni secondo le research questions del lavoro.
 
-## 5. Criticità residue
+Il paper non contiene risultati confirmatory inventati. Le figure sono richiamate condizionalmente: verranno incluse quando i corrispondenti PDF saranno prodotti dai post-processori. I risultati pilot, quando disponibili, dovranno essere identificati come esplorativi e distinti dalla conferma HPC.
 
-### A. Fedeltà matematica alla formulazione sorgente — bloccante scientifico
+## 6. Questioni ancora aperte, senza riaprire il modello matematico
 
-Non è stata chiusa la verifica equazione-per-equazione rispetto al testo integrale di Orlando e Ricciardello. Restano da confrontare coefficienti casuali scalari o coordinate-wise, ODE e inerzia, indicizzazione temporale, distribuzioni iniziali, vincoli e istanti di osservazione dell'obiettivo. Il propagatore locale è testato contro RK4 indipendente e proprietà di semigruppo; questi test non dimostrano la corrispondenza completa con l'articolo.
+1. **Esecuzione dei pilot sul Mac:** build nativa macOS e run effettivi delle campagne locali.
+2. **Dipendenze ufficiali:** smoke COCO con `coco-experiment`/`cocopp` e smoke CEC con wrapper/licenza verificati.
+3. **Prestazioni:** misure su Mac per carichi di valutazione realistici e, successivamente, strong scaling su HPC; il solo `sphere_work` non basta a sostenere un vantaggio applicativo generale.
+4. **Statistica:** interpretare le funzioni come unità/cluster di livello superiore dove previsto; non trattare seed, dimensioni o istanze come repliche indipendenti senza giustificazione. Definire e congelare i confronti prima di esaminare i confirmatory.
+5. **Validità del confronto topologico:** le sette reti non sono degree-matched; i risultati identificano differenze tra famiglie e parametri implementati, non l'effetto causale isolato della geometria.
+6. **Perimetro delle baseline:** il confronto è PSO-vs-PSO; non comprende CMA-ES, differential evolution o l'intero panorama degli ottimizzatori continui.
+7. **Portabilità e rilascio:** verificare macOS e CI remota, aggiungere la licenza solo dopo conferma dei diritti, e versionare repository/configurazioni/dati.
+8. **Campagne confirmatory:** non eseguire sul Mac base le campagne definitive complete; la loro esecuzione è prevista sull'HPC.
 
-**Input necessario:** PDF integrale o sorgente affidabile dell'articolo. Sino ad allora il manoscritto deve descrivere una ricostruzione operativa documentata, non una replica rigorosa certificata.
+## 7. Giudizio aggiornato
 
-### B. Pacchetti ufficiali esterni non ancora verificati
+**Software:** architettura e test automatici sono in uno stato maturo per avviare i pilot sul Mac.
 
-COCO e CEC non sono stati installati nell'ambiente offline. Gli adapter usano le interfacce pubbliche documentate e i test simulati coprono i contratti interni, ma prima delle campagne reali occorre verificare la versione concreta dei pacchetti, i percorsi COCO Observer, i formati di input Cython e i risultati delle funzioni di riferimento. Il pacchetto comunemente usato `cec2013lsgo` è GPL-3.0 e non è vendorizzato; la licenza va considerata nel contesto di distribuzione.
+**Disegno sperimentale:** sono presenti protocolli locali e confirmatory separati, con configurazioni, runner, manifest e strumenti di post-processing. I profili locali consentono di controllare la pipeline e ottenere confronti preliminari comparabili, senza sostituire la conferma HPC.
 
-### C. Campagne non eseguite
-
-Nessuna campagna esterna, né la campagna interna definitiva da 9.360 run, è stata completata. I dry-run validano i piani; i test simulati validano il software; nessuno dei due fornisce evidenza di qualità algoritmica.
-
-### D. Baseline e validità comparativa
-
-Le dieci baseline PSO a tempo discreto in spazio continuo comprendono quattro varianti canoniche parametrizzate, CLPSO, SL-PSO, SPSO-2011, FIPS, CSO e DMS-PSO. Le scelte di implementazione e gli adattamenti di confine/population sono esplicitati in docs/stage_c_pso_baselines.md; la raccolta non costituisce una rassegna esaustiva dello stato dell’arte. I metodi condividono popolazione, bounds, seed label e FE; non condividono necessariamente gli stati iniziali o le sequenze casuali perché usano generatori diversi. Questa scelta è documentata. Un eventuale confronto con implementazioni ufficiali SPSO richiederà adapter dedicati e una verifica dei dettagli standardizzati.
-
-Per CEC, la mappa clamp/restitution 0.5 è una scelta del progetto applicata a tutti i metodi. Non è una proprietà del benchmark. Va mantenuta esplicita nelle pubblicazioni e può essere oggetto di un'analisi di sensibilità.
-
-### E. Statistica e ampiezza della base di problemi
-
-L'analisi interna tratta sei funzioni come cluster di livello superiore; la potenza resta limitata. Le campagne esterne ampliano la base di problemi, ma devono ancora essere progettate le tabelle aggregate, i confronti appaiati e il trattamento di obiettivi e istanze COCO secondo il post-processing ufficiale. Per BBOB va conservato il dataset Observer e processato con `cocopp`; non va sostituito da statistiche ad hoc sui soli valori finali.
-
-### F. Piattaforme e licenza del progetto
-
-La CI GitHub Actions Ubuntu/macOS è configurata ma non eseguita sul servizio remoto. Le verifiche locali attuali sono Linux/GCC; macOS sul dispositivo target resta da verificare. La licenza del progetto rimane intenzionalmente non dichiarata fino alla conferma del titolare e all'aggiunta del file legale.
-
-### G. Git e risultati grezzi
-
-L'archivio non include la storia Git. La repository aggiornata deve essere importata in un repository versionato e i risultati grezzi devono essere conservati separatamente, insieme ai manifest, ai COCO observer logs e ai record JSONL.
-
-## 6. Sequenza raccomandata
-
-1. Ottenere il testo integrale dell'articolo sorgente e congelare la formulazione seriale con una matrice di verifica equazione-codice-test.
-2. Installare COCO in un ambiente dedicato e verificare `bbob` e `bbob-largescale` smoke su problemi ufficiali; eseguire poi lo smoke CEC solo dopo aver verificato wrapper e licenza.
-3. Eseguire le tre campagne pre-confirmatory, controllare qualità, FE, valori noti, stabilità, storage e tempi; definire l'analisi statistica prima delle confermative.
-4. Decidere se le baseline PSO devono restare riferimenti algoritmici trasparenti o se è necessario aggiungere implementazioni certificate SPSO.
-5. Eseguire le campagne confermative solo dopo il superamento dei gate precedenti e conservare tutti i dati grezzi.
-6. Eseguire GitHub CI e build macOS target; confermare la licenza del progetto.
-7. Aggiornare il paper con risultati riproducibili, intervalli, dimensioni dell'effetto e limiti; non anticipare alcuna conclusione dai soli smoke test.
-
-## 7. Giudizio
-
-**Implementazione:** la repository ora include il motore CPSO, dieci baseline PSO, tre adapter/suite esterni, preflight dei budget, checkpoint e manifest di provenienza. Le verifiche locali automatizzate sono superate.
-
-**Validazione scientifica:** non è ancora chiusa. La fedeltà alla formulazione sorgente, l'esecuzione con le librerie ufficiali e le campagne effettive rimangono prerequisiti prima di formulare conclusioni comparative o di preparare una submission.
-
-
-## Integrazione benchmark/PSO — versione 0.7.4
-
-- Aggiunta la baseline CLPSO (Liang et al., 2006) con exemplar per coordinata,
-  refresh del learning set e snapshot di generazione.
-- Aggiunta la baseline SL-PSO (Cheng e Jin, 2015), con ordinamento
-  worst-to-best, dimostratori migliori, probabilità di apprendimento e
-  influenza sociale dipendenti dalla dimensione. La popolazione resta fissata
-  dalla campagna per garantire parità FE; questa scelta differisce dal default
-  dimension-dependent dell'articolo ed è registrata nei metadati.
-- La suite di confronto comprende ora CPSO continuo e dieci varianti PSO a tempo discreto in spazio continuo
-  (quattro baseline classiche, CLPSO e SL-PSO). Nessuna è dichiarata come
-  universalmente SOTA; SL-PSO è una baseline specifica per problemi scalabili.
-- Aggiunte configurazioni di smoke e pilot per CPSO sincrono, asynchronous e islands.
-- L'analisi delle campagne tratta l'equivalenza esatta dei metodi sincroni come
-  verifica deterministica e non forza un test di Friedman degenere sui pareggi.
-
-
-## Stage C — baseline PSO estese (0.7.4)
-
-Stage C aggiunge quattro varianti indipendenti al livello NumPy seriale: SPSO-2011, FIPS su anello a due vicini, Competitive Swarm Optimizer e Dynamic Multi-Swarm PSO. Il set esterno contiene CPSO più dieci baseline PSO. Gli algoritmi sono comparati per qualità a parità di FE; la callback Python resta seriale e non misura lo speedup dei backend paralleli nativi.
-
-La versione SPSO-2011 è stata allineata alla descrizione standard di Clerc: grafo random informant diretto con auto-informazione, centro geometrico, campionamento ipersferico predefinito a direzione e raggio uniformi, inizializzazione di velocità relativa ai limiti e riflessione a metà velocità sulle componenti fuori dominio. Le implementazioni FIPS, CSO e DMS-PSO dichiarano esplicitamente topologia e adattamenti del trattamento dei vincoli. Vedere `docs/stage_c_pso_baselines.md`.
-
-Le configurazioni `*_stageC_smoke.json` includono tutti gli undici metodi; le configurazioni Stage C pilot BBOB e CEC sono separate dalle configurazioni storiche. I smoke test sono controlli d'integrazione e non supportano ranking scientifici. Le campagne confirmatory complete non sono state eseguite in questo sviluppo.
+**Paper:** la bozza ora è coerente con il perimetro implementato e predisposta per l'inserimento dei risultati. Il lavoro scientifico da completare è l'esecuzione delle campagne, l'analisi delle evidenze, la discussione dei limiti e la stesura delle conclusioni.
