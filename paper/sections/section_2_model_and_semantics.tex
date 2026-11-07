@@ -18,7 +18,7 @@ e definiamo $F_i^k=a_i^kp_i^k+b_i^ks_i^k$. Per ogni coordinata $j$ la traiettori
   \quad t\in[0,\Delta t],
   \label{eq:cpso-frozen-ode}
 \end{equation}
-con condizioni iniziali $x_{i,j}(0)=x_{i,j}^k$ e $\dot{x}_{i,j}(0)=v_{i,j}^k$. Gli scalari casuali sono condivisi da tutte le coordinate della stessa particella nello stesso intervallo, secondo la convenzione del modello verificato e implementato.
+con condizioni iniziali $x_{i,j}(0)=x_{i,j}^k$ e $\dot{x}_{i,j}(0)=v_{i,j}^k$. Nel caso \emph{global-best}, $s_i^k=g^k$ e si recupera la dinamica CPSO globale descritta dalla formulazione di riferimento. Le varianti ad anello, griglia e gli altri grafi sociali sostituiscono il migliore globale con un leader di vicinato e sono pertanto estensioni topologiche del modello, non la medesima formulazione global-best. Gli scalari casuali sono condivisi da tutte le coordinate della stessa particella nello stesso intervallo, in accordo con la notazione scalare della formulazione qui adottata.
 
 Quando $q_i^k>0$, l'equilibrio della dinamica congelata è $x_{i,j}^{\mathrm{eq}}=F_{i,j}^k/q_i^k$. La parte omogenea ha equazione caratteristica
 \begin{equation}
@@ -44,7 +44,7 @@ con $\rho$ pari al parametro \texttt{initial\_velocity\_fraction}.
 
 \subsection{Vincoli, memoria e topologia sociale}
 
-La soluzione analitica viene seguita da una mappa discreta di gestione dei vincoli. Se una coordinata oltrepassa il limite inferiore $\ell_j$, la posizione viene proiettata su $\ell_j$ e una velocità uscente viene sostituita con $-e v_{i,j}$; il caso del limite superiore $u_j$ è simmetrico. Il coefficiente $e\in[0,1]$ è il parametro di restituzione. Questa mappa è una regola algoritmica applicata agli estremi degli intervalli, non una condizione al contorno dell'ODE. Non vengono rilevati attraversamenti multipli all'interno dello stesso intervallo: la posizione intermedia della traiettoria analitica non viene monitorata.
+La soluzione analitica viene seguita da una mappa discreta di gestione dei vincoli. Se una coordinata oltrepassa il limite inferiore $\ell_j$, la posizione viene proiettata su $\ell_j$ e una velocità uscente viene sostituita con $-e v_{i,j}$; il caso del limite superiore $u_j$ è simmetrico. Il coefficiente $e\in[0,1]$ è il parametro di restituzione. Questa mappa è una regola algoritmica applicata agli estremi degli intervalli, non una condizione al contorno dell'ODE. Non vengono rilevati attraversamenti multipli all'interno dello stesso intervallo: la posizione intermedia della traiettoria analitica non viene monitorata. Di conseguenza, la particella può uscire temporaneamente dal dominio ammissibile tra due osservazioni; se l'estremo dell'intervallo è esterno, la proiezione può introdurre un salto rispetto all'estremo della traiettoria analitica non vincolata. La continuità riguarda dunque il flusso dell'ODE congelata, non necessariamente la traiettoria complessiva quando interviene la mappa di vincolo.
 
 Il miglior personale è aggiornato soltanto in presenza di miglioramento stretto,
 \begin{equation}

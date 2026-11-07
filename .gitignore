@@ -4,5 +4,6 @@ build/
 .pytest_cache/
 __pycache__/
 cpso_hpc.egg-info/
+cpso_parallel.egg-info/
 compiler/
 .DS_Store

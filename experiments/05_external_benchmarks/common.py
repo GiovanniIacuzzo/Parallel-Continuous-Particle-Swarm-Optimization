@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import json
+import math
 import os
 import platform
 from pathlib import Path
@@ -202,6 +203,7 @@ def run_method(
     population_size: int,
     max_evaluations: int,
     seed: int,
+    cpso_dt: float = 0.7,
 ):
     if method not in METHODS:
         raise ValueError(f"Unknown method {method!r}; supported methods: {sorted(METHODS)}")
@@ -209,6 +211,8 @@ def run_method(
         raise ValueError("For strict cross-method FE parity, max_evaluations must be a multiple of population_size")
     kind, variant = METHODS[method]
     if kind == "cpso":
+        if not math.isfinite(float(cpso_dt)) or float(cpso_dt) <= 0.0:
+            raise ValueError("cpso_dt must be finite and strictly positive")
         config = CpsoConfig(
             lower_bounds=tuple(float(v) for v in lower_bounds),
             upper_bounds=tuple(float(v) for v in upper_bounds),
@@ -219,7 +223,7 @@ def run_method(
             mu_min=0.4,
             cognitive=2.05,
             social=2.05,
-            dt=0.7,
+            dt=float(cpso_dt),
             initial_velocity_fraction=0.1,
             boundary_restitution=0.5,
             topology="global",
@@ -278,6 +282,7 @@ def build_run_record(
     max_evaluations: int,
     result: Any,
     milestones: Sequence[int] = (),
+    cpso_dt: float = 0.7,
 ) -> dict[str, Any]:
     record: dict[str, Any] = {
         "schema_version": 1,
@@ -305,7 +310,7 @@ def build_run_record(
             "mu_min": 0.4,
             "cognitive": 2.05,
             "social": 2.05,
-            "dt": 0.7,
+            "dt": float(cpso_dt),
             "topology": "global-best",
             "boundary_restitution": 0.5,
             "initial_velocity_fraction": 0.1,

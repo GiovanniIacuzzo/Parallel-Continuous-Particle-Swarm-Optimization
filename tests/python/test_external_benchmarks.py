@@ -8,6 +8,9 @@ import types
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
+PYTHON_ROOT = ROOT / "python"
+if str(PYTHON_ROOT) not in sys.path:
+    sys.path.insert(0, str(PYTHON_ROOT))
 EXPERIMENT = ROOT / "experiments" / "05_external_benchmarks"
 if str(EXPERIMENT) not in sys.path:
     sys.path.insert(0, str(EXPERIMENT))
@@ -212,6 +215,7 @@ def test_bbob_driver_runs_and_resumes_against_controlled_coco_contract(tmp_path,
         "instances": "instances: 1",
         "suite_options": "dimensions: 20 function_indices: 1",
         "population_size": 8,
+        "cpso_dt": 0.7,
         "budget_multiplier": 8,
         "seed": 7,
         "methods": ["cpso_continuous", "pso_inertia_gbest"],
@@ -260,6 +264,7 @@ def test_cec_driver_runs_against_controlled_1000d_adapter_and_resumes(tmp_path, 
         "function_ids": [1],
         "seeds": [5],
         "population_size": 8,
+        "cpso_dt": 0.7,
         "max_evaluations": 16,
         "milestones": [8, 16],
         "methods": ["cpso_continuous", "pso_inertia_gbest"],
@@ -369,3 +374,49 @@ def test_stage_c_configs_include_all_eleven_methods_with_expected_run_counts():
     assert len(bbob_ls_smoke["methods"]) * 12 == 132
     assert len(cec_smoke["methods"]) * 1 == 11
     assert len(cec_pilot["methods"]) * 6 * 3 == 198
+
+
+def test_external_cpso_dt_is_explicitly_passed_to_native_serial_callback(monkeypatch):
+    import common as common_module
+    from types import SimpleNamespace
+
+    captured = []
+
+    def fake_run_serial_objective(config, objective):
+        captured.append(config)
+        return SimpleNamespace(function_evaluations=12, best_value=1.0)
+
+    monkeypatch.setattr(common_module, "run_serial_objective", fake_run_serial_objective)
+    run_method(
+        "cpso_continuous", lambda point: sum(value * value for value in point),
+        (-2.0, -2.0), (2.0, 2.0), population_size=4,
+        max_evaluations=12, seed=17, cpso_dt=3.6,
+    )
+    assert len(captured) == 1
+    assert captured[0].dt == pytest.approx(3.6)
+    with pytest.raises(ValueError, match="cpso_dt"):
+        run_method(
+            "cpso_continuous", lambda point: 0.0, (-2.0,), (2.0,),
+            population_size=4, max_evaluations=8, seed=17, cpso_dt=0.0,
+        )
+
+
+def test_every_external_benchmark_config_pins_the_cpso_dt_explicitly():
+    config_paths = sorted((ROOT / "configs/benchmarks").glob("*.json"))
+    assert config_paths, "No external benchmark configuration files found"
+    for path in config_paths:
+        config = json.loads(path.read_text(encoding="utf-8"))
+        assert "cpso_dt" in config, f"{path.name} must pin cpso_dt explicitly"
+        assert isinstance(config["cpso_dt"], (int, float)) and not isinstance(config["cpso_dt"], bool)
+        assert 0.0 < float(config["cpso_dt"]) < float("inf")
+
+
+
+def test_external_drivers_reject_missing_cpso_dt(tmp_path):
+    for source_name, execute in (("bbob_smoke.json", execute_bbob), ("cec2013_smoke.json", execute_cec)):
+        source = json.loads((ROOT / "configs/benchmarks" / source_name).read_text(encoding="utf-8"))
+        source.pop("cpso_dt")
+        config = tmp_path / source_name
+        config.write_text(json.dumps(source), encoding="utf-8")
+        with pytest.raises(ValueError, match="cpso_dt explicitly"):
+            execute(config, tmp_path / f"out_{source_name}", dry_run=True)

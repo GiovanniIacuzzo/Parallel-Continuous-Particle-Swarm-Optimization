@@ -565,7 +565,10 @@ def execute_study(study: dict[str, Any], output: Path, no_plots: bool = False,
     if check_equivalence:
         verify_exact_equivalence(records)
     materialize_tables(records, output)
-    analyze_records(records, output, no_plots=no_plots)
+    analyze_records(
+        records, output, no_plots=no_plots,
+        equivalence_verified=check_equivalence,
+    )
     return output
 
 
@@ -645,7 +648,13 @@ def materialize_tables(records: list[dict[str, Any]], output: Path) -> None:
     )
 
 
-def analyze_records(records: list[dict[str, Any]], output: Path, no_plots: bool = False) -> None:
+def analyze_records(
+    records: list[dict[str, Any]],
+    output: Path,
+    no_plots: bool = False,
+    *,
+    equivalence_verified: bool = True,
+) -> None:
     groups: dict[tuple[str, int, str], list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         groups[(record["benchmark"], int(record["dimension"]), record["method"])].append(record)
@@ -713,11 +722,16 @@ def analyze_records(records: list[dict[str, Any]], output: Path, no_plots: bool 
             "method_elapsed_seconds": record["elapsed_seconds"],
             "paired_speedup": (
                 float(baseline["elapsed_seconds"]) / float(record["elapsed_seconds"])
-                if record["architecture"] in {"master_slave", "particle_parallel"}
+                if equivalence_verified
+                and record["architecture"] in {"master_slave", "particle_parallel"}
+                and float(baseline["elapsed_seconds"]) > 0.0
                 and float(record["elapsed_seconds"]) > 0.0 else ""
             ),
             "runtime_ratio_interpretation": (
-                "same synchronous algorithm: valid paired speedup"
+                "same synchronous algorithm: exact trajectory verified; valid paired speedup"
+                if equivalence_verified
+                and record["architecture"] in {"master_slave", "particle_parallel"}
+                else "same synchronous backend but exact trajectory not verified: speedup withheld"
                 if record["architecture"] in {"master_slave", "particle_parallel"}
                 else "different search dynamics: do not label as speedup"
             ),

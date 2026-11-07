@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -30,6 +31,11 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
     methods = config.get("methods", list(METHODS))
     max_evaluations = int(config.get("max_evaluations", 3_000_000))
     population = int(config.get("population_size", 40))
+    if "cpso_dt" not in config:
+        raise ValueError("benchmark configuration must define cpso_dt explicitly")
+    cpso_dt = float(config["cpso_dt"])
+    if not math.isfinite(cpso_dt) or cpso_dt <= 0.0:
+        raise ValueError("cpso_dt must be finite and strictly positive")
     milestones = [int(v) for v in config.get("milestones", [120_000, 600_000, 3_000_000])]
     if not function_ids or any(v < 1 or v > 15 for v in function_ids):
         raise ValueError("function_ids must be selected from [1,15]")
@@ -49,6 +55,7 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
         "seeds": seeds,
         "methods": methods,
         "population_size": population,
+        "cpso_dt": cpso_dt,
         "max_evaluations": max_evaluations,
         "milestones": milestones,
         "expected_run_count": len(function_ids) * len(seeds) * len(methods),
@@ -93,6 +100,7 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
                     population_size=population,
                     max_evaluations=max_evaluations,
                     seed=seed,
+                    cpso_dt=cpso_dt,
                 )
                 record = build_run_record(
                     suite="CEC2013-LSGO",
@@ -105,6 +113,7 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
                     max_evaluations=max_evaluations,
                     result=result,
                     milestones=milestones,
+                    cpso_dt=cpso_dt,
                 )
                 append_jsonl_durable(result_path, record_with_key(record))
                 completed.add(record_key)

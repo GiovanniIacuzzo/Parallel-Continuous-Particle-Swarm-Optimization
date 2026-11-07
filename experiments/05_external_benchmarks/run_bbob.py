@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -40,6 +41,11 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
     if unknown:
         raise ValueError(f"Unknown methods in campaign: {unknown}")
     population = int(config.get("population_size", 40))
+    if "cpso_dt" not in config:
+        raise ValueError("benchmark configuration must define cpso_dt explicitly")
+    cpso_dt = float(config["cpso_dt"])
+    if not math.isfinite(cpso_dt) or cpso_dt <= 0.0:
+        raise ValueError("cpso_dt must be finite and strictly positive")
     budget_multiplier = int(config.get("budget_multiplier", 10_000))
     if population < 2 or budget_multiplier < 1:
         raise ValueError("population_size must be >=2 and budget_multiplier must be positive")
@@ -58,6 +64,7 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
         "suite_instances": config.get("instances", "instances: 1-15"),
         "suite_options": config.get("suite_options", ""),
         "population_size": population,
+        "cpso_dt": cpso_dt,
         "budget_multiplier": budget_multiplier,
         "methods": methods,
         "budget_rule": "max_evaluations = budget_multiplier * dimension; exact and divisible by population",
@@ -109,6 +116,7 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
                 population_size=population,
                 max_evaluations=max_evaluations,
                 seed=seed,
+                cpso_dt=cpso_dt,
             )
             coco_evaluations = int(getattr(raw_problem, "evaluations", result.function_evaluations))
             if coco_evaluations != result.function_evaluations:
@@ -126,6 +134,7 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
                 seed=seed,
                 max_evaluations=max_evaluations,
                 result=result,
+                cpso_dt=cpso_dt,
             )
             record["coco_evaluations"] = coco_evaluations
             append_jsonl_durable(result_path, record_with_key(record))

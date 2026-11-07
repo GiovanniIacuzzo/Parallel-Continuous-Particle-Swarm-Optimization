@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import pytest
 import sys
 from pathlib import Path
 
@@ -349,3 +350,101 @@ def test_quality_analysis_marks_exactly_tied_architectures_as_degenerate(tmp_pat
     assert len(friedman) == 1
     assert friedman[0]["friedman_status"] == "all_methods_tied_no_inferential_test"
     assert math.isnan(friedman[0]["friedman_p_block_permutation"])
+
+
+def _small_performance_study():
+    study = {
+        "benchmarks": ["sphere_work"],
+        "dimensions": [2],
+        "population_size": 4,
+        "iterations": 2,
+        "seeds": [101, 202, 303],
+        "work_iterations": 16,
+        "check_equivalence": True,
+        "methods": [
+            {"name": "serial_global", "architecture": "serial", "topology": "global"},
+            {"name": "ms_global_w2", "architecture": "master_slave", "topology": "global", "workers": 2},
+        ],
+    }
+    return {
+        "id": "speedup_test",
+        "study": study,
+        "comparisons": [{"method": "ms_global_w2", "reference": "serial_global", "metric": "runtime"}],
+    }
+
+
+def test_speedup_protocol_accepts_only_same_configuration_synchronous_executor_pairs():
+    from run_research_campaign import validate_performance_study
+    stage = {"id": "04_strong_scaling", "kind": "performance"}
+    item = _small_performance_study()
+    validate_performance_study(stage, item)
+
+    bad_equivalence = json.loads(json.dumps(item))
+    bad_equivalence["study"]["check_equivalence"] = False
+    with pytest.raises(ValueError, match="check_equivalence"):
+        validate_performance_study(stage, bad_equivalence)
+
+    bad_topology = json.loads(json.dumps(item))
+    bad_topology["study"]["methods"][1]["topology"] = "ring"
+    with pytest.raises(ValueError, match="topology"):
+        validate_performance_study(stage, bad_topology)
+
+    bad_algorithm = json.loads(json.dumps(item))
+    bad_algorithm["study"]["methods"][1]["dt"] = 0.7
+    with pytest.raises(ValueError, match="algorithmic settings"):
+        validate_performance_study(stage, bad_algorithm)
+
+    bad_architecture = json.loads(json.dumps(item))
+    bad_architecture["study"]["methods"][1]["architecture"] = "asynchronous"
+    with pytest.raises(ValueError, match="master_slave or particle_parallel"):
+        validate_performance_study(stage, bad_architecture)
+
+    with pytest.raises(ValueError, match="performance stage"):
+        validate_performance_study({"id": "quality", "kind": "quality"}, item)
+
+
+def test_speedup_is_median_of_paired_end_to_end_ratios_and_checks_fe(tmp_path):
+    from analyze_research_campaign import _analyze_performance_study
+    item = _small_performance_study()
+    stage = {"id": "04_strong_scaling", "kind": "performance"}
+    records = []
+    serial_times = [6.0, 8.0, 10.0]
+    parallel_times = [2.0, 2.0, 5.0]
+    for seed, serial_time, parallel_time in zip(item["study"]["seeds"], serial_times, parallel_times):
+        for method, architecture, workers, elapsed in (
+            ("serial_global", "serial", 1, serial_time),
+            ("ms_global_w2", "master_slave", 2, parallel_time),
+        ):
+            records.append({
+                "benchmark": "sphere_work", "dimension": 2, "seed": seed,
+                "method": method, "architecture": architecture, "topology": "global",
+                "workers": workers, "population_size": 4, "iterations": 2,
+                "function_evaluations": 12, "elapsed_seconds": elapsed,
+            })
+
+    result = _analyze_performance_study(stage, item, records)
+    assert len(result) == 1
+    assert result[0]["n_paired_runs"] == 3
+    assert result[0]["median_speedup"] == pytest.approx(3.0)  # median([3, 4, 2])
+    assert result[0]["median_serial_runtime_seconds"] == pytest.approx(8.0)
+    assert result[0]["median_parallel_runtime_seconds"] == pytest.approx(2.0)
+    assert result[0]["parallel_efficiency"] == pytest.approx(1.5)
+
+    broken = [dict(row) for row in records]
+    broken[1]["function_evaluations"] = 11
+    with pytest.raises(RuntimeError, match="FE budget mismatch"):
+        _analyze_performance_study(stage, item, broken)
+
+    missing = records[:-1]
+    with pytest.raises(RuntimeError, match="Missing paired speedup record"):
+        _analyze_performance_study(stage, item, missing)
+
+
+def test_topology_scaling_uses_one_matched_serial_reference_per_topology():
+    path = ROOT / "configs/campaigns/cpso_topology_expansion_confirmatory.json"
+    campaign = json.loads(path.read_text(encoding="utf-8"))
+    validate_campaign(campaign)
+    performance = next(stage for stage in campaign["stages"] if stage["kind"] == "performance")
+    item = performance["studies"][0]
+    assert len(item["comparisons"]) == 14
+    assert len({comparison["reference"] for comparison in item["comparisons"]}) == 7

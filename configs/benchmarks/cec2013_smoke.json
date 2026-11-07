@@ -19,5 +19,6 @@
     "pso_inertia_lbest_ring",
     "pso_clpso",
     "pso_slpso"
-  ]
+  ],
+  "cpso_dt": 0.35
 }

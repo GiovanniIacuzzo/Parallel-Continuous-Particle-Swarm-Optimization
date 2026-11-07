@@ -79,19 +79,125 @@ def validate_campaign(campaign: dict[str, Any]) -> None:
             if not isinstance(study, dict):
                 raise ValueError(f"Study {full_id}: study must be an object")
             validate_study(study)
-            method_names = {m["name"] for m in study["methods"]}
-            for comparison in item.get("comparisons", []):
+            method_by_name = {m["name"]: m for m in study["methods"]}
+            comparisons = item.get("comparisons", [])
+            if not isinstance(comparisons, list):
+                raise ValueError(f"Study {full_id}: comparisons must be an array")
+            for comparison in comparisons:
+                if not isinstance(comparison, dict):
+                    raise ValueError(f"Study {full_id}: each comparison must be an object")
                 method = comparison.get("method")
                 reference = comparison.get("reference")
-                if method not in method_names or reference not in method_names:
+                if method not in method_by_name or reference not in method_by_name:
                     raise ValueError(
                         f"Study {full_id}: comparison references unknown methods {method!r}/{reference!r}"
                     )
                 if method == reference:
                     raise ValueError(f"Study {full_id}: method cannot be compared with itself")
-                if comparison.get("metric", "quality") not in {"quality", "runtime"}:
+                metric = comparison.get("metric", "quality")
+                if metric not in {"quality", "runtime"}:
                     raise ValueError(f"Study {full_id}: comparison metric must be quality or runtime")
+                if stage["kind"] == "performance" and metric != "runtime":
+                    raise ValueError(
+                        f"Study {full_id}: performance-stage comparisons must use metric='runtime'"
+                    )
+                if stage["kind"] == "quality" and metric == "runtime":
+                    raise ValueError(
+                        f"Study {full_id}: runtime ratios are not permitted in a quality stage"
+                    )
+            if stage["kind"] == "performance":
+                validate_performance_study(stage, item, method_by_name)
 
+
+
+def validate_performance_study(
+    stage: dict[str, Any],
+    study_item: dict[str, Any],
+    method_by_name: dict[str, dict[str, Any]] | None = None,
+) -> None:
+    """Reject runtime comparisons that are not true same-trajectory speedups.
+
+    The performance stage is deliberately restricted to the native ``sphere_work``
+    instrument. External COCO/CEC callbacks are serial Python callbacks and are
+    not eligible for claims about the native C++ executor speedup.
+    """
+    study = study_item["study"]
+    if stage.get("kind") != "performance":
+        raise ValueError(f"Study {stage['id']}/{study_item['id']}: speedup validator requires a performance stage")
+    if study.get("benchmarks") != ["sphere_work"]:
+        raise ValueError(
+            f"Study {stage['id']}/{study_item['id']}: performance studies must use only sphere_work"
+        )
+    if study.get("check_equivalence", True) is not True:
+        raise ValueError(
+            f"Study {stage['id']}/{study_item['id']}: check_equivalence must be true for speedup"
+        )
+    if method_by_name is None:
+        method_by_name = {method["name"]: method for method in study["methods"]}
+    comparisons = study_item.get("comparisons", [])
+    if not comparisons:
+        raise ValueError(
+            f"Study {stage['id']}/{study_item['id']}: at least one runtime comparison is required"
+        )
+
+    runtime_methods: set[str] = set()
+    reference_methods: set[str] = set()
+    for comparison in comparisons:
+        method_name = comparison["method"]
+        reference_name = comparison["reference"]
+        if comparison.get("metric", "quality") != "runtime":
+            raise ValueError("All performance-stage comparisons must use runtime")
+        if method_name in runtime_methods:
+            raise ValueError(f"Duplicate runtime comparison for method {method_name}")
+        runtime_methods.add(method_name)
+        reference_methods.add(reference_name)
+        method = method_by_name[method_name]
+        reference = method_by_name[reference_name]
+        architecture = method.get("architecture")
+        if architecture not in {"master_slave", "particle_parallel"}:
+            raise ValueError(
+                f"Speedup candidate {method_name} must be master_slave or particle_parallel, not {architecture!r}"
+            )
+        workers = method.get("workers")
+        if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
+            raise ValueError(f"Speedup candidate {method_name} must specify workers >= 1")
+        if reference.get("architecture") != "serial":
+            raise ValueError(f"Speedup reference {reference_name} must use the serial architecture")
+        if method.get("topology", "global") != reference.get("topology", "global"):
+            raise ValueError(
+                f"Speedup comparison {method_name}/{reference_name} changes the social topology"
+            )
+        # All algorithmic/topology options must be identical. Only the method
+        # label, executor and worker count may differ.
+        excluded = {"name", "architecture", "workers"}
+        method_semantics = {key: value for key, value in method.items() if key not in excluded}
+        reference_semantics = {key: value for key, value in reference.items() if key not in excluded}
+        if method_semantics != reference_semantics:
+            raise ValueError(
+                f"Speedup comparison {method_name}/{reference_name} changes algorithmic settings"
+            )
+    serial_methods = {
+        name for name, method in method_by_name.items()
+        if method.get("architecture") == "serial"
+    }
+    if reference_methods != serial_methods:
+        raise ValueError(
+            "Every serial reference must be used, and every runtime pair must point to its matched serial reference"
+        )
+    serial_topologies = [
+        method.get("topology", "global") for method in method_by_name.values()
+        if method.get("architecture") == "serial"
+    ]
+    if len(serial_topologies) != len(set(serial_topologies)):
+        raise ValueError("A performance study must contain exactly one serial reference per topology")
+    if any(method.get("architecture") not in {"serial", "master_slave", "particle_parallel"}
+           for method in method_by_name.values()):
+        raise ValueError("A performance study cannot contain asynchronous or island dynamics")
+    if runtime_methods != {
+        name for name, method in method_by_name.items()
+        if method.get("architecture") in {"master_slave", "particle_parallel"}
+    }:
+        raise ValueError("Every synchronous parallel method must have exactly one runtime comparison")
 
 def flatten_studies(campaign: dict[str, Any], selected_stage_ids: set[str] | None = None):
     flattened = []

@@ -63,5 +63,6 @@
     "pso_fips",
     "pso_cso",
     "pso_dms"
-  ]
+  ],
+  "cpso_dt": 0.35
 }

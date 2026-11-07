@@ -490,53 +490,108 @@ def _analyze_quality_study(
 def _analyze_performance_study(
     stage: dict[str, Any], study_item: dict[str, Any], records: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    lookup = {
-        (r["benchmark"], int(r["dimension"]), int(r["seed"]), r["method"]): r
-        for r in records
-    }
+    """Compute paired wall-clock speedup only for validated synchronous pairs."""
+    study = study_item["study"]
+    if study.get("benchmarks") != ["sphere_work"] or study.get("check_equivalence", True) is not True:
+        raise ValueError(
+            f"{stage['id']}/{study_item['id']}: speedup requires sphere_work and exact-equivalence checks"
+        )
+    method_specs = {item["name"]: item for item in study["methods"]}
+    lookup: dict[tuple[str, int, int, str], dict[str, Any]] = {}
+    for row in records:
+        key = (row["benchmark"], int(row["dimension"]), int(row["seed"]), row["method"])
+        if key in lookup:
+            raise RuntimeError(f"Duplicate record in performance study: {key}")
+        lookup[key] = row
+
     output: list[dict[str, Any]] = []
     for comparison in study_item.get("comparisons", []):
         if comparison.get("metric") != "runtime":
-            continue
+            raise ValueError("Performance comparisons must all use metric='runtime'")
         method = comparison["method"]
         reference = comparison["reference"]
-        by_dimension: dict[int, list[float]] = defaultdict(list)
-        worker_count = None
-        for (benchmark, dimension, seed, method_name), row in lookup.items():
-            if benchmark != "sphere_work" or method_name != method:
-                continue
-            base = lookup.get((benchmark, dimension, seed, reference))
-            if base is None:
-                raise RuntimeError(f"Missing runtime reference {reference} for {method}")
-            by_dimension[dimension].append(
-                float(base["elapsed_seconds"]) / max(float(row["elapsed_seconds"]), 1.0e-15)
-            )
-            worker_count = int(row["workers"])
-        for dimension, ratios in sorted(by_dimension.items()):
+        method_spec = method_specs[method]
+        reference_spec = method_specs[reference]
+        if method_spec.get("architecture") not in {"master_slave", "particle_parallel"}:
+            raise ValueError(f"{method} is not a synchronous parallel executor")
+        if reference_spec.get("architecture") != "serial":
+            raise ValueError(f"{reference} is not a serial reference")
+        if method_spec.get("topology", "global") != reference_spec.get("topology", "global"):
+            raise ValueError(f"{method}/{reference} use different social topologies")
+        method_semantics = {
+            key: value for key, value in method_spec.items()
+            if key not in {"name", "architecture", "workers"}
+        }
+        reference_semantics = {
+            key: value for key, value in reference_spec.items()
+            if key not in {"name", "architecture", "workers"}
+        }
+        if method_semantics != reference_semantics:
+            raise ValueError(f"{method}/{reference} differ in algorithmic settings")
+
+        worker_count = int(method_spec["workers"])
+        for dimension in study["dimensions"]:
+            ratios: list[float] = []
+            serial_times: list[float] = []
+            parallel_times: list[float] = []
+            for seed in study["seeds"]:
+                parallel_row = lookup.get(("sphere_work", int(dimension), int(seed), method))
+                serial_row = lookup.get(("sphere_work", int(dimension), int(seed), reference))
+                if parallel_row is None or serial_row is None:
+                    raise RuntimeError(
+                        f"Missing paired speedup record for {method}/{reference}, "
+                        f"D={dimension}, seed={seed}"
+                    )
+                parallel_time = float(parallel_row["elapsed_seconds"])
+                serial_time = float(serial_row["elapsed_seconds"])
+                if not math.isfinite(parallel_time) or parallel_time <= 0.0:
+                    raise RuntimeError(
+                        f"Invalid parallel elapsed_seconds for {method}, D={dimension}, seed={seed}"
+                    )
+                if not math.isfinite(serial_time) or serial_time <= 0.0:
+                    raise RuntimeError(
+                        f"Invalid serial elapsed_seconds for {reference}, D={dimension}, seed={seed}"
+                    )
+                if int(parallel_row.get("workers", worker_count)) != worker_count:
+                    raise RuntimeError(f"Inconsistent worker count recorded for {method}")
+                if int(parallel_row["function_evaluations"]) != int(serial_row["function_evaluations"]):
+                    raise RuntimeError(f"FE budget mismatch in speedup pair {method}/{reference}")
+                for field in ("population_size", "iterations"):
+                    if field in parallel_row and field in serial_row:
+                        if int(parallel_row[field]) != int(serial_row[field]):
+                            raise RuntimeError(
+                                f"{field} mismatch in speedup pair {method}/{reference}"
+                            )
+                # Exact synchronous incumbent-trace equivalence is verified by
+                # analyze_campaign_directory before this function is called. Use
+                # end-to-end native elapsed time; on parallel runs it includes
+                # worker-pool startup/shutdown, which is part of executor overhead.
+                ratios.append(serial_time / parallel_time)
+                serial_times.append(serial_time)
+                parallel_times.append(parallel_time)
+
             ci_low, ci_high = _bootstrap_median(
                 ratios,
-                random.Random(20261105 + dimension + sum(ord(ch) for ch in method + study_item["id"])),
+                random.Random(20261105 + int(dimension) + sum(ord(ch) for ch in method + study_item["id"])),
             )
             median_speedup = statistics.median(ratios)
             output.append({
                 "stage": stage["id"],
                 "study": study_item["id"],
-                "population_size": int(study_item["study"]["population_size"]),
-                "work_iterations": int(study_item["study"].get("work_iterations", 0)),
-                "dimension": dimension,
+                "population_size": int(study["population_size"]),
+                "work_iterations": int(study.get("work_iterations", 0)),
+                "dimension": int(dimension),
                 "method": method,
                 "reference": reference,
                 "workers": worker_count,
                 "n_paired_runs": len(ratios),
+                "median_serial_runtime_seconds": statistics.median(serial_times),
+                "median_parallel_runtime_seconds": statistics.median(parallel_times),
                 "median_speedup": median_speedup,
                 "bootstrap_95_low": ci_low,
                 "bootstrap_95_high": ci_high,
-                "parallel_efficiency": median_speedup / max(1, int(worker_count or 1)),
-                "median_runtime_seconds": statistics.median([
-                    float(lookup[("sphere_work", dimension, seed, method)]["elapsed_seconds"])
-                    for seed in study_item["study"]["seeds"]
-                ]),
-                "interpretation": "valid speedup: same synchronous CPSO trajectory and FE budget",
+                "parallel_efficiency": median_speedup / worker_count,
+                "interpretation": "paired end-to-end speedup; verified synchronous incumbent trace and FE budget validated",
             })
     return output
 

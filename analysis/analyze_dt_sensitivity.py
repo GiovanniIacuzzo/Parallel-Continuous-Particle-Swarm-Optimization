@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
-"""Validate paired dt-sensitivity runs and create vector PDF figures."""
+"""Validate and analyze the current native CPSO paired-dt screening campaign.
+
+This is a screening analysis, not a confirmatory hypothesis-testing pipeline.
+Seeds are paired within each fixed benchmark x dimension cell. The bootstrap
+interval is conditional on the selected benchmark functions and dimensions and
+resamples paired seeds only. Objective values are compared on log10 scale
+because the benchmark functions have different numerical scales.
+"""
 from __future__ import annotations
 
 import argparse
 import csv
 import json
 import math
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -14,228 +22,389 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from plot_style import PALETTE, configure_style
-from paired_stats import holm_adjust, paired_wilcoxon
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in __import__("sys").path:
+    __import__("sys").path.insert(0, str(ROOT))
+
+from analysis.plot_style import PALETTE, configure_style  # noqa: E402
+
+LOG_FLOOR = 1.0e-16
 
 
-def dt_tag(value: float) -> str:
-    return format(value, ".8g").replace("-", "m").replace(".", "p")
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    with path.open("r", encoding="utf-8") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSONL at {path}:{line_number}") from exc
+            if not isinstance(row, dict):
+                raise ValueError(f"Expected an object at {path}:{line_number}")
+            rows.append(row)
+    return rows
 
 
-def ci_mean(values: np.ndarray) -> tuple[float, float, float]:
-    values = np.asarray(values, dtype=float)
-    mean = float(np.mean(values))
-    if len(values) < 2:
-        return mean, mean, mean
-    try:
-        from scipy.stats import t
-        q = float(t.ppf(0.975, len(values) - 1))
-    except Exception:
-        q = 1.96
-    half = q * float(np.std(values, ddof=1)) / math.sqrt(len(values))
-    return mean, mean - half, mean + half
+def _log_objective(value: float) -> float:
+    if not math.isfinite(value) or value < -1.0e-12:
+        raise ValueError(f"Expected a finite non-negative objective, received {value!r}")
+    return math.log10(max(value, LOG_FLOOR))
 
 
-def load_rows(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8") as stream:
-        return list(csv.DictReader(stream))
+def load_and_validate(input_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
+    manifest_path = input_dir / "study_config.json"
+    records_path = input_dir / "runs.jsonl"
+    if not manifest_path.is_file() or not records_path.is_file():
+        raise FileNotFoundError(
+            f"Expected both {manifest_path.name} and {records_path.name} in {input_dir}"
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    config = manifest.get("study_config")
+    if not isinstance(config, dict):
+        raise ValueError("study_config.json does not contain a study_config object")
+    records = _read_jsonl(records_path)
+    if not records:
+        raise ValueError("No dt-sensitivity records were found")
 
-
-def validate(rows: list[dict[str, str]], input_dir: Path) -> tuple[dict[str, Any], dict[float, list[list[float]]]]:
-    if not rows:
-        raise ValueError("No dt-sensitivity rows found.")
-    required = {"dt", "repetition", "seed", "dimension", "population_size", "iterations",
-                "function_evaluations", "topology", "workers_requested", "actual_threads",
-                "sync_interval", "best_value", "elapsed_seconds", "openmp_enabled"}
-    missing = required - set(rows[0])
-    if missing:
-        raise ValueError(f"dt-sensitivity CSV lacks required columns: {sorted(missing)}")
-    dts = sorted({float(r["dt"]) for r in rows})
-    seeds = sorted({int(r["seed"]) for r in rows})
-    if len(dts) < 2 or len(seeds) < 2:
-        raise ValueError("At least two dt values and two paired seeds are required.")
-    if any(dt <= 0 for dt in dts):
-        raise ValueError("All dt values must be positive.")
-    if not any(abs(dt - 1.0) <= 1e-12 for dt in dts):
-        raise ValueError("The predeclared reference interval dt=1.0 must be included in the sensitivity sweep.")
-    if any(r["topology"] != "star" or int(r["sync_interval"]) != 1 for r in rows):
-        raise ValueError("The dt study is defined for Star with sync_interval=1.")
-    cells = [(float(r["dt"]), int(r["seed"])) for r in rows]
-    if len(cells) != len(set(cells)):
-        raise ValueError("Duplicate (dt, seed) entries detected.")
-    for dt in dts:
-        found = {int(r["seed"]) for r in rows if float(r["dt"]) == dt}
-        if found != set(seeds):
-            raise ValueError(f"Seed pairing is incomplete for dt={dt:g}.")
-    fes = {int(r["function_evaluations"]) for r in rows}
-    pop = {int(r["population_size"]) for r in rows}
-    iterations = {int(r["iterations"]) for r in rows}
-    dims = {int(r["dimension"]) for r in rows}
-    workers = {int(r["workers_requested"]) for r in rows}
-    actual = {int(r["actual_threads"]) for r in rows}
-    openmp_ok = all(r["openmp_enabled"].lower() == "true" for r in rows)
-    if any(int(r["function_evaluations"]) != int(r["population_size"]) * (int(r["iterations"]) + 1)
-           for r in rows):
-        raise ValueError("Objective-evaluation accounting mismatch.")
-    if len(fes) != 1 or len(pop) != 1 or len(iterations) != 1 or len(dims) != 1 or len(workers) != 1:
-        raise ValueError("The dt sweep must keep dimension, population, iterations, FEs and worker count fixed.")
-
-    histories: dict[float, list[list[float]]] = {dt: [] for dt in dts}
-    for row in rows:
-        dt = float(row["dt"])
-        rep = int(row["repetition"])
-        raw_file = input_dir / "runs" / f"dt_{dt_tag(dt)}_run{rep:02d}.json"
-        if not raw_file.is_file():
-            raise FileNotFoundError(f"Missing raw run file: {raw_file}")
-        raw = json.loads(raw_file.read_text(encoding="utf-8"))
-        hist = [float(x) for x in raw.get("history", [])]
-        if len(hist) != next(iter(iterations)) + 1:
-            raise ValueError(f"History length mismatch in {raw_file}.")
-        if abs(hist[-1] - float(row["best_value"])) > 1e-12:
-            raise ValueError(f"CSV and raw JSON final values differ in {raw_file}.")
-        if any(b > a + 1e-12 for a, b in zip(hist, hist[1:])):
-            raise ValueError(f"Best-so-far history is not monotone in {raw_file}.")
-        histories[dt].append(hist)
-    validation = {
-        "dt_values": dts,
-        "repetitions": len(seeds),
-        "paired_seeds": seeds,
-        "dimension": next(iter(dims)),
-        "population_size": next(iter(pop)),
-        "iterations": next(iter(iterations)),
-        "function_evaluations": next(iter(fes)),
-        "workers_requested": next(iter(workers)),
-        "actual_threads_unique": sorted(actual),
-        "openmp_enabled_all": openmp_ok,
-        "parallel_team_match": all(int(r["actual_threads"]) == int(r["workers_requested"]) for r in rows),
+    benchmarks = [str(value) for value in config["benchmarks"]]
+    dimensions = [int(value) for value in config["dimensions"]]
+    seeds = [int(value) for value in config["seeds"]]
+    dts = [float(value) for value in config["dt_values"]]
+    reference_dt = float(config["reference_dt"])
+    population = int(config["population_size"])
+    iterations = int(config["iterations"])
+    expected_fe = population * (iterations + 1)
+    expected_keys = {
+        (benchmark, dimension, seed, dt)
+        for benchmark in benchmarks for dimension in dimensions
+        for seed in seeds for dt in dts
     }
-    return validation, histories
+    actual: dict[tuple[str, int, int, float], dict[str, Any]] = {}
+    expected_history_axis = [population * (iteration + 1) for iteration in range(iterations + 1)]
+
+    required = {
+        "benchmark", "dimension", "seed", "dt", "topology", "population_size", "iterations",
+        "function_evaluations", "best_value", "best_position", "history_evaluations",
+        "best_history", "elapsed_seconds",
+    }
+    for index, row in enumerate(records, start=1):
+        missing = required - set(row)
+        if missing:
+            raise ValueError(f"Run record {index} is missing fields: {sorted(missing)}")
+        key = (str(row["benchmark"]), int(row["dimension"]), int(row["seed"]), float(row["dt"]))
+        if key in actual:
+            raise ValueError(f"Duplicate dt-sensitivity run: {key}")
+        if key not in expected_keys:
+            raise ValueError(f"Unexpected dt-sensitivity run: {key}")
+        if row["topology"] != "global":
+            raise ValueError(f"Run {key} changed the fixed global-best topology")
+        if int(row["population_size"]) != population or int(row["iterations"]) != iterations:
+            raise ValueError(f"Population/iteration mismatch in run {key}")
+        if int(row["function_evaluations"]) != expected_fe:
+            raise ValueError(f"FE mismatch in run {key}: expected {expected_fe}")
+        axis = [int(value) for value in row["history_evaluations"]]
+        history = [float(value) for value in row["best_history"]]
+        if axis != expected_history_axis or len(history) != iterations + 1:
+            raise ValueError(f"Convergence-history axis/length mismatch in run {key}")
+        if any(not math.isfinite(value) for value in history):
+            raise ValueError(f"Non-finite convergence history in run {key}")
+        if any(next_value > value + 1.0e-12 for value, next_value in zip(history, history[1:])):
+            raise ValueError(f"Best-so-far history increased in run {key}")
+        best_value = float(row["best_value"])
+        elapsed = float(row["elapsed_seconds"])
+        if not math.isfinite(best_value) or abs(history[-1] - best_value) > 1.0e-12 * max(1.0, abs(best_value)):
+            raise ValueError(f"Final objective/history mismatch in run {key}")
+        _log_objective(best_value)
+        if not math.isfinite(elapsed) or elapsed <= 0.0:
+            raise ValueError(f"Non-positive/non-finite elapsed time in run {key}")
+        actual[key] = row
+
+    missing_keys = expected_keys - set(actual)
+    if missing_keys:
+        example = sorted(missing_keys)[:5]
+        raise ValueError(f"Incomplete factorial dt design: {len(missing_keys)} runs missing, e.g. {example}")
+    if reference_dt not in dts:
+        raise ValueError("Predeclared reference_dt is not in dt_values")
+
+    validation = {
+        "campaign_id": config.get("campaign_id"),
+        "status": "complete_factorial_design_validated",
+        "n_runs": len(records),
+        "n_benchmarks": len(benchmarks),
+        "benchmarks": benchmarks,
+        "dimensions": dimensions,
+        "n_seeds": len(seeds),
+        "seeds": seeds,
+        "dt_values": dts,
+        "reference_dt": reference_dt,
+        "population_size": population,
+        "iterations": iterations,
+        "function_evaluations_per_run": expected_fe,
+        "total_function_evaluations": len(records) * expected_fe,
+        "pairing": "same benchmark, dimension and seed for every dt value",
+        "analysis_scope": "exploratory_screening_conditional_on_selected_benchmarks_and_dimensions",
+        "bootstrap_scope": "paired seeds resampled within each fixed benchmark x dimension cell; benchmark functions and dimensions are fixed design factors",
+    }
+    return config, records, validation
 
 
-def summarize(rows: list[dict[str, str]], validation: dict[str, Any]) -> list[dict[str, Any]]:
-    summary = []
-    for dt in validation["dt_values"]:
-        group = [r for r in rows if float(r["dt"]) == dt]
-        values = np.asarray([float(r["best_value"]) for r in group])
-        times = np.asarray([float(r["elapsed_seconds"]) for r in group])
-        vm, vlo, vhi = ci_mean(values)
-        tm, tlo, thi = ci_mean(times)
-        summary.append({
-            "dt": dt, "n": len(group), "best_mean": vm,
-            "best_sd": float(values.std(ddof=1)), "best_median": float(np.median(values)),
-            "best_q25": float(np.quantile(values, .25)), "best_q75": float(np.quantile(values, .75)),
-            "best_ci95_low": vlo, "best_ci95_high": vhi,
-            "elapsed_mean_s": tm, "elapsed_ci95_low_s": tlo, "elapsed_ci95_high_s": thi,
-        })
+def _paired_deltas(records: list[dict[str, Any]], validation: dict[str, Any]) -> dict[tuple[str, int, int, float], float]:
+    values = {
+        (str(row["benchmark"]), int(row["dimension"]), int(row["seed"]), float(row["dt"])):
+            _log_objective(float(row["best_value"]))
+        for row in records
+    }
+    reference_dt = float(validation["reference_dt"])
+    deltas: dict[tuple[str, int, int, float], float] = {}
+    for benchmark in validation["benchmarks"]:
+        for dimension in validation["dimensions"]:
+            for seed in validation["seeds"]:
+                reference = values[(benchmark, dimension, seed, reference_dt)]
+                for dt in validation["dt_values"]:
+                    deltas[(benchmark, dimension, seed, float(dt))] = (
+                        values[(benchmark, dimension, seed, float(dt))] - reference
+                    )
+    return deltas
+
+
+def summarize_problem_blocks(
+    records: list[dict[str, Any]], validation: dict[str, Any],
+    deltas: dict[tuple[str, int, int, float], float],
+) -> list[dict[str, Any]]:
+    lookup = {
+        (str(row["benchmark"]), int(row["dimension"]), int(row["seed"]), float(row["dt"])): row
+        for row in records
+    }
+    summary: list[dict[str, Any]] = []
+    for benchmark in validation["benchmarks"]:
+        for dimension in validation["dimensions"]:
+            for dt in validation["dt_values"]:
+                values = [float(lookup[(benchmark, dimension, seed, dt)]["best_value"])
+                          for seed in validation["seeds"]]
+                delta = [deltas[(benchmark, dimension, seed, dt)] for seed in validation["seeds"]]
+                summary.append({
+                    "benchmark": benchmark,
+                    "dimension": dimension,
+                    "dt": dt,
+                    "n_paired_seeds": len(values),
+                    "median_best_value": float(np.median(values)),
+                    "q25_best_value": float(np.quantile(values, 0.25)),
+                    "q75_best_value": float(np.quantile(values, 0.75)),
+                    "median_delta_log10_vs_reference": float(np.median(delta)),
+                    "q25_delta_log10_vs_reference": float(np.quantile(delta, 0.25)),
+                    "q75_delta_log10_vs_reference": float(np.quantile(delta, 0.75)),
+                })
     return summary
 
 
-
-def paired_dt_tests(rows: list[dict[str, str]], validation: dict[str, Any]) -> list[dict[str, Any]]:
-    """Compare every tested dt against the predeclared dt=1 reference by seed."""
-    reference_dt = min(validation["dt_values"], key=lambda v: abs(v - 1.0))
-    values = {(float(r["dt"]), int(r["seed"])): float(r["best_value"]) for r in rows}
-    tests: list[dict[str, Any]] = []
+def build_family_effects(
+    validation: dict[str, Any],
+    deltas: dict[tuple[str, int, int, float], float],
+) -> tuple[list[dict[str, Any]], dict[float, dict[str, dict[int, list[float]]]]]:
+    nested: dict[float, dict[str, dict[int, list[float]]]] = {}
+    family_rows: list[dict[str, Any]] = []
     for dt in validation["dt_values"]:
-        if dt == reference_dt:
-            continue
-        seeds = validation["paired_seeds"]
-        result = paired_wilcoxon(
-            [values[(dt, seed)] for seed in seeds],
-            [values[(reference_dt, seed)] for seed in seeds],
-        )
-        tests.append({"dt": dt, "reference_dt": reference_dt, **result})
-    adjusted = holm_adjust([float(row["p_value"]) for row in tests])
-    for row, p_adj in zip(tests, adjusted):
-        row["p_value_holm"] = p_adj
-    return tests
+        nested[float(dt)] = {}
+        for benchmark in validation["benchmarks"]:
+            nested[float(dt)][benchmark] = {}
+            dimension_effects: list[float] = []
+            for dimension in validation["dimensions"]:
+                paired = [deltas[(benchmark, dimension, seed, float(dt))] for seed in validation["seeds"]]
+                nested[float(dt)][benchmark][dimension] = paired
+                dimension_effects.append(float(np.median(paired)))
+            family_effect = float(np.median(dimension_effects))
+            family_rows.append({
+                "benchmark_family": benchmark,
+                "dt": float(dt),
+                "family_median_delta_log10_vs_reference": family_effect,
+                "dimension_effects": json.dumps(
+                    {
+                        str(dimension): float(np.median(nested[float(dt)][benchmark][dimension]))
+                        for dimension in validation["dimensions"]
+                    },
+                    sort_keys=True,
+                ),
+            })
+    return family_rows, nested
 
-def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+
+def hierarchical_bootstrap_profile(
+    nested: dict[float, dict[str, dict[int, list[float]]]],
+    validation: dict[str, Any], *, replicates: int = 5000, seed: int = 20261107,
+) -> list[dict[str, Any]]:
+    """Bootstrap paired seeds, conditioning on the selected problems/dimensions.
+
+    The six benchmark functions are a deliberately selected screening set, not
+    a random sample from a population of all optimization problems. They are
+    therefore kept fixed in every replicate. For each fixed function x
+    dimension cell, only its paired seeds are resampled; cell and family
+    medians are then recomputed. The interval describes seed uncertainty
+    conditional on this screening design, not generalization to all problems.
+    """
+    rng = np.random.default_rng(seed)
+    families = list(validation["benchmarks"])
+    dimensions = list(validation["dimensions"])
+    output = []
+    for dt in validation["dt_values"]:
+        family_values = []
+        for family in families:
+            by_dimension = [
+                float(np.median(nested[float(dt)][family][dimension])) for dimension in dimensions
+            ]
+            family_values.append(float(np.median(by_dimension)))
+        samples = np.empty(replicates, dtype=float)
+        for replicate in range(replicates):
+            replicate_family_effects = []
+            for family in families:  # fixed benchmark set; do not resample families
+                dimension_effects = []
+                for dimension in dimensions:  # fixed dimensions; resample paired seeds only
+                    paired = np.asarray(nested[float(dt)][family][dimension], dtype=float)
+                    sampled_seeds = rng.choice(paired, size=paired.size, replace=True)
+                    dimension_effects.append(float(np.median(sampled_seeds)))
+                replicate_family_effects.append(float(np.median(dimension_effects)))
+            samples[replicate] = float(np.median(replicate_family_effects))
+        output.append({
+            "dt": float(dt),
+            "n_fixed_benchmark_functions": len(families),
+            "median_family_effect_log10": float(np.median(family_values)),
+            "seed_bootstrap_95_low": float(np.quantile(samples, 0.025)),
+            "seed_bootstrap_95_high": float(np.quantile(samples, 0.975)),
+            "bootstrap_replicates": int(replicates),
+            "interval_scope": "conditional_on_selected_benchmarks_and_dimensions",
+        })
+    return output
+
+
+def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        raise ValueError(f"Refusing to write an empty CSV: {path}")
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-        writer.writeheader(); writer.writerows(rows)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
-def make_figures(rows: list[dict[str, str]], validation: dict[str, Any], summary: list[dict[str, Any]],
-                 histories: dict[float, list[list[float]]], output: Path) -> None:
+def make_figures(
+    summary: list[dict[str, Any]], profile: list[dict[str, Any]], validation: dict[str, Any],
+    output: Path,
+) -> list[Path]:
     configure_style()
+    plt.rcParams.update({"pdf.fonttype": 42, "ps.fonttype": 42, "font.size": 8.2})
     output.mkdir(parents=True, exist_ok=True)
+    generated: list[Path] = []
+    benchmarks = validation["benchmarks"]
+    dimensions = validation["dimensions"]
     dts = validation["dt_values"]
+    reference_dt = float(validation["reference_dt"])
 
-    # Mean final objective with t-based 95% CI.
-    fig, ax = plt.subplots(figsize=(6.5, 3.8))
-    x = np.asarray(dts)
-    y = np.asarray([r["best_mean"] for r in summary])
-    lo = np.maximum(0.0, y - np.asarray([r["best_ci95_low"] for r in summary]))
-    hi = np.asarray([r["best_ci95_high"] for r in summary]) - y
-    ax.errorbar(x, y, yerr=np.vstack([lo, hi]), fmt="o-", capsize=3, color=PALETTE["navy"])
-    ax.set_xlabel("CPSO interval length, $\\Delta t$")
-    ax.set_ylabel("Mean final objective value (95% CI)")
-    ax.set_title("Sensitivity of CPSO solution quality to interval length")
-    ax.set_xticks(dts)
-    ax.set_ylim(bottom=0)
-    ax.grid(True)
-    fig.savefig(output / "fig_13_dt_sensitivity_mean_quality.pdf")
+    # Heatmap of paired log10 differences: rows are benchmark x dimension,
+    # columns are dt, and zero is the predeclared current reference.
+    row_labels: list[str] = []
+    matrix: list[list[float]] = []
+    indexed = {(r["benchmark"], int(r["dimension"]), float(r["dt"])): r for r in summary}
+    for benchmark in benchmarks:
+        for dimension in dimensions:
+            row_labels.append(f"{benchmark}, D={dimension}")
+            matrix.append([
+                float(indexed[(benchmark, dimension, float(dt))]["median_delta_log10_vs_reference"])
+                for dt in dts
+            ])
+    image = np.asarray(matrix, dtype=float)
+    finite = np.abs(image[np.isfinite(image)])
+    limit = max(0.05, float(np.quantile(finite, 0.95))) if finite.size else 1.0
+    fig_height = max(4.0, 0.30 * len(row_labels) + 1.2)
+    fig, ax = plt.subplots(figsize=(8.0, fig_height))
+    plotted = ax.imshow(image, aspect="auto", cmap="coolwarm", vmin=-limit, vmax=limit)
+    ax.set_yticks(np.arange(len(row_labels)), row_labels)
+    ax.set_xticks(np.arange(len(dts)), [f"{value:g}" for value in dts])
+    ax.set_xlabel(r"CPSO interval length, $\Delta t$")
+    ax.set_title(r"Paired sensitivity relative to the reference $\Delta t$", weight="bold")
+    for index, dt in enumerate(dts):
+        if float(dt) == reference_dt:
+            ax.axvline(index, color="black", linewidth=1.0, linestyle="--")
+    colorbar = fig.colorbar(plotted, ax=ax, pad=0.015)
+    colorbar.set_label(r"Median paired $\Delta\log_{10}(f)$ (negative is better)")
+    ax.tick_params(axis="x", rotation=35)
+    fig.tight_layout()
+    path = output / "fig_dt_sensitivity_problem_heatmap.pdf"
+    fig.savefig(path, bbox_inches="tight")
     plt.close(fig)
+    generated.append(path)
 
-    # Individual observations, IQR and median.
-    fig, ax = plt.subplots(figsize=(6.5, 3.8))
-    rng = np.random.default_rng(20261104)
-    for pos, dt in enumerate(dts, start=1):
-        values = np.asarray([float(r["best_value"]) for r in rows if float(r["dt"]) == dt])
-        jitter = rng.uniform(-0.10, 0.10, size=len(values))
-        color = PALETTE["blue"]
-        ax.scatter(pos + jitter, values, s=18, color=color, alpha=0.68,
-                   edgecolor="white", linewidth=0.3, zorder=3)
-        q25, med, q75 = np.quantile(values, [0.25, 0.5, 0.75])
-        ax.vlines(pos, q25, q75, color=PALETTE["teal"], linewidth=4, zorder=2)
-        ax.scatter(pos, med, marker="_", color="black", s=130, linewidth=1.7, zorder=4)
-    ax.set_xticks(np.arange(1, len(dts) + 1), [f"{v:g}" for v in dts])
-    ax.set_xlabel("CPSO interval length, $\\Delta t$")
-    ax.set_ylabel("Final objective value")
-    ax.set_title("Final objective distribution across interval lengths")
-    ax.set_ylim(bottom=0)
-    ax.grid(True, axis="y")
-    fig.savefig(output / "fig_14_dt_sensitivity_distribution.pdf")
+    # Aggregated profile across the fixed selected benchmark set.
+    values = np.asarray([float(row["median_family_effect_log10"]) for row in profile])
+    lows = np.asarray([float(row["seed_bootstrap_95_low"]) for row in profile])
+    highs = np.asarray([float(row["seed_bootstrap_95_high"]) for row in profile])
+    x = np.asarray([float(row["dt"]) for row in profile])
+    fig, ax = plt.subplots(figsize=(6.8, 3.8))
+    ax.fill_between(x, lows, highs, color=PALETTE["blue"], alpha=0.16, linewidth=0,
+                    label="Paired-seed bootstrap 95% interval")
+    ax.plot(x, values, marker="o", markersize=4.2, linewidth=1.6,
+            color=PALETTE["navy"], label="Median across selected benchmark functions")
+    ax.axhline(0.0, color=PALETTE["grey"], linewidth=0.9, linestyle="--")
+    ax.axvline(reference_dt, color=PALETTE["red"], linewidth=0.9, linestyle=":",
+               label=fr"Reference $\Delta t={reference_dt:g}$")
+    ax.set_xscale("log")
+    ax.set_xticks(x, [f"{value:g}" for value in x])
+    ax.set_xlabel(r"CPSO interval length, $\Delta t$ (log scale)")
+    ax.set_ylabel(r"Median paired $\Delta\log_{10}(f)$")
+    ax.set_title("Seed uncertainty for the selected benchmark set", weight="bold")
+    ax.grid(True, axis="y", alpha=0.25)
+    ax.legend(frameon=False, fontsize=7.0)
+    fig.tight_layout()
+    path = output / "fig_dt_sensitivity_family_profile.pdf"
+    fig.savefig(path, bbox_inches="tight")
     plt.close(fig)
-
-    # Convergence profiles for up to five representative dt values.
-    indices = np.unique(np.linspace(0, len(dts) - 1, min(5, len(dts))).round().astype(int))
-    selected = [dts[i] for i in indices]
-    fig, ax = plt.subplots(figsize=(6.6, 3.8))
-    colors = [PALETTE["navy"], PALETTE["blue"], PALETTE["teal"], PALETTE["gold"], PALETTE["red"]]
-    fes = np.arange(1, validation["iterations"] + 2) * validation["population_size"]
-    for dt, color in zip(selected, colors):
-        h = np.asarray(histories[dt], dtype=float)
-        med = np.median(h, axis=0)
-        q25, q75 = np.quantile(h, [0.25, 0.75], axis=0)
-        ax.plot(fes, med, color=color, label=fr"$\Delta t={dt:g}$")
-        ax.fill_between(fes, q25, q75, color=color, alpha=.12, linewidth=0)
-    ax.set_xlabel("Objective-function evaluations")
-    ax.set_ylabel("Best-so-far objective value")
-    ax.set_title("CPSO convergence for representative interval lengths")
-    ax.grid(True)
-    ax.legend(frameon=False)
-    fig.savefig(output / "fig_15_dt_sensitivity_convergence.pdf")
-    plt.close(fig)
+    generated.append(path)
+    return generated
 
 
-def main() -> None:
+def analyze(input_dir: Path, output_dir: Path, figures_dir: Path, *, bootstrap_replicates: int = 5000) -> dict[str, Any]:
+    config, records, validation = load_and_validate(input_dir)
+    deltas = _paired_deltas(records, validation)
+    problem_summary = summarize_problem_blocks(records, validation, deltas)
+    family_rows, nested = build_family_effects(validation, deltas)
+    profile = hierarchical_bootstrap_profile(
+        nested, validation, replicates=bootstrap_replicates,
+        seed=int(config.get("analysis_seed", 20261107)),
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _write_csv(output_dir / "dt_problem_summary.csv", problem_summary)
+    _write_csv(output_dir / "dt_family_effects.csv", family_rows)
+    _write_csv(output_dir / "dt_family_profile.csv", profile)
+    validation["bootstrap_replicates"] = int(bootstrap_replicates)
+    validation_path = output_dir / "validation.json"
+    validation_path.write_text(json.dumps(validation, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    figures = make_figures(problem_summary, profile, validation, figures_dir)
+    return {"validation": validation, "figures": [str(path) for path in figures]}
+
+
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", required=True, type=Path, help="Directory with dt_sensitivity_runs.csv and raw runs.")
-    parser.add_argument("--output-dir", default="results/dt_sensitivity_analysis", type=Path)
-    parser.add_argument("--figures-dir", default="figures/dt_sensitivity", type=Path)
+    parser.add_argument(
+        "--input", type=Path,
+        default=ROOT / "results/raw/cpso_dt_sensitivity_screening_v1",
+        help="Campaign directory containing study_config.json and runs.jsonl",
+    )
+    parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--figures-dir", type=Path, default=None)
+    parser.add_argument("--bootstrap-replicates", type=int, default=5000)
     args = parser.parse_args()
-    rows = load_rows(args.input / "dt_sensitivity_runs.csv")
-    validation, histories = validate(rows, args.input)
-    summary = summarize(rows, validation)
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    (args.output_dir / "validation.json").write_text(json.dumps(validation, indent=2), encoding="utf-8")
-    write_csv(args.output_dir / "dt_sensitivity_summary.csv", summary)
-    write_csv(args.output_dir / "paired_dt_tests.csv", paired_dt_tests(rows, validation))
-    make_figures(rows, validation, summary, histories, args.figures_dir)
-    print(f"Validated {len(rows)} paired dt-sensitivity runs; generated 3 vector PDF figures.")
+    if args.bootstrap_replicates < 200:
+        parser.error("--bootstrap-replicates must be at least 200")
+    output_dir = args.output_dir or args.input / "analysis"
+    figures_dir = args.figures_dir or args.input / "figures"
+    result = analyze(args.input, output_dir, figures_dir, bootstrap_replicates=args.bootstrap_replicates)
+    print(
+        f"Validated {result['validation']['n_runs']} runs over "
+        f"{len(result['validation']['dt_values'])} dt values; generated {len(result['figures'])} figures."
+    )
+    print(f"Analysis CSV/JSON: {output_dir}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
