@@ -128,8 +128,12 @@ def load_and_validate(input_dir: Path) -> tuple[dict[str, Any], list[dict[str, A
     if reference_dt not in dts:
         raise ValueError("Predeclared reference_dt is not in dt_values")
 
+    evidence_class = str(config.get("evidence_class", "exploratory"))
+    if evidence_class not in {"confirmatory", "exploratory", "integration_only"}:
+        raise ValueError(f"Unsupported dt evidence_class: {evidence_class!r}")
     validation = {
         "campaign_id": config.get("campaign_id"),
+        "evidence_class": evidence_class,
         "status": "complete_factorial_design_validated",
         "n_runs": len(records),
         "n_benchmarks": len(benchmarks),
@@ -321,7 +325,10 @@ def make_figures(
     ax.set_yticks(np.arange(len(row_labels)), row_labels)
     ax.set_xticks(np.arange(len(dts)), [f"{value:g}" for value in dts])
     ax.set_xlabel(r"CPSO interval length, $\Delta t$")
-    ax.set_title(r"Paired sensitivity relative to the reference $\Delta t$", weight="bold")
+    evidence_label = " — exploratory pilot" if validation.get("evidence_class") == "exploratory" else (
+        " — integration only" if validation.get("evidence_class") == "integration_only" else ""
+    )
+    ax.set_title(r"Paired sensitivity relative to the reference $\Delta t$" + evidence_label, weight="bold")
     for index, dt in enumerate(dts):
         if float(dt) == reference_dt:
             ax.axvline(index, color="black", linewidth=1.0, linestyle="--")
@@ -351,7 +358,7 @@ def make_figures(
     ax.set_xticks(x, [f"{value:g}" for value in x])
     ax.set_xlabel(r"CPSO interval length, $\Delta t$ (log scale)")
     ax.set_ylabel(r"Median paired $\Delta\log_{10}(f)$")
-    ax.set_title("Seed uncertainty for the selected benchmark set", weight="bold")
+    ax.set_title("Seed uncertainty for the selected benchmark set" + evidence_label, weight="bold")
     ax.grid(True, axis="y", alpha=0.25)
     ax.legend(frameon=False, fontsize=7.0)
     fig.tight_layout()

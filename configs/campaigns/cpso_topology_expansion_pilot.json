@@ -393,5 +393,6 @@
         }
       ]
     }
-  ]
+  ],
+  "evidence_class": "exploratory"
 }

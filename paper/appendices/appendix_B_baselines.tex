@@ -1,0 +1,127 @@
+\section{Formulazioni e configurazioni delle baseline PSO}
+\label{app:baselines}
+
+Le baseline sono algoritmi PSO discreti in spazio decisionale continuo e sono implementate in moduli NumPy distinti dal nucleo CPSO C++. In questa appendice si documentano le formule e le scelte effettivamente presenti nel codice. Le adattazioni per budget FE comune non vengono presentate come parte delle formulazioni originali. L'acronimo CPSO non viene usato per nessuna baseline: identifica soltanto la formulazione di Orlando--Ricciardello.
+
+\subsection{Parametri e adattamenti comuni}
+
+La popolazione esterna è fissata a $N=40$ per tutti gli undici metodi e la valutazione è limitata da un budget FE identico per problema e algoritmo. Il seed deriva da un hash stabile dell'identificatore del problema e del seme di campagna; generatori diversi e implementazioni indipendenti implicano che il pairing del seed non garantisce inizializzazione coordinata identica. La velocità iniziale è in generale campionata in $[-0.1w_j,0.1w_j]$, dove $w_j=u_j-\ell_j$; SL-PSO e Competitive Swarm Optimizer iniziano con velocità nulla, mentre SPSO-2011 usa la propria inizializzazione nel box normalizzato.
+
+\begin{table}[H]
+\centering
+\caption{Configurazioni effettive delle baseline nel codice Python. $V_{\max}$ è espresso come frazione della larghezza del dominio.}
+\label{tab:app-baseline-config}
+\small
+\begin{tabularx}{\textwidth}{@{}lXllX@{}}
+\toprule
+Metodo & Parametri/controlli principali & $V_{\max}$ & $v^0$ & Nota di adattamento \\
+\midrule
+Classic global-best & $c_1=c_2=2$, $w=1$ & $0.2w_j$ & $U[-0.1w_j,0.1w_j]$ & PSO gbest senza inerzia variabile; clipping e restituzione comuni. \\
+Inertia global-best & $c_1=c_2=2.05$, $w:0.9\to0.4$ & $0.2w_j$ & $U[-0.1w_j,0.1w_j]$ & Schedule lineare associata allo studio empirico di Shi--Eberhart 1999. \\
+Constriction global-best & $c_1=c_2=2.05$, $\chi$ di Clerc--Kennedy & Nessuno & $U[-0.1w_j,0.1w_j]$ & Nessun limite di velocità nella configurazione corrente. \\
+Inertia local-best ring & $c_1=c_2=2.05$, $w:0.9\to0.4$, raggio 1 & $0.2w_j$ & $U[-0.1w_j,0.1w_j]$ & Snapshot sincrono con vicinato periodico. \\
+CLPSO & $c=1.49445$, $w:0.9\to0.4$, refresh 7 & $0.2w_j$ & $U[-0.1w_j,0.1w_j]$ & Esemplari per coordinata e probabilità di apprendimento dipendente dall'indice. \\
+SL-PSO & $M=100$, $\alpha=0.5$, $\beta=0.01$ & Nessuno & $0$ & Formula di apprendimento conforme; popolazione fissata a 40 per parità FE. \\
+SPSO-2011 & $K_{\mathrm{informant}}=3$, $c=0.5+\ln2$, $\omega=(2\ln2)^{-1}$ & Nessuno & Box normalizzato & Direzioni uniformi e raggio uniforme; regola di confinamento SPSO-2011. \\
+FIPS ring & $\phi=4.1$, due vicini, $\chi$ di costrizione & Nessuno & $U[-0.1w_j,0.1w_j]$ & Coefficienti casuali per coordinata, ring escluso il self. \\
+Competitive Swarm Optimizer & $\varphi=0.1$, matching casuale & Nessuno & $0$ & Soli perdenti aggiornati; $N/2$ FE per generazione se $N$ è pari. \\
+DMS-PSO & $c_1=c_2=2$, $w:0.9\to0.2$, gruppo obiettivo 3, regroup 5 & $0.2w_j$ & $U[-0.1w_j,0.1w_j]$ & Variante base senza ricerca locale quasi-Newton. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Per i metodi con limite di velocità, $V_{\max}=0.2(u_j-\ell_j)$ per coordinata. Le baseline che non lo usano non ricevono un limite implicito. La mappa clamp--restitution è comune per i metodi che non prescrivono una regola di confinamento propria; SPSO-2011 mantiene il proprio clipping e inversione della componente uscente. Le iterazioni sono sincrone rispetto a snapshot congelati; l'ordine delle valutazioni non crea un aggiornamento asincrono accidentale.
+
+\subsection{Fattore di costrizione}
+
+La PSO con fattore di costrizione usa
+\begin{equation}
+ \chi=\frac{2}{\left|2-\varphi-\sqrt{\varphi^2-4\varphi}\right|}
+ =\frac{2}{\varphi-2+\sqrt{\varphi^2-4\varphi}},
+ \quad \varphi=c_1+c_2>4.
+ \label{eq:app-clerc}
+\end{equation}
+Per $c_1=c_2=2.05$, $\varphi=4.1$ e $\chi\simeq0.7298$. Il sorgente Python usa la seconda forma, corretta; il denominatore alternativo $4-\varphi+\sqrt{\varphi^2-4\varphi}$ comparso in una versione del manoscritto era un refuso redazionale e non corrisponde all'implementazione.
+
+\subsection{Inerzia e CLPSO}
+
+La baseline con inerzia utilizza $w_t$ decrescente linearmente da $0.9$ a $0.4$, con coefficienti $c_1=c_2=2.05$. L'introduzione del peso d'inerzia è associata a Shi ed Eberhart 1998, mentre lo studio empirico da cui si riprende la schedule lineare è citato separatamente come Shi ed Eberhart 1999 \citep{ShiEberhart1998,ShiEberhart1999}. Per CLPSO, la probabilità di apprendimento è
+\begin{equation}
+ P_{c,i}=0.05+0.45\frac{\exp\left(10i/(N-1)\right)-1}{\exp(10)-1},
+ \qquad i=0,\ldots,N-1,
+ \label{eq:app-clpso-pc}
+\end{equation}
+con esemplari selezionati per coordinata, $c=1.49445$ e refresh gap pari a sette generazioni. La baseline usa lo snapshot congelato e il limite di velocità $0.2$ volte la larghezza del dominio.
+
+\subsection{SL-PSO: formula implementata e adattamento della popolazione}
+
+SL-PSO ordina la popolazione dal peggiore al migliore; ogni particella non migliore può apprendere da dimostratori con fitness superiore. La versione presente nel codice usa la stessa legge di probabilità di Cheng e Jin \citep{ChengJin2015SLPSO}, espressa con un rango zero-based $r=0,\ldots,N-2$:
+\begin{equation}
+ \gamma=\beta\frac{D}{M},\qquad
+ P_r=\left(1-\frac{r}{N}\right)^\eta,
+ \qquad \eta=\alpha\log\!\left(\max\left\{1,\left\lceil\frac{D}{M}\right\rceil\right\}\right),
+ \label{eq:app-slpso-impl}
+\end{equation}
+con $M=100$, $\alpha=0.5$, $\beta=0.01$. Nella notazione originale, che usa il rango one-based $i=1,\ldots,m-1$, la probabilità è $P_i^L=(1-(i-1)/m)^{\alpha\log\lceil D/M\rceil}$; ponendo $r=i-1$ e $N=m$ si ottiene esattamente la forma implementata. Il fattore $\max\{1,\cdot\}$ non altera la formula, poiché $D,M$ sono positivi e $\lceil D/M\rceil\geq1$. Se l'apprendimento viene attivato, per ogni coordinata è selezionato un dimostratore migliore e lo spostamento è
+\begin{equation}
+ \Delta x_{i,j}^{t+1}=r_1v_{i,j}^t
+ +r_2(x_{k(i,j),j}^t-x_{i,j}^t)
+ +r_3\gamma(\bar x_j^t-x_{i,j}^t),
+ \label{eq:app-slpso-update}
+\end{equation}
+con $r_1,r_2,r_3\sim U(0,1)$ e un dimostratore selezionato indipendentemente per coordinata fra le particelle migliori. La configurazione mantiene $N=40$ per la parità FE; la fonte primaria \citep{ChengJin2015SLPSO} raccomanda invece $m=M+\lfloor D/10\rfloor$ con $M=100$. La popolazione fissa è dunque un adattamento esplicito del protocollo, non un errore nella formula di apprendimento. I risultati vanno etichettati come SL-PSO con popolazione fissata, non come riproduzione integrale di tutti i default originali.
+\subsection{SPSO-2011}
+
+La baseline SPSO-2011 costruisce un grafo diretto casuale di informant con $K=3$ informant più il self. Sia $p_i$ il personal best e $l_i$ il miglior personal best nell'insieme di informant. Il centro di gravità è
+\begin{equation}
+ G_i=x_i+c\frac{p_i+l_i-2x_i}{3},
+ \quad c=\frac12+\ln2,
+ \label{eq:app-spso-center}
+\end{equation}
+con il centro a due punti $G_i=x_i+c(p_i-x_i)/2$ nel caso $p_i=l_i$. Il campione $x_i'$ è estratto dall'ipersfera centrata in $G_i$ e di raggio $\|G_i-x_i\|$, con direzione uniforme e raggio uniforme. L'aggiornamento è
+\begin{equation}
+ v_i^{t+1}=\omega v_i^t+x_i'-x_i^t,
+ \qquad x_i^{t+1}=x_i^t+v_i^{t+1},
+ \qquad \omega=(2\ln2)^{-1}.
+ \label{eq:app-spso-update}
+\end{equation}
+Le coordinate sono normalizzate nel box unitario per la costruzione geometrica e riportate al dominio originale. Il grafo viene rigenerato dopo una generazione senza miglioramento del best globale; il confinamento è quello SPSO-2011, non la mappa comune.
+
+\subsection{FIPS}
+
+La baseline FIPS usa il ring periodico a due vicini, escludendo la particella centrale. L'aggiornamento implementato è
+\begin{equation}
+ v_i^{t+1}=\chi v_i^t+\frac{\chi}{|\mathcal N_i|}
+ \sum_{j\in\mathcal N_i}R_{ij}\odot(p_j-x_i^t),
+ \quad R_{ij,k}\sim U(0,\phi),\quad \phi=4.1,
+ \label{eq:app-fips}
+\end{equation}
+con $\chi=2/(\phi-2+\sqrt{\phi^2-4\phi})$. Il sorgente campiona pesi casuali coordinata per coordinata; la topologia resta fissa per l'intera run. La variante implementata è quindi FIPS su ring di grado due, non la topologia square a quattro vicini spesso considerata nei confronti classici.
+
+\subsection{Competitive Swarm Optimizer e DMS-PSO}
+
+Nel Competitive Swarm Optimizer (qui abbreviato nel testo come \emph{Competitive Swarm Optimizer}, per evitare collisioni con l'acronimo CPSO), le particelle vengono accoppiate casualmente. Il vincitore resta invariato; il perdente aggiorna
+\begin{equation}
+\begin{aligned}
+ v_l^{t+1}&=r_1\odot v_l^t+r_2\odot(x_w^t-x_l^t)
+ +\varphi_{\mathrm{CSO}}r_3\odot(\bar x^t-x_l^t),\\
+ x_l^{t+1}&=x_l^t+v_l^{t+1},\qquad \varphi_{\mathrm{CSO}}=0.1,
+\end{aligned}
+\label{eq:app-cso}
+\end{equation}
+con coefficienti casuali vettoriali. Soltanto i perdenti vengono rivalutati e una generazione completa consuma $N/2$ FE se $N$ è pari.
+
+La baseline DMS-PSO usa sottosciami di dimensione obiettivo tre, riorganizzati casualmente ogni cinque generazioni. L'aggiornamento è
+\begin{equation}
+\begin{aligned}
+ v_i^{t+1}&=\omega_t v_i^t+2r_1\odot(p_i-x_i^t)
+ +2r_2\odot(l_i-x_i^t),\\
+ x_i^{t+1}&=x_i^t+v_i^{t+1},
+\end{aligned}
+\label{eq:app-dms}
+\end{equation}
+con inerzia lineare da $0.9$ a $0.2$. La variante di progetto non include ricerca locale quasi-Newton; il resto della partizione è aggiunto all'ultimo sottosciame.
+
+\subsection{Controlli da completare prima del benchmark definitivo}
+
+Prima delle campagne esterne devono essere completati e archiviati: (i) congelamento esplicito della popolazione SL-PSO a $N=40$ come adattamento di confronto, con eventuale esperimento separato usando $m=M+\lfloor D/10\rfloor$; (ii) confronto indipendente delle implementazioni SPSO-2011, FIPS, CSO e DMS-PSO con formule e test di riferimento; (iii) verifica dei limiti $V_{\max}$ registrati nel manifest; (iv) conferma che tutti i metodi eseguano esattamente il budget FE previsto. Le formule di Clerc--Kennedy e CSO sono già coerenti nel codice Python; le anomalie individuate nelle versioni precedenti del LaTeX erano errori redazionali.

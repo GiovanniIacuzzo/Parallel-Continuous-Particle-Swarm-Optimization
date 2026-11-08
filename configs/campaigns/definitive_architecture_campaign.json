@@ -3,7 +3,7 @@
   "title": "Confirmatory study of CPSO parallel execution architectures",
   "schedule_seed": 20261105,
   "study_notes": {
-    "design": "Paired seeds within benchmark \u00d7 dimension problem instances; 30 independent seeds for search-quality stages and 10 for timing stage.",
+    "design": "Paired seeds within benchmark × dimension problem instances; 30 independent seeds for search-quality stages and 10 for timing stage.",
     "fixed_quality_budget": "N=64, K=500, FE=N(K+1)=32064 for every method including islands.",
     "fixed_scaling_budget": "K=80, FE=N(K+1), with N=64 or 128.",
     "quality_target": "Predeclared target 1e-8 for functions with global optimum 0; ERT is censored at budget for unsuccessful runs.",
@@ -1312,5 +1312,6 @@
         }
       ]
     }
-  ]
+  ],
+  "evidence_class": "confirmatory"
 }

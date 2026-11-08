@@ -2,10 +2,12 @@
 
 This repository contains a C++20 implementation of a continuous-time PSO
 (CPSO) model, a Python `ctypes` interface, five execution architectures, and a
-separate external-benchmark layer with discrete-PSO reference baselines. The
-code distinguishes algorithmic dynamics from execution strategy: synchronous
-parallel modes are required to preserve the serial CPSO trajectory, whereas
-asynchronous and island modes intentionally change information flow.
+separate external-benchmark layer with discrete-PSO reference baselines. This
+root `README.md` is the authoritative repository and operations guide; the
+project intentionally has no separate `docs/` directory. The code distinguishes
+algorithmic dynamics from execution strategy: synchronous parallel modes are
+required to preserve the serial CPSO trajectory, whereas asynchronous and
+island modes intentionally change information flow.
 
 ## Implemented execution modes
 
@@ -36,9 +38,13 @@ campaigns do not measure or claim parallel speedup.
 
 Both COCO suites are driven through the official `coco-experiment` (`cocoex`)
 package; the functions are not reimplemented locally. COCO observer data are
-retained for standard `cocopp` post-processing. CEC 2013 LSGO is accessed through
-an optional third-party Python wrapper, which is not vendored. Review its
-license before installing or redistributing an environment containing it.
+retained for standard `cocopp` post-processing. The direct COCO dependencies are
+pinned in `requirements-benchmarks-coco.txt` (`coco-experiment==2.8.3`,
+`cocopp==2.9.1`) and in the matching optional extras. CEC 2013 LSGO is accessed
+through the optional third-party wrapper `cec2013lsgo==2.2`, which is not
+vendored and is a legacy integration. Review its GPL-3.0 terms and test its
+build separately before installing it on Apple Silicon or redistributing an
+environment containing it.
 
 The benchmark campaign compares eleven algorithms under an exactly matched
 function-evaluation budget:
@@ -61,10 +67,13 @@ learning, neighborhood, competition and multi-swarm mechanisms. This is a
 representative comparison set, not a universal or exhaustive current SOTA set.
 The SL-PSO implementation uses the project-fixed population to preserve equal
 FE accounting, rather than the paper's dimension-dependent population default.
-Algorithm-specific and project-adapted boundary rules are recorded in
-`docs/stage_c_pso_baselines.md` and `docs/external_benchmarks_and_pso_baselines.md`. Methods share population,
-search bounds, deterministic problem/seed key and exact FE budget; algorithmic
-random streams and initial coordinates are not forced to match.
+The implemented update laws, fixed parameters, initialization choices and
+boundary-handling policies are defined in `python/cpso_serial/pso_baselines.py`
+and the external-suite adapters. Methods share population, search bounds,
+problem identity and exact FE budget; algorithmic random streams and initial
+coordinates are not forced to match. These are documented reconstructions of
+the cited methods with explicit project adaptations, not claims of bitwise
+reproduction of every original implementation.
 
 ## Repository map
 
@@ -80,7 +89,6 @@ random streams and initial coordinates are not forced to match.
   2013 LSGO campaign drivers.
 - `configs/`: smoke and confirmatory configurations.
 - `analysis/`: statistical and plotting utilities.
-- `docs/`: mathematical model, implementation decisions, protocols and audit.
 - `paper/`: current manuscript draft and bibliography.
 - `tests/`: C++ and Python regression and integration-contract tests.
 
@@ -205,6 +213,123 @@ objective evaluations. Its scaling stage uses `sphere_work` exclusively as an
 execution-cost instrument; those results must not be mixed with external
 optimization-quality tables.
 
+## MacBook Air M2 — measured exploratory profiles
+
+The repository includes dedicated Apple-Silicon profiles. They preserve the
+full per-run FE budgets of the broader internal pilot studies and reduce the
+number of paired seeds, rather than shortening every optimization trajectory.
+This makes the measured quality curves useful for checking the analysis and
+figure pipeline and for inspecting whether qualitative trends are plausible.
+The smaller seed count remains exploratory and is not a substitute for the
+confirmatory HPC design.
+
+Build natively on Apple Silicon (use an ARM64 terminal, not Rosetta):
+
+```bash
+uname -m  # must print arm64
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -e ".[analysis,test]"
+
+cmake -S . -B build-m2 -DCMAKE_BUILD_TYPE=Release -DCPSO_BUILD_TESTS=ON
+cmake --build build-m2 --parallel 4
+ctest --test-dir build-m2 --output-on-failure
+
+export CPSO_SERIAL_LIBRARY="$PWD/build-m2/lib/libcpso_serial.dylib"
+export PYTHONPATH="$PWD/python"
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+python -m pytest -q
+python scripts/run_smoke.py
+```
+
+Execute the three internal profiles sequentially. Start with `--dry-run` for
+each; do not launch them concurrently on a fanless Air:
+
+```bash
+python experiments/04_architectures/run_research_campaign.py \
+  configs/campaigns/cpso_serial_parallel_m2_pilot.json \
+  --output results/raw/cpso_serial_parallel_m2_pilot --dry-run
+python experiments/04_architectures/run_research_campaign.py \
+  configs/campaigns/cpso_serial_parallel_m2_pilot.json \
+  --output results/raw/cpso_serial_parallel_m2_pilot --no-plots
+
+python experiments/04_architectures/run_research_campaign.py \
+  configs/campaigns/cpso_dynamics_m2_pilot.json \
+  --output results/raw/cpso_dynamics_m2_pilot --dry-run
+python experiments/04_architectures/run_research_campaign.py \
+  configs/campaigns/cpso_dynamics_m2_pilot.json \
+  --output results/raw/cpso_dynamics_m2_pilot --no-plots
+
+python experiments/04_architectures/run_research_campaign.py \
+  configs/campaigns/cpso_topology_expansion_m2_pilot.json \
+  --output results/raw/cpso_topology_expansion_m2_pilot --dry-run
+python experiments/04_architectures/run_research_campaign.py \
+  configs/campaigns/cpso_topology_expansion_m2_pilot.json \
+  --output results/raw/cpso_topology_expansion_m2_pilot --no-plots
+```
+
+The quality stages retain six analytic functions, D=30 and D=100, N=64,
+200 updates and five paired seeds (12,864 FE per run). The synthetic timing
+stages are isolated from optimization quality and use `sphere_work` only as a
+controlled execution-cost instrument. The three internal profiles contain
+560, 720 and 525 runs, respectively; the separate `dt` screening contains 900
+runs at 32,064 FE each. Execute them one at a time. The architecture runner
+checkpoints individual runs: after an interruption, rerun the identical
+command with the same configuration and output directory. Do not edit a
+configuration while resuming it.
+
+The M2 quality pilots preserve the per-run objective budget and the first five
+predeclared seed values from the broader pilot designs. Their final objective
+values and FE-indexed convergence curves can therefore be compared with HPC
+records at matching benchmark, dimension, method, parameters, seed and FE
+budget. Small cross-platform floating-point differences may still alter
+near-tie decisions, so exact cross-machine trajectory identity must be measured,
+not assumed. Five seeds remain exploratory and do not provide the confirmatory
+power of the full HPC design. M2 wall times describe the M2 and must not be
+compared directly to HPC wall times. Only synchronous runs whose exact
+trajectory check passes are eligible for speedup interpretation.
+
+Generate the internal pilot figures from the three explicitly selected
+campaign outputs. The script writes a `FIGURE_CATALOGUE.md` with every
+figure generated or omitted; it returns a non-zero exit code if any expected
+figure is unavailable, even when the other figures were created:
+
+```bash
+python analysis/postprocess_publication_figures.py \
+  --profile exploratory \
+  --synchronous-campaign results/raw/cpso_serial_parallel_m2_pilot \
+  --dynamics-campaign results/raw/cpso_dynamics_m2_pilot \
+  --topology-campaign results/raw/cpso_topology_expansion_m2_pilot \
+  --output paper/figures/internal_pilots
+```
+
+The paired `dt` screening profile retains the full 15-point grid and 500-update
+run budget, but uses five paired seeds (900 runs, 28,857,600 FE). It is
+resumable after interruption:
+
+```bash
+python experiments/06_dt_sensitivity/run_dt_sensitivity.py \
+  --config configs/campaigns/cpso_dt_sensitivity_m2_screening.json \
+  --output results/raw/cpso_dt_sensitivity_m2_screening --dry-run
+python experiments/06_dt_sensitivity/run_dt_sensitivity.py \
+  --config configs/campaigns/cpso_dt_sensitivity_m2_screening.json \
+  --output results/raw/cpso_dt_sensitivity_m2_screening
+# If interrupted, repeat the last command with --resume.
+python analysis/analyze_dt_sensitivity.py \
+  --input results/raw/cpso_dt_sensitivity_m2_screening \
+  --output-dir results/analysis/cpso_dt_sensitivity_m2_screening \
+  --figures-dir paper/figures/dt_m2_screening
+```
+
+A result is comparable to an HPC result in algorithmic quality only when the
+benchmark, implementation, parameter values, seed, initialization and FE
+budget are matched. Cross-machine timing comparisons require a separate
+normalization/benchmarking protocol and are not inferred from these pilots.
+
 ## Scope and scientific limitations
 
 The current native engine exposes six analytic objectives and one separately
@@ -217,11 +342,39 @@ budgets, not parallel wall-time speedup. No external benchmark results are
 included in this development snapshot, and no superiority or state-of-the-art
 claim follows from the integration tests.
 
-The exact mathematical fidelity of the serial CPSO implementation to the
-complete source article by Orlando and Ricciardello (2021) remains an explicit
-audit item in `docs/implementation_decisions.md`. Until an equation-by-equation
-comparison with the complete article is completed, describe the native
-implementation as a documented reconstruction rather than a certified strict
+The native CPSO implementation is a documented numerical reconstruction of
+the continuous-time model attributed to Orlando and Ricciardello (2021). The
+current repository regression tests establish software properties and
+executor contracts; they do not certify mathematical fidelity to the complete
+source article. A traceable equation-by-equation comparison with the primary
+source, including the stochastic coefficients, frozen-coefficient
+assumption, analytic propagator, initialization and boundary conventions,
+remains required before describing the code as a strict reproduction.
+
+## Audit status and remaining release decisions
+
+The repository audit performed on 2026-11-07 corrected the manuscript/figure
+filename contract, separated confirmatory and exploratory post-processing,
+added a generated figure catalogue and non-zero exit on incomplete figure
+sets, fixed the campaign equivalence-audit CSV writer, and made the `dt`
+screening resumable with configuration-hash and record validation. The M2
+profiles are explicitly `exploratory`; they preserve full per-run FE budgets
+and reduce paired seeds. No generated pilot output is shipped in this source
+archive.
+
+The root README is intentionally the single operational guide; `docs/` is not
+required and has not been recreated. Optional COCO/Cocopp/CEC entry-point
+versions are pinned, but the project does not yet ship a complete
+platform-specific transitive lockfile. The analysis/test dependencies in
+`pyproject.toml` and `requirements.txt` retain compatible lower bounds. For a
+fully frozen production environment, generate and review a lock on the target
+OS/architecture after the native build and external adapters have been tested.
+
+Two decisions cannot safely be guessed by a code change: (i) the rights holder
+must choose the project's redistribution license and add a matching `LICENSE`
+file; (ii) strict mathematical reproduction of the primary CPSO source still
+requires the equation-by-equation audit described above. Until these are
+resolved, do not claim an assigned project license or strict source-paper
 reproduction.
 
 ## Package and ABI versions
@@ -234,8 +387,9 @@ separate and are checked when the Python wrapper loads the native library.
 The current `paper/paper.pdf` is a working draft describing the internal
 architecture study and the newly specified external benchmark protocol. It
 does not contain definitive external benchmark results or conclusions. The
-project license is intentionally unset until the rights holder confirms it;
-see `docs/license_status.md`.
+No `LICENSE` file or package license metadata is supplied yet. Do not assume
+that the repository is licensed for redistribution or reuse until the rights
+holder selects a license and adds the corresponding file.
 
 ## Stage C — extended PSO comparison
 
@@ -255,5 +409,7 @@ After preflight, run the same commands without `--dry-run` and provide an
 explicit `--output` directory. Only after all three real smoke campaigns pass,
 run `bbob_stageC_pilot.json`, `cec2013_stageC_pilot.json`, and the broader
 `bbob_largescale_preconfirmatory.json` campaign. The methods, update laws,
-constraints and parameter policies are documented in
-`docs/stage_c_pso_baselines.md`.
+constraints and parameter policies are implemented and described in
+`python/cpso_serial/pso_baselines.py` and `python/cpso_serial/benchmarks/`;
+project-specific adaptations are recorded in their module docstrings and
+configuration files.

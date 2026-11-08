@@ -1,0 +1,66 @@
+\section{Dettaglio dei profili sperimentali e delle unità statistiche}
+\label{app:campaigns}
+
+\subsection{Parametri delle campagne interne}
+
+La configurazione architetturale principale definisce $N=64$, $K=500$, $D\in\{30,100\}$, 30 seed per gli stadi di qualità e $\Delta t=0.35$. I parametri della dinamica sono $c_1=c_2=2.05$, $\mu_{\max}=0.9$, $\mu_{\min}=0.4$, $\rho=0.1$ ed $e=0.5$. La schedule lineare è indicizzata sul numero di aggiornamenti pianificati $K$; le curve anytime a budget intermedio descrivono quindi il prefisso di una schedule parametrizzata dal budget completo, non una nuova schedule ottimizzata per ciascun budget troncato.
+
+\begin{table}[H]
+\centering
+\caption{Configurazioni delle isole nella campagna architetturale principale.}
+\label{tab:app-island-config}
+\small
+\begin{tabular}{@{}r r l l r@{}}
+\toprule
+Isole & Worker & Topologia locale & Migrazione & Intervallo \\
+\midrule
+2 & 2 & Global & Nessuna & -- \\
+4 & 4 & Global & Nessuna & -- \\
+8 & 8 & Global & Nessuna & -- \\
+4 & 4 & Global & Ring & 5 \\
+4 & 4 & Global & Ring & 20 \\
+4 & 4 & Global & Ring & 50 \\
+4 & 4 & Global & Fully connected & 20 \\
+4 & 4 & Ring & Nessuna & -- \\
+4 & 4 & Ring & Ring & 20 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La migrazione è eseguita quando $k+1$ è multiplo dell'intervallo e non dopo l'ultima generazione. Il codice sostituisce una sola particella peggiore per isola destinataria, solo se l'emigrante è strettamente migliore. La sostituzione aggiorna posizione, personal best e valore corrente, azzera la velocità e mantiene lo stream casuale del destinatario. Le isole richiedono dimensione locale almeno due, divisibilità di $N$ per il numero di isole e worker non superiori al numero di isole; la griglia von Neumann non è supportata intra-isola.
+
+\subsection{Screening del passo temporale}
+
+Il profilo \path{configs/campaigns/cpso_dt_sensitivity_m2_screening.json} è esplicitamente esplorativo: usa sei funzioni, $D\in\{30,100\}$, $N=64$, $K=500$ e cinque seed sul MacBook Air M2. La griglia di $\Delta t$ è
+\[
+ \{0.1,0.2,0.35,0.5,0.7,1,1.5,2.2,3.6,5.5,8,12,20,30,50\}.
+\]
+Il parametro \texttt{reference\_dt=30} è un riferimento del grafico di screening, non il valore $\Delta t$ delle configurazioni architetturali e non dimostra che $30$ sia ottimale. Il profilo di campagna corrente usa $0.35$. La decisione su $\Delta t$ dovrà essere congelata dopo aver valutato i profili esplorativi, senza selezionare e testare sullo stesso insieme di seed come se fosse una verifica indipendente. Il riepilogo da compilare è predisposto nell'Appendice~\ref{app:extended-results}, Tabella~\ref{tab:app-dt-sensitivity} e Figura~\ref{fig:app-dt-sensitivity}.
+
+\subsection{Profili esterni e carico computazionale}
+
+\begin{table}[H]
+\centering
+\caption{Contabilità delle campagne esterne. I conteggi FE sono determinati dalle configurazioni e dalla moltiplicazione tra problemi, istanze, metodi e budget per run.}
+\label{tab:app-external-counts}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Suite & Problemi per metodo & Metodi & Run complessive & FE complessive \\
+\midrule
+COCO BBOB & $24\times6\times15$ & 11 & 23\,760 & 3.168 miliardi \\
+COCO BBOB-LargeScale & $24\times6\times15$ & 11 & 23\,760 & 49.896 miliardi \\
+CEC 2013 LSGO & $15\times25$ & 11 & 4\,125 & 12.375 miliardi \\
+\midrule
+Totale & & & 51\,645 & 65.439 miliardi \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Il conteggio FE totale BBOB-LargeScale è elevato perché combina 24 funzioni, sei dimensioni, 15 istanze, 11 metodi e $10^4D$ FE per run. La riduzione del budget non è automatica: un pre-pilot deve determinare il costo per FE e verificare se i target anytime siano raggiunti con il budget proposto. Se il budget cambia, la nuova configurazione deve ricevere un identificatore distinto e non può essere aggregata alla campagna corrente.
+
+\subsection{Gerarchia dei dati per l'inferenza}
+
+Per l'analisi interna il dato primario viene prima aggregato tra seed entro cella funzione-dimensione, poi tra dimensioni entro funzione. Le sei funzioni rimangono le unità di livello superiore. Per BBOB, le 24 funzioni sono le unità di benchmark; istanze e dimensioni sono fattori ripetuti/annidati e non aumentano il numero delle funzioni indipendenti. Per CEC LSGO, le 15 funzioni sono le unità di benchmark e i 25 seed sono repliche entro funzione. Le famiglie dei confronti e i target devono essere pre-specificati; i valori dei seed o delle dimensioni non possono essere utilizzati per gonfiare il numero di osservazioni indipendenti.
+
+Con sei unità, il test signed-rank esatto bilaterale ha $p_{\min}=0.03125$. Per due o più confronti, il primo valore aggiustato di Holm è almeno $0.0625$ anche nel caso limite di sei differenze concordi e non nulle. L'analisi interna non potrà quindi supportare significatività pairwise Holm al livello 0.05; deve restare descrittiva/esplorativa. Le suite esterne aumentano il numero di funzioni, ma la struttura di dipendenza all'interno delle suite deve essere mantenuta nell'analisi.

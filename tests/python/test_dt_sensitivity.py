@@ -94,6 +94,7 @@ def test_dt_analyzer_validates_factorial_and_emits_result_figures(tmp_path):
     figures = tmp_path / "figures"
     summary = analyzer.analyze(input_dir, output, figures, bootstrap_replicates=300)
     assert summary["validation"]["n_runs"] == 54
+    assert summary["validation"]["evidence_class"] == "exploratory"
     assert (output / "dt_problem_summary.csv").is_file()
     assert (output / "dt_family_effects.csv").is_file()
     assert (output / "dt_family_profile.csv").is_file()
@@ -127,3 +128,102 @@ def test_dt_analyzer_rejects_missing_factorial_cell(tmp_path):
     )
     with pytest.raises(ValueError, match="Incomplete factorial"):
         analyzer.load_and_validate(input_dir)
+
+
+def test_dt_runner_resumes_only_matching_campaign_and_skips_completed_jobs(tmp_path, monkeypatch):
+    import types
+
+    config = {
+        "campaign_id": "resume_test",
+        "schedule_seed": 17,
+        "benchmarks": ["sphere", "rastrigin"],
+        "dimensions": [2, 3],
+        "population_size": 4,
+        "iterations": 2,
+        "seeds": [11, 12],
+        "dt_values": [0.25, 0.5, 1.0],
+        "reference_dt": 1.0,
+        "topology": "global",
+    }
+    config_path = tmp_path / "dt.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    output = tmp_path / "campaign"
+
+    class FakeConfig:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        def validate(self):
+            return None
+
+    calls = {"count": 0}
+
+    def interrupted_run_serial(cpso_config, benchmark):
+        calls["count"] += 1
+        if calls["count"] == 3:
+            raise RuntimeError("synthetic interruption")
+        dimension = len(cpso_config.kwargs["lower_bounds"])
+        return types.SimpleNamespace(
+            function_evaluations=12,
+            best_value=3.0,
+            best_position=tuple(0.0 for _ in range(dimension)),
+            history_evaluations=(4, 8, 12),
+            best_history=(5.0, 4.0, 3.0),
+            elapsed_seconds=0.1,
+        )
+
+    fake_module = types.ModuleType("cpso_serial")
+    fake_module.CpsoConfig = FakeConfig
+    fake_module.native_build_info = lambda: {"compiler": "test"}
+    fake_module.native_version = lambda: 7
+    fake_module.run_serial = interrupted_run_serial
+    monkeypatch.setitem(sys.modules, "cpso_serial", fake_module)
+
+    with pytest.raises(RuntimeError, match="synthetic interruption"):
+        DRIVER.execute(config_path, output)
+    manifest = json.loads((output / "study_config.json").read_text(encoding="utf-8"))
+    assert manifest["config_sha256"] == DRIVER.config_fingerprint(config)
+    assert manifest["environment"]["platform"]["machine"]
+    assert "logical_count" in manifest["environment"]["cpu"]
+    run_path = output / "runs.jsonl"
+    first_record = json.loads(run_path.read_text(encoding="utf-8").splitlines()[0])
+    assert first_record["schema_version"] == 2
+    assert first_record["run_key"] == DRIVER.serialized_run_key(
+        DRIVER.run_key(first_record["benchmark"], first_record["dimension"],
+                       first_record["seed"], first_record["dt"])
+    )
+    assert len(run_path.read_text(encoding="utf-8").splitlines()) == 2
+    # Simulate a process killed during the final JSONL write. Resume may discard
+    # only this malformed, unterminated tail and must preserve prior records.
+    with run_path.open("ab") as stream:
+        stream.write(b'{"truncated":')
+
+    calls["count"] = 0
+
+    def successful_run_serial(cpso_config, benchmark):
+        calls["count"] += 1
+        dimension = len(cpso_config.kwargs["lower_bounds"])
+        return types.SimpleNamespace(
+            function_evaluations=12,
+            best_value=3.0,
+            best_position=tuple(0.0 for _ in range(dimension)),
+            history_evaluations=(4, 8, 12),
+            best_history=(5.0, 4.0, 3.0),
+            elapsed_seconds=0.1,
+        )
+
+    fake_module.run_serial = successful_run_serial
+    assert DRIVER.execute(config_path, output, resume=True) == 0
+    assert calls["count"] == 22
+    assert len(run_path.read_text(encoding="utf-8").splitlines()) == 24
+
+    calls["count"] = 0
+    assert DRIVER.execute(config_path, output, resume=True) == 0
+    assert calls["count"] == 0
+
+    changed = dict(config)
+    changed["iterations"] = 3
+    changed_path = tmp_path / "dt_changed.json"
+    changed_path.write_text(json.dumps(changed), encoding="utf-8")
+    with pytest.raises(ValueError, match="differs from the existing campaign manifest"):
+        DRIVER.execute(changed_path, output, resume=True)

@@ -1,0 +1,330 @@
+{
+  "campaign_id": "cpso_serial_parallel_m2_pilot",
+  "title": "MacBook Air M2 exploratory pilot: synchronous equivalence and local scaling",
+  "schedule_seed": 20261107,
+  "stages": [
+    {
+      "id": "01_exact_quality_equivalence",
+      "kind": "quality",
+      "purpose": "The synchronous backends must reproduce exactly the serial CPSO trajectories; these runs verify the invariant across six native objectives, two dimensions and ten seeds.",
+      "studies": [
+        {
+          "id": "six_native_benchmarks_d30_d100",
+          "study": {
+            "benchmarks": [
+              "sphere",
+              "rastrigin",
+              "rosenbrock",
+              "ackley",
+              "griewank",
+              "salomon"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 200,
+            "seeds": [
+              31001,
+              31002,
+              31003,
+              31004,
+              31005
+            ],
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "ms_global_w4",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w4",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 4
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "ms_global_w4",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "pp_global_w4",
+              "reference": "serial_global",
+              "metric": "quality"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "02_synthetic_cost_scaling",
+      "kind": "performance",
+      "purpose": "Estimate paired strong-scaling behavior over multiple population sizes, dimensions and objective costs. sphere_work is synthetic and is never mixed with optimization-quality results.",
+      "studies": [
+        {
+          "id": "sphere_work_n64_cost512",
+          "study": {
+            "benchmarks": [
+              "sphere_work"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 80,
+            "seeds": [
+              32001,
+              32002,
+              32003,
+              32004,
+              32005
+            ],
+            "work_iterations": 512,
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "ms_global_w4",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w4",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 4
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            }
+          ]
+        },
+        {
+          "id": "sphere_work_n64_cost4096",
+          "study": {
+            "benchmarks": [
+              "sphere_work"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 80,
+            "seeds": [
+              32001,
+              32002,
+              32003,
+              32004,
+              32005
+            ],
+            "work_iterations": 4096,
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w1",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "ms_global_w2",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "ms_global_w4",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "pp_global_w1",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 1
+              },
+              {
+                "name": "pp_global_w2",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 2
+              },
+              {
+                "name": "pp_global_w4",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 4
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w1",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w2",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "evidence_class": "exploratory",
+  "study_notes": {
+    "evidence_class": "exploratory",
+    "purpose": "Validate the figure pipeline with measured local runs while preserving each optimization run FE budget from the broader pilot.",
+    "hardware_scope": "Timing is specific to the MacBook Air M2 and is not compared directly with HPC wall times.",
+    "seed_policy": "Five predeclared seeds per block, selected as the first five from the broader pilot design.",
+    "performance_scope": "N=64 only, D=30 and 100, two synthetic work levels (512 and 4096); sphere_work is an execution-cost instrument, not an optimization benchmark."
+  }
+}

@@ -1,0 +1,37 @@
+\section{Casualità scalare e limitazione del sottospazio in assenza di correzioni ai vincoli}
+\label{app:scalar-randomness}
+
+Questa appendice precisa una conseguenza geometrica della convenzione implementativa adottata nel codice: due scalari casuali vengono estratti per particella e intervallo e condivisi fra tutte le coordinate. L'articolo di Orlando--Ricciardello usa variabili casuali scalari, ma non specifica con chiarezza se la coppia sia indipendente per particella oppure condivisa dallo sciame; pertanto la granularità per-particella qui analizzata è una scelta del codice, non un dettaglio che si possa attribuire senza riserve alla fonte. Il risultato seguente riguarda il flusso senza attivazione della mappa non lineare dei vincoli e non implica l'irraggiungibilità generale dell'ottimo.
+
+\begin{proposition}[Invarianza dello span senza correzione ai vincoli]
+Sia
+\[
+ \mathcal S_0=\operatorname{span}\{x_1^0,\ldots,x_N^0,
+ v_1^0,\ldots,v_N^0\}\subseteq\mathbb R^D.
+\]
+Se, a ogni passo, i coefficienti della dinamica congelata sono scalari comuni a tutte le coordinate di ciascuna particella, gli attrattori personali e sociali sono selezionati tra le posizioni precedentemente generate e la mappa di vincolo non modifica lo stato, allora
+\[
+ x_i^k,v_i^k,p_i^k,s_i^k\in\mathcal S_0
+ \quad\text{per ogni }i,k,
+ \qquad \dim(\mathcal S_0)\leq\min(D,2N).
+\]
+\end{proposition}
+
+\begin{proof}
+La proprietà è vera per $x_i^0,v_i^0$ per definizione di $\mathcal S_0$; anche $p_i^0=x_i^0$ appartiene allo spazio. Supponiamo che gli stati e i migliori personali al passo $k$ appartengano a $\mathcal S_0$. Il leader sociale $s_i^k$ è scelto fra i migliori personali, quindi appartiene allo stesso spazio. Per una particella, $q_i^k$ e $\alpha_k$ sono scalari comuni alle coordinate. Se $q_i^k>0$, l'equilibrio è
+\[
+ x_i^{\mathrm{eq},k}=\frac{a_i^k}{q_i^k}p_i^k+
+ \frac{b_i^k}{q_i^k}s_i^k\in\mathcal S_0.
+\]
+La soluzione del sistema lineare congelato è una combinazione lineare di $x_i^k$, $v_i^k$ e $x_i^{\mathrm{eq},k}$, con coefficienti scalari indipendenti da $j$; dunque la posizione e la velocità propagate appartengono a $\mathcal S_0$. Nel caso $q_i^k=0$, la soluzione è una combinazione di $x_i^k$ e $v_i^k$ e la conclusione resta valida. Se la mappa di vincolo non modifica lo stato, il passo successivo conserva l'appartenenza. Il personal best viene selezionato fra posizioni già appartenenti a $\mathcal S_0$, quindi resta nello spazio. Per induzione la proprietà vale per ogni $k$. La dimensione è al più il numero dei generatori, $2N$, e non può superare $D$.
+\end{proof}
+
+\subsection{Perché il risultato non equivale a irraggiungibilità}
+
+La mappa clamp--restitution opera coordinata per coordinata e non è una trasformazione lineare globale; quando è attiva può spostare la posizione fuori da $\mathcal S_0$. Pertanto il risultato precedente è una proprietà del tratto non corretto della dinamica, non un vincolo assoluto sulla traiettoria completa. Analogamente, in una singola isola di $n=N/M$ particelle la sottopopolazione locale, prima delle migrazioni e senza correzioni ai vincoli, ha un sottospazio generato da al più $2n$ vettori. Gli immigrati possono introdurre direzioni provenienti da altre isole e ampliare lo span locale.
+
+\subsection{Implicazioni per i benchmark presenti}
+
+Nella campagna interna principale $N=64$, quindi $2N=128$ e il limite dimensionale non forza uno span proprio in $D=30$ o $D=100$; in assenza di correzioni, i vettori iniziali possono generare tutto $\mathbb R^D$. Nelle campagne esterne, invece, $N=40$ e $2N=80$: per $D=160,320,640$ in BBOB-LargeScale e per $D=1000$ nominali in CEC, il sottospazio non corretto può avere dimensione strettamente inferiore a $D$. Nel modello a isole principale, $N=64$ e otto isole comportano $n=8$, quindi il sottospazio locale iniziale è al più di dimensione 16 prima delle migrazioni.
+
+Questo fatto deve essere considerato una limitazione potenzialmente rilevante, non una prova che l'ottimo sia irraggiungibile. Per quantificarne l'effetto occorre registrare almeno: (i) rango numerico degli stati/posizioni per generazione; (ii) frequenza di attivazione della mappa dei vincoli per coordinata e particella; (iii) rango locale prima e dopo la migrazione; (iv) risultati su problemi traslati e ruotati. Una variante con $r_{1,i,j}^k,r_{2,i,j}^k$ indipendenti per coordinata modificherebbe la formulazione stocastica; potrà essere studiata soltanto come ablation separata e non sarà denominata CPSO di riferimento.

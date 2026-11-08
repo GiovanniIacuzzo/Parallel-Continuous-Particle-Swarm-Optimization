@@ -1,0 +1,389 @@
+{
+  "campaign_id": "cpso_topology_expansion_m2_pilot",
+  "title": "MacBook Air M2 exploratory pilot: seven particle-social topologies",
+  "schedule_seed": 20261106,
+  "study_notes": {
+    "evidence_class": "exploratory",
+    "purpose": "Validate seven-topology analysis and plot generation using measured local runs.",
+    "hardware_scope": "All topology-quality comparisons use matched FE budgets; timing is Mac-specific.",
+    "seed_policy": "Five paired seeds per quality and performance block.",
+    "per_run_budget": "Quality: 64 * 201 = 12,864 FE; performance: 64 * 151 = 9,664 FE.",
+    "limitations": "Exploratory subset only; not a replacement for the 30-seed confirmatory design."
+  },
+  "stages": [
+    {
+      "id": "01_serial_topology_quality",
+      "kind": "quality",
+      "purpose": "Compare seven fixed particle communication topologies under identical CPSO dynamics and FE budgets. This stage isolates the effect of the social graph from parallel execution semantics.",
+      "studies": [
+        {
+          "id": "native_benchmarks_d30_d100",
+          "study": {
+            "benchmarks": [
+              "sphere",
+              "rastrigin",
+              "rosenbrock",
+              "ackley",
+              "griewank",
+              "salomon"
+            ],
+            "dimensions": [
+              30,
+              100
+            ],
+            "population_size": 64,
+            "iterations": 200,
+            "seeds": [
+              47001,
+              47002,
+              47003,
+              47004,
+              47005
+            ],
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.35,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "serial_ring",
+                "architecture": "serial",
+                "topology": "ring"
+              },
+              {
+                "name": "serial_grid_von_neumann",
+                "architecture": "serial",
+                "topology": "grid_von_neumann",
+                "grid_shape": [
+                  8,
+                  8
+                ]
+              },
+              {
+                "name": "serial_wheel",
+                "architecture": "serial",
+                "topology": "wheel"
+              },
+              {
+                "name": "serial_random",
+                "architecture": "serial",
+                "topology": "random",
+                "topology_degree": 4
+              },
+              {
+                "name": "serial_small_world",
+                "architecture": "serial",
+                "topology": "small_world",
+                "topology_degree": 4,
+                "topology_rewiring_probability": 0.15
+              },
+              {
+                "name": "serial_scale_free",
+                "architecture": "serial",
+                "topology": "scale_free",
+                "topology_degree": 4
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "serial_ring",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "serial_grid_von_neumann",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "serial_wheel",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "serial_random",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "serial_small_world",
+              "reference": "serial_global",
+              "metric": "quality"
+            },
+            {
+              "method": "serial_scale_free",
+              "reference": "serial_global",
+              "metric": "quality"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "02_synchronous_topology_scaling",
+      "kind": "performance",
+      "purpose": "Measure topology-dependent synchronous execution overhead with paired serial, master-slave, and particle-parallel runs. Synchronous trajectories must remain exactly equivalent.",
+      "studies": [
+        {
+          "id": "sphere_work_topology_scaling",
+          "study": {
+            "benchmarks": [
+              "sphere_work"
+            ],
+            "dimensions": [
+              30
+            ],
+            "population_size": 64,
+            "iterations": 150,
+            "seeds": [
+              47101,
+              47102,
+              47103,
+              47104,
+              47105
+            ],
+            "work_iterations": 4096,
+            "success_target_default": 1e-08,
+            "check_equivalence": true,
+            "mu_max": 0.9,
+            "mu_min": 0.4,
+            "cognitive": 2.05,
+            "social": 2.05,
+            "dt": 0.35,
+            "initial_velocity_fraction": 0.1,
+            "boundary_restitution": 0.5,
+            "methods": [
+              {
+                "name": "serial_global",
+                "architecture": "serial",
+                "topology": "global"
+              },
+              {
+                "name": "ms_global_w4",
+                "architecture": "master_slave",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "pp_global_w4",
+                "architecture": "particle_parallel",
+                "topology": "global",
+                "workers": 4
+              },
+              {
+                "name": "serial_ring",
+                "architecture": "serial",
+                "topology": "ring"
+              },
+              {
+                "name": "ms_ring_w4",
+                "architecture": "master_slave",
+                "topology": "ring",
+                "workers": 4
+              },
+              {
+                "name": "pp_ring_w4",
+                "architecture": "particle_parallel",
+                "topology": "ring",
+                "workers": 4
+              },
+              {
+                "name": "serial_grid_von_neumann",
+                "architecture": "serial",
+                "topology": "grid_von_neumann",
+                "grid_shape": [
+                  8,
+                  8
+                ]
+              },
+              {
+                "name": "ms_grid_von_neumann_w4",
+                "architecture": "master_slave",
+                "topology": "grid_von_neumann",
+                "workers": 4,
+                "grid_shape": [
+                  8,
+                  8
+                ]
+              },
+              {
+                "name": "pp_grid_von_neumann_w4",
+                "architecture": "particle_parallel",
+                "topology": "grid_von_neumann",
+                "workers": 4,
+                "grid_shape": [
+                  8,
+                  8
+                ]
+              },
+              {
+                "name": "serial_wheel",
+                "architecture": "serial",
+                "topology": "wheel"
+              },
+              {
+                "name": "ms_wheel_w4",
+                "architecture": "master_slave",
+                "topology": "wheel",
+                "workers": 4
+              },
+              {
+                "name": "pp_wheel_w4",
+                "architecture": "particle_parallel",
+                "topology": "wheel",
+                "workers": 4
+              },
+              {
+                "name": "serial_random",
+                "architecture": "serial",
+                "topology": "random",
+                "topology_degree": 4
+              },
+              {
+                "name": "ms_random_w4",
+                "architecture": "master_slave",
+                "topology": "random",
+                "workers": 4,
+                "topology_degree": 4
+              },
+              {
+                "name": "pp_random_w4",
+                "architecture": "particle_parallel",
+                "topology": "random",
+                "workers": 4,
+                "topology_degree": 4
+              },
+              {
+                "name": "serial_small_world",
+                "architecture": "serial",
+                "topology": "small_world",
+                "topology_degree": 4,
+                "topology_rewiring_probability": 0.15
+              },
+              {
+                "name": "ms_small_world_w4",
+                "architecture": "master_slave",
+                "topology": "small_world",
+                "workers": 4,
+                "topology_degree": 4,
+                "topology_rewiring_probability": 0.15
+              },
+              {
+                "name": "pp_small_world_w4",
+                "architecture": "particle_parallel",
+                "topology": "small_world",
+                "workers": 4,
+                "topology_degree": 4,
+                "topology_rewiring_probability": 0.15
+              },
+              {
+                "name": "serial_scale_free",
+                "architecture": "serial",
+                "topology": "scale_free",
+                "topology_degree": 4
+              },
+              {
+                "name": "ms_scale_free_w4",
+                "architecture": "master_slave",
+                "topology": "scale_free",
+                "workers": 4,
+                "topology_degree": 4
+              },
+              {
+                "name": "pp_scale_free_w4",
+                "architecture": "particle_parallel",
+                "topology": "scale_free",
+                "workers": 4,
+                "topology_degree": 4
+              }
+            ]
+          },
+          "comparisons": [
+            {
+              "method": "ms_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_global_w4",
+              "reference": "serial_global",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_ring_w4",
+              "reference": "serial_ring",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_ring_w4",
+              "reference": "serial_ring",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_grid_von_neumann_w4",
+              "reference": "serial_grid_von_neumann",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_grid_von_neumann_w4",
+              "reference": "serial_grid_von_neumann",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_wheel_w4",
+              "reference": "serial_wheel",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_wheel_w4",
+              "reference": "serial_wheel",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_random_w4",
+              "reference": "serial_random",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_random_w4",
+              "reference": "serial_random",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_small_world_w4",
+              "reference": "serial_small_world",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_small_world_w4",
+              "reference": "serial_small_world",
+              "metric": "runtime"
+            },
+            {
+              "method": "ms_scale_free_w4",
+              "reference": "serial_scale_free",
+              "metric": "runtime"
+            },
+            {
+              "method": "pp_scale_free_w4",
+              "reference": "serial_scale_free",
+              "metric": "runtime"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "evidence_class": "exploratory"
+}

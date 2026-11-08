@@ -1,0 +1,150 @@
+\section{Tabelle e figure estese dei risultati}
+\label{app:extended-results}
+
+Questa appendice è destinata ai dettagli che appesantirebbero il corpo principale: risultati per singola funzione e dimensione, breakdown per worker, seed e topologia, statistiche di rete, configurazioni di migrazione e figure diagnostiche. Le celle TBD sono intenzionalmente vuote fino alla generazione dei risultati confermativi.
+
+\subsection{Risultati interni per funzione e dimensione}
+
+\begin{table}[H]
+\centering
+\caption{Template esteso per risultati interni. Riportare mediana [IQR] del log-errore sui seed, successi e run valide separatamente per ogni funzione-dimensione.}
+\label{tab:app-internal-function-results}
+\small
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+Funzione & $D$ & Metodo & Run valide & Mediana $\log_{10}(f-f^*)$ & IQR & Successi & FE/run \\
+\midrule
+Sphere & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Sphere & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Rastrigin & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Rastrigin & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Rosenbrock & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Rosenbrock & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Ackley & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Ackley & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Griewank & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Griewank & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Salomon & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Salomon & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Sensibilità al passo temporale}
+\label{app:dt-sensitivity-results}
+
+Il profilo locale di screening valuta i valori di $\Delta t$ indicati nell'Appendice~\ref{app:campaigns}. La tabella seguente è un template: le statistiche devono essere calcolate separatamente per funzione e dimensione prima di qualsiasi sintesi. Il parametro $\Delta t=30$ è il riferimento grafico del pilot, non il valore congelato nella campagna architetturale ($0.35$) e non deve essere interpretato come ottimo a priori.
+
+\begin{table}[H]
+\centering
+\caption{Template per lo screening di $\Delta t$. Riportare mediana [IQR] sui seed entro ciascuna funzione e poi una sintesi tra le sei funzioni, separatamente per dimensione.}
+\label{tab:app-dt-sensitivity}
+\small
+\begin{tabularx}{\textwidth}{@{}lXXrrX@{}}
+\toprule
+$\Delta t$ & $D=30$: mediana [IQR] & $D=100$: mediana [IQR] & FE/run & Run valide & Note \\
+\midrule
+0.10 & TBD & TBD & 32\,064 & TBD & TBD\\
+0.20 & TBD & TBD & 32\,064 & TBD & TBD\\
+0.35 & TBD & TBD & 32\,064 & TBD & TBD\\
+0.50 & TBD & TBD & 32\,064 & TBD & TBD\\
+0.70 & TBD & TBD & 32\,064 & TBD & TBD\\
+1.00 & TBD & TBD & 32\,064 & TBD & TBD\\
+1.50 & TBD & TBD & 32\,064 & TBD & TBD\\
+2.20 & TBD & TBD & 32\,064 & TBD & TBD\\
+3.60 & TBD & TBD & 32\,064 & TBD & TBD\\
+5.50 & TBD & TBD & 32\,064 & TBD & TBD\\
+8.00 & TBD & TBD & 32\,064 & TBD & TBD\\
+12.00 & TBD & TBD & 32\,064 & TBD & TBD\\
+20.00 & TBD & TBD & 32\,064 & TBD & TBD\\
+30.00 & TBD & TBD & 32\,064 & TBD & TBD\\
+50.00 & TBD & TBD & 32\,064 & TBD & TBD\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{figures/results/fig_dt_sensitivity_summary.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_dt_sensitivity_summary.pdf}}{\fbox{\parbox[c][4.2cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_dt\_sensitivity\_summary.pdf}\par Curve di qualità/target attainment in funzione di $\Delta t$, separate per dimensione e funzione.}}}
+\caption{Sensibilità della qualità della CPSO al passo temporale $\Delta t$.}
+\label{fig:app-dt-sensitivity}
+\end{figure}
+
+\subsection{Breakdown dello scaling}
+
+\begin{table}[H]
+\centering
+\caption{Template per la decomposizione temporale. Tutti i tempi sono mediane tra ripetizioni sulla stessa piattaforma.}
+\label{tab:app-timing-breakdown}
+\small
+\begin{tabular}{@{}rrrlrrrrrr@{}}
+\toprule
+$D$ & $N$ & Lavoro & Backend & Worker & Init. & Propag. & Eval. & Sync/commit & Totale \\
+\midrule
+TBD & TBD & TBD & Serial & 1 & TBD & TBD & TBD & TBD & TBD \\
+TBD & TBD & TBD & Master--slave & 1 & TBD & TBD & TBD & TBD & TBD \\
+TBD & TBD & TBD & Master--slave & 4 & TBD & TBD & TBD & TBD & TBD \\
+TBD & TBD & TBD & Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD \\
+TBD & TBD & TBD & Particle-parallel & 8 & TBD & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{figures/results/fig_runtime_decomposition.pdf}{\includegraphics[width=0.78\textwidth]{figures/results/fig_runtime_decomposition.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.90\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_runtime\_decomposition.pdf}\par Decomposizione del tempo in inizializzazione, propagazione, valutazione, sincronizzazione e overhead.}}}
+\caption{Decomposizione del tempo di esecuzione per backend e numero di worker.}
+\label{fig:app-runtime-decomposition}
+\end{figure}
+
+\subsection{Risultati per topologia e metriche di rete}
+
+\begin{table}[H]
+\centering
+\caption{Template per qualità e struttura del grafo, conservando il breakdown per funzione e dimensione.}
+\label{tab:app-topology-function}
+\small
+\begin{tabular}{@{}llrrrrrrrr@{}}
+\toprule
+Funzione & $D$ & Topologia & Grado medio & SD grado & Diametro & Cammino medio & Clustering & Mediana errore & Rango \\
+\midrule
+TBD & TBD & Global-best & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+TBD & TBD & Ring & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+TBD & TBD & Von Neumann & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+TBD & TBD & Wheel & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+TBD & TBD & Random connessa & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+TBD & TBD & Watts--Strogatz & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+TBD & TBD & Barabási--Albert & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Figure supplementari}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{figures/results/fig_internal_function_forest.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_internal_function_forest.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_internal\_function\_forest.pdf}\par Forest plot per funzione e dimensione, con intervalli.}}}
+\caption{Breakdown degli effetti per funzione e dimensione nelle campagne interne.}
+\label{fig:app-internal-forest}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{figures/results/fig_migration_diagnostics.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_migration_diagnostics.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_migration\_diagnostics.pdf}\par Numero e percentuale delle migrazioni tentate/accettate per isola e intervallo.}}}
+\caption{Diagnostica delle migrazioni nelle diverse configurazioni a isole.}
+\label{fig:app-migration-diagnostics}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{figures/results/fig_external_function_heatmaps.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_external_function_heatmaps.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_external\_function\_heatmaps.pdf}\par Heatmap per funzione/dimensione: log-error, ERT o target attainment.}}}
+\caption{Prestazioni esterne per funzione e dimensione, in forma di heatmap.}
+\label{fig:app-external-heatmaps}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{figures/results/fig_cec_function_breakdown.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_cec_function_breakdown.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_cec\_function\_breakdown.pdf}\par Risultati per funzione CEC ai tre checkpoint FE.}}}
+\caption{Breakdown per funzione del benchmark CEC 2013 LSGO.}
+\label{fig:app-cec-breakdown}
+\end{figure}

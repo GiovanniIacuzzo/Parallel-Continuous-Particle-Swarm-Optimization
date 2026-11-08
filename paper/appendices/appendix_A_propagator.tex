@@ -1,0 +1,194 @@
+\section{Soluzione analitica: formule di Orlando--Ricciardello e forma implementativa}
+\label{app:propagator}
+
+Questa appendice riporta prima la soluzione nella forma esponenziale pubblicata da Orlando--Ricciardello, distinguendo le formule stampate dalle correzioni algebriche necessarie a soddisfare le condizioni iniziali, e poi la forma utilizzata dal nucleo C++. La distinzione è importante: l'articolo scrive la soluzione in funzione del tempo assoluto $t$, mentre il codice propaga lo stato su un tempo locale $\tau=t-k\Delta t$ misurato dall'inizio del sottointervallo.
+
+\subsection{Incongruenze della stampa originale}
+
+L'equazione continua (5) definisce il termine forzante come
+\begin{equation}
+ \boldsymbol f_{i,k}^{(5)}
+ =c_c r_{1,k}\boldsymbol p_i^{b,k}
+  +c_s r_{2,k}\boldsymbol p_{gb}^{k},
+ \label{eq:or-forcing-from-eq5}
+\end{equation}
+mentre il testo immediatamente successivo al problema congelato (9) stampa
+\begin{equation}
+ \boldsymbol f_{i,k}^{(9,\mathrm{stampa})}
+ =c_c\boldsymbol p_i^{b,k}+c_s\boldsymbol p_{gb}^{k},
+ \label{eq:or-forcing-as-printed}
+\end{equation}
+senza $r_1,r_2$. Le due forme non sono algebricamente equivalenti. Il codice implementa~\eqref{eq:or-forcing-from-eq5}, cioè la lettura coerente con l'equazione (5) e con la derivazione dall'aggiornamento discreto (2); non implementa letteralmente~\eqref{eq:or-forcing-as-printed}. In mancanza di un'errata ufficiale o di una precisazione degli autori, questa scelta viene dichiarata e non presentata come una trascrizione letterale dell'equazione (9).
+
+Il passaggio dall'equazione alle differenze (4) all'ODE (5) è presentato nell'articolo come interpretazione del quoziente incrementale della velocità e passaggio a un incremento temporale infinitesimo. La pubblicazione non esplicita una riscalatura dipendente da $\delta t$ dei termini a destra durante tale limite. In questo lavoro l'ODE (5) viene quindi assunta come il modello continuo proposto da Orlando--Ricciardello; non si rivendica una dimostrazione di convergenza rigorosa della ricorrenza discreta verso tale ODE.
+
+La fonte dichiara inoltre in (6) $\zeta(t)\in[0,1]$, ma descrive poi il caso sovrasmorzato mediante $\zeta_k>1$. Il codice non impone $\zeta\leq1$ e individua i regimi dal discriminante $\alpha^2-q$, così da trattare anche il ramo sovrasmorzato descritto nel testo e nelle equazioni caratteristiche.
+
+Il pseudocodice a pagina 7 contiene un'inversione dei rami: assegna il caso $\lambda_1^k=\lambda_2^k$ alle formule (14)--(15), che sono quelle per radici distinte, e il caso $\lambda_1^k\ne\lambda_2^k$ alle formule (16)--(18), che sono quelle per la radice ripetuta. Il codice seleziona invece i rami in accordo con la matematica delle soluzioni: radice ripetuta per lo smorzamento critico, radici distinte altrimenti.
+
+È presente anche un'incongruenza algebrica nell'equazione (18): per la forma $p(t)=(C_1^k+C_2^k t)e^{\bar\lambda^k t}+f_k/\omega_k^2$, il coefficiente $C_2^k$ stampato non contiene il fattore $e^{-\bar\lambda^k k\Delta t}$ necessario a soddisfare la condizione sulla velocità in $t=k\Delta t$. La formula stampata è conservata nella trascrizione seguente; subito dopo viene derivata la correzione richiesta dalle condizioni iniziali.
+
+Infine, le formule (14) e (16) riportano nel pedice l'intervallo $[(k-1)dt,kdt]$, mentre la definizione (10) del problema congelato usa $[kdt,(k+1)dt]$. Le costanti delle soluzioni (15) e (17) sono determinate imponendo $p_k,\dot p_k$ al tempo $kdt$; pertanto il codice interpreta ogni chiamata come propagazione da $kdt$ a $(k+1)dt$. Nella trascrizione che segue si conserva il pedice d'intervallo così come stampato nelle formule originali, ma la corrispondenza con il codice usa il tratto coerente individuato dall'equazione (10) e dalle condizioni iniziali.
+
+\subsection{Radici caratteristiche e soluzione nella notazione originale}
+
+Per il problema congelato (9), la fonte definisce $\omega_k^2=c_c r_{1,k}+c_s r_{2,k}$ e $2\zeta_k\omega_k=1-\mu_k$. Le radici caratteristiche riportate nell'equazione (13) sono
+\begin{equation}
+ \lambda_1^k=-\omega_k\left(\zeta_k+\sqrt{\zeta_k^2-1}\right),
+ \qquad
+ \lambda_2^k=-\omega_k\left(\zeta_k-\sqrt{\zeta_k^2-1}\right).
+ \label{eq:or-source-roots}
+\end{equation}
+Per $\zeta_k<1$ le radici sono complesse coniugate; per $\zeta_k=1$ coincidono; per $\zeta_k>1$ sono reali distinte. Nel seguito $f_k$ indica il termine forzante congelato. Per una trascrizione letterale delle equazioni (14)--(18), esso è il $f_k$ stampato dopo l'equazione (9); per la corrispondenza con il codice deve invece essere usata la definizione pesata dai fattori casuali dell'equazione continua (5), come discusso nella Sezione~\ref{sec:model}.
+
+Nelle espressioni originali seguenti si conserva anche l’etichetta di intervallo stampata nella fonte. Si noti che nelle equazioni (14) e (16) l’articolo riporta $[(k-1)\Delta t,k\Delta t]$, in contrasto con l’intervallo $[k\Delta t,(k+1)\Delta t]$ definito in (10). Poiché le costanti sono determinate imponendo $p_k,\dot p_k$ al tempo $k\Delta t$, il codice adotta l’intervallo coerente $[k\Delta t,(k+1)\Delta t]$.
+
+Se $\lambda_1^k\ne\lambda_2^k$, la soluzione pubblicata è
+\begin{equation}
+ p_{[(k-1)\Delta t,k\Delta t]}(t)
+ =C_1^k e^{\lambda_1^k t}
+  +C_2^k e^{\lambda_2^k t}
+  +\frac{f_k}{\omega_k^2},
+ \label{eq:or-source-distinct}
+\end{equation}
+con
+\begin{align}
+ C_1^k&=
+ \frac{\left(p_k-\dfrac{f_k}{\omega_k^2}\right)\lambda_2^k-\dot p_k}
+ {\left(\lambda_2^k-\lambda_1^k\right)e^{\lambda_1^k k\Delta t}},
+ \label{eq:or-source-c1-distinct}\\
+ C_2^k&=
+ \frac{\dot p_k-\left(p_k-\dfrac{f_k}{\omega_k^2}\right)\lambda_1^k}
+ {\left(\lambda_2^k-\lambda_1^k\right)e^{\lambda_2^k k\Delta t}}.
+ \label{eq:or-source-c2-distinct}
+\end{align}
+Nel caso di radice ripetuta $\lambda_1^k=\lambda_2^k=\bar\lambda^k$, la fonte riporta
+\begin{equation}
+ p_{[(k-1)\Delta t,k\Delta t]}(t)
+ =\left(C_1^k+C_2^k t\right)e^{\bar\lambda^k t}
+  +\frac{f_k}{\omega_k^2},
+ \label{eq:or-source-repeated}
+\end{equation}
+con
+\begin{align}
+ C_1^k&=\left[
+ \left(p_k-\frac{f_k}{\omega_k^2}\right)
+ (1+\bar\lambda^k k\Delta t)-\dot p_k k\Delta t
+ \right]e^{-\bar\lambda^k k\Delta t},
+ \label{eq:or-source-c1-repeated}\\
+ C_2^k&=\dot p_k-\bar\lambda^k
+ \left(p_k-\frac{f_k}{\omega_k^2}\right).
+ \label{eq:or-source-c2-repeated}
+\end{align}
+Le equazioni precedenti trascrivono le formule (14)--(18) come sono stampate nell'articolo. In particolare, la (18) pubblicata riporta $C_2^k=\dot p_k-\bar\lambda^k(p_k-f_k/\omega_k^2)$, senza il fattore esponenziale. Tuttavia, imponendo $p(k\Delta t)=p_k$ e $\dot p(k\Delta t)=\dot p_k$ alla soluzione (16), si ricava
+\begin{equation}
+ C_{2,\mathrm{corr}}^k=
+ \left[\dot p_k-\bar\lambda^k\left(p_k-\frac{f_k}{\omega_k^2}\right)\right]
+ e^{-\bar\lambda^k k\Delta t}.
+ \label{eq:or-source-c2-repeated-corrected}
+\end{equation}
+La costante $C_1^k$ della (17) resta invariata. Senza il fattore esponenziale in $C_2^k$, la derivata della soluzione (16) in $k\Delta t$ non coincide in generale con $\dot p_k$. La forma locale del propagatore C++ riportata sotto corrisponde alla soluzione ripetuta con questa correzione algebrica, non alla formula (18) presa letteralmente. Le formule originali, incluso il refuso, sono conservate per rendere verificabile la comparazione. Le espressioni della fonte sono definite per $\omega_k^2>0$; il caso $\omega_k=0$ richiede un limite separato.
+
+\subsection{Forma locale equivalente utilizzata nel codice}
+
+Per una coordinata, si consideri il problema congelato
+\begin{equation}
+ \ddot x+2\alpha\dot x+q x=F,
+ \qquad x(0)=x_0,\quad \dot x(0)=v_0,
+ \label{eq:app-ode}
+\end{equation}
+con la corrispondenza
+\begin{equation}
+ q=\omega_k^2,
+ \qquad \alpha=\zeta_k\omega_k=\frac{1-\mu_k}{2},
+ \qquad F=F_{i,j}^k.
+ \label{eq:app-code-map}
+\end{equation}
+Per $q>0$ l'equilibrio è $x_{\mathrm{eq}}=F/q$ e, ponendo $u=x-x_{\mathrm{eq}}$, l'equazione omogenea è $\ddot u+2\alpha\dot u+q u=0$. Le radici del codice sono l'insieme
+\begin{equation}
+ \left\{-\alpha+\sqrt{\alpha^2-q},
+       -\alpha-\sqrt{\alpha^2-q}\right\},
+ \label{eq:app-code-roots}
+\end{equation}
+che coincide con~\eqref{eq:or-source-roots}; nel ramo sovrasmorzato il codice assegna alle due radici un ordine opposto rispetto alle etichette $\lambda_1^k,\lambda_2^k$ della fonte. Ciò non cambia la soluzione, perché le costanti associate sono calcolate con lo stesso ordinamento.
+
+Le formule seguenti restituiscono lo stato a $\tau=\Delta t$, prima dell'eventuale mappa di vincolo aggiunta dal progetto. Si ponga $\delta=x_0-x_{\mathrm{eq}}$.
+
+\paragraph{Regime sottosmorzato.}
+Se $q>\alpha^2$, si ponga $\omega_d=\sqrt{q-\alpha^2}$ e $B=(v_0+\alpha\delta)/\omega_d$. Allora
+\begin{align}
+ \widetilde x&=x_{\mathrm{eq}}+e^{-\alpha\Delta t}
+ \left[\delta\cos(\omega_d\Delta t)+B\sin(\omega_d\Delta t)\right],
+ \label{eq:app-under-x}\\
+ \widetilde v&=e^{-\alpha\Delta t}\left[
+ (\omega_dB-\alpha\delta)\cos(\omega_d\Delta t)
+ -(\omega_d\delta+\alpha B)\sin(\omega_d\Delta t)
+ \right].
+ \label{eq:app-under-v}
+\end{align}
+
+\paragraph{Regime criticamente smorzato.}
+Se $q=\alpha^2$, si ponga $C=v_0+\alpha\delta$. La soluzione è
+\begin{align}
+ \widetilde x&=x_{\mathrm{eq}}+e^{-\alpha\Delta t}
+ (\delta+C\Delta t),
+ \label{eq:app-critical-x}\\
+ \widetilde v&=e^{-\alpha\Delta t}
+ (v_0-\alpha C\Delta t).
+ \label{eq:app-critical-v}
+\end{align}
+
+\paragraph{Regime sovrasmorzato.}
+Se $0<q<\alpha^2$, si ponga $\beta=\sqrt{\alpha^2-q}$ e $D=(v_0+\alpha\delta)/\beta$. Allora
+\begin{align}
+ \widetilde x&=x_{\mathrm{eq}}+e^{-\alpha\Delta t}
+ \left[\delta\cosh(\beta\Delta t)+D\sinh(\beta\Delta t)\right],
+ \label{eq:app-over-x}\\
+ \widetilde v&=e^{-\alpha\Delta t}\left[
+ (\beta D-\alpha\delta)\cosh(\beta\Delta t)
+ +(\beta\delta-\alpha D)\sinh(\beta\Delta t)
+ \right].
+ \label{eq:app-over-v}
+\end{align}
+
+\subsection{Caso degenere $q=0$}
+
+Poiché $a=c_cr_1\geq0$, $b=c_sr_2\geq0$ e $q=a+b$, il caso $q=0$ implica $a=b=F=0$. L'equazione diventa $\ddot x+2\alpha\dot x=0$. Per $\alpha\ne0$:
+\begin{equation}
+ \widetilde x=x_0+v_0\frac{1-e^{-2\alpha\Delta t}}{2\alpha},
+ \qquad \widetilde v=v_0e^{-2\alpha\Delta t}.
+ \label{eq:app-qzero}
+\end{equation}
+Per $\alpha=0$ il limite è il moto rettilineo uniforme:
+\begin{equation}
+ \widetilde x=x_0+v_0\Delta t,
+ \qquad \widetilde v=v_0.
+ \label{eq:app-qzero-alpha0}
+\end{equation}
+Il caso $q=0$ non è trattato separatamente nelle formule (13)--(18) dell'articolo, che contengono divisioni per $\omega_k^2$; le espressioni sopra sono il limite analitico del problema e costituiscono un completamento implementativo. Nel codice non esiste un ramo separato esplicito per $q=0$: il caso è trattato dalla formula a due radici per $\alpha>0$ e dal ramo critico per $\alpha=0$.
+
+\subsection{Tolleranza numerica e mappa di vincolo}
+
+Il codice classifica il regime mediante $\Delta=\alpha^2-q$ e la tolleranza numerica
+\begin{equation}
+\tau_{\mathrm{crit}}=64\,\varepsilon_{\mathrm{mach}}
+\max\{1,\alpha^2,q\}.
+\label{eq:app-critical-tolerance}
+\end{equation}
+Utilizza la formula a radice ripetuta quando $|\Delta|\leq\tau_{\mathrm{crit}}$, la forma trigonometrica quando $\Delta<-\tau_{\mathrm{crit}}$ e le due radici reali distinte quando $\Delta>\tau_{\mathrm{crit}}$. Per discriminanti non nulli ma compresi nella tolleranza, la formula critica è un'approssimazione locale numerica, non il regime critico esatto. I test C++ correnti confrontano i tre regimi e i casi $q=0$ con un riferimento RK4 e verificano la proprietà di semigruppo; non costituiscono ancora una scansione esaustiva dell'errore attraverso la soglia critica.
+
+Dopo la propagazione, il codice applica coordinata per coordinata
+\begin{equation}
+ x^+=\min\{u,\max\{\ell,\widetilde x\}\},\qquad
+ v^+=\begin{cases}
+ -e\widetilde v,&\widetilde x<\ell\text{ e }\widetilde v<0,\\
+ -e\widetilde v,&\widetilde x>u\text{ e }\widetilde v>0,\\
+ \widetilde v,&\text{altrimenti}.
+ \end{cases}
+ \label{eq:app-boundary-map}
+\end{equation}
+Questa mappa non è presente nella formulazione di Orlando--Ricciardello: è una proiezione/riflessione discreta introdotta dal codice al tempo di osservazione. Perciò il propagatore è analitico all'interno dell'intervallo, mentre la traiettoria osservata complessiva può essere discontinua nei passi in cui la mappa è attiva. I risultati ottenuti con questa mappa si riferiscono alla variante con dominio limitato del progetto, non al problema non vincolato senza ulteriori ipotesi.
+
+\subsection{Portata della stabilità lineare}
+
+Per $q>0$ e $\alpha>0$ le radici dell'equazione caratteristica hanno parte reale negativa. Questa proprietà riguarda il sistema lineare congelato con attrattore fisso; non è un teorema di convergenza dell'algoritmo di ottimizzazione, nel quale attrattori e coefficienti casuali vengono aggiornati a ogni intervallo e può intervenire la mappa di vincolo aggiunta. Non si assume pertanto che la CPSO completa sia contrattiva per ogni $\Delta t$ o per ogni sequenza di attrattori.

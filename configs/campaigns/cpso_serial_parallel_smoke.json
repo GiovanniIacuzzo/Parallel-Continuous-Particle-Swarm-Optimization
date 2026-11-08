@@ -170,5 +170,6 @@
         }
       ]
     }
-  ]
+  ],
+  "evidence_class": "integration_only"
 }

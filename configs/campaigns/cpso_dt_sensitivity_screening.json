@@ -11,7 +11,10 @@
     "griewank",
     "salomon"
   ],
-  "dimensions": [30, 100],
+  "dimensions": [
+    30,
+    100
+  ],
   "population_size": 64,
   "iterations": 500,
   "seeds": [
@@ -50,5 +53,6 @@
   "cognitive": 2.05,
   "social": 2.05,
   "initial_velocity_fraction": 0.1,
-  "boundary_restitution": 0.5
+  "boundary_restitution": 0.5,
+  "evidence_class": "exploratory"
 }

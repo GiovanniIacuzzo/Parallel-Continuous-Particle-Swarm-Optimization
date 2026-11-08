@@ -221,5 +221,6 @@
         }
       ]
     }
-  ]
+  ],
+  "evidence_class": "exploratory"
 }

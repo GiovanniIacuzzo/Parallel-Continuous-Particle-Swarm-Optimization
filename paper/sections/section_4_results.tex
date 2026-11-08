@@ -1,139 +1,258 @@
 \section{Risultati sperimentali}
 \label{sec:results}
 
-Questa sezione sarà compilata dopo l'esecuzione delle campagne. I pilot locali
-servono a verificare le pipeline e a formulare ipotesi; le conclusioni
-confermative saranno basate sui risultati ottenuti con i protocolli e le
-configurazioni congelati. Ogni tabella deve riportare il numero di run
-complete, le FE effettive, i seed e le funzioni incluse; i risultati non
-completi non devono essere aggregati come se fossero una campagna conclusa.
+Questa sezione è predisposta per l'inserimento dei risultati delle campagne congelate. Alla data della presente versione non vengono presentati valori confirmatory: le celle contrassegnate con \texttt{TBD} e i riquadri grafici sono segnaposto intenzionali, non risultati stimati. I pilot locali e gli smoke test non vengono incorporati nelle tabelle principali. Ogni tabella definitiva dovrà riportare il numero di run completate, le FE effettive, la copertura dei problemi e le esclusioni motivate.
 
-\subsection{Equivalenza delle modalità sincrone}
+\subsection{Equivalenza delle modalità sincrone (RQ1)}
 \label{sec:results-equivalence}
 
-Da riportare: percentuale di run appaiate con identità esatta di best value,
-posizione e cronologia best-so-far; eventuali mismatch, loro riproducibilità e
-causa. L'esito deve essere verificato per master--slave e particle-parallel a
-ciascun numero di worker. Non è sufficiente confrontare soltanto il valore
-finale.
+Il controllo di equivalenza deve confrontare l'intera cronologia osservata, non soltanto il valore finale. La tabella~\ref{tab:result-equivalence} registra run verificate, mismatch e massima differenza numerica; il confronto viene separato per topologia e numero di worker nell'Appendice~\ref{app:extended-results}.
 
-\IfFileExists{figures/internal_pilots/fig_01_synchronous_equivalence.pdf}{%
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_01_synchronous_equivalence.pdf}
-  \caption{Controllo dell'equivalenza esatta tra esecutori sincroni.}
-  \label{fig:synchronous-equivalence}
-\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: \texttt{fig\_01\_synchronous\_equivalence.pdf}.}}}
+\begin{table*}[t]
+\centering
+\caption{Template per il controllo di equivalenza rispetto al backend seriale. Le percentuali sono calcolate sulle sole run completate e appaiate.}
+\label{tab:result-equivalence}
+\small
+\begin{tabularx}{\textwidth}{@{}llrrrrX@{}}
+\toprule
+Backend & Worker & Run appaiate & Identiche & Identità (\%) & Max $|\Delta f|$ & Esito/mismatch \\
+\midrule
+Master--slave & 1 & TBD & TBD & TBD & TBD & TBD \\
+Master--slave & 2 & TBD & TBD & TBD & TBD & TBD \\
+Master--slave & 4 & TBD & TBD & TBD & TBD & TBD \\
+Master--slave & 8 & TBD & TBD & TBD & TBD & TBD \\
+Particle-parallel & 1 & TBD & TBD & TBD & TBD & TBD \\
+Particle-parallel & 2 & TBD & TBD & TBD & TBD & TBD \\
+Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD \\
+Particle-parallel & 8 & TBD & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabularx}
+\end{table*}
 
-\subsection{Scaling e costo dell'esecutore}
+\begin{figure*}[t]
+\centering
+\IfFileExists{figures/results/fig_sync_equivalence.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_sync_equivalence.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_sync\_equivalence.pdf}\par Mismatch per run, backend e numero di worker.}}}
+\caption{Equivalenza delle traiettorie e degli incumbent tra il riferimento seriale e gli esecutori sincroni.}
+\label{fig:result-sync-equivalence}
+\end{figure*}
+
+\subsection{Strong scaling e costo dell'esecutore (RQ2)}
 \label{sec:results-scaling}
 
-Da riportare: tempi appaiati, speedup, efficienza parallela e intervalli di
-incertezza per master--slave e particle-parallel. Separare i tre livelli di
-costo della funzione obiettivo (nessun lavoro aggiuntivo, carico intermedio e
-carico elevato) e le dimensioni/population size previste. I tempi assoluti
-sono riferiti esclusivamente alla macchina descritta nel manifest.
+Lo scaling è riportato esclusivamente per configurazioni che superano il controllo di equivalenza. I risultati vengono stratificati per dimensione, popolazione e lavoro per valutazione; tempi mediani, intervalli e speedup devono essere calcolati sulle ripetizioni appaiate. La decomposizione temporale distingue inizializzazione, propagazione, valutazione, sincronizzazione e overhead.
 
-\IfFileExists{figures/internal_pilots/fig_02_strong_scaling.pdf}{%
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_02_strong_scaling.pdf}
-  \caption{Strong scaling degli esecutori CPSO sincroni.}
-  \label{fig:strong-scaling}
-\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: \texttt{fig\_02\_strong\_scaling.pdf}.}}}
+\begin{table*}[t]
+\centering
+\caption{Template per strong scaling. $T_p$ è la mediana del tempo di run; intervalli e speedup sono calcolati solo dopo la verifica di equivalenza.}
+\label{tab:result-scaling}
+\small
+\begin{tabularx}{\textwidth}{@{}rrrrlrrrr@{}}
+\toprule
+$D$ & $N$ & Lavoro & Worker & Backend & $T_p$ (s) & IC 95\% & $S(p)$ & $E(p)$ \\
+\midrule
+TBD & TBD & 0 & 1 & Master--slave & TBD & TBD & TBD & TBD \\
+TBD & TBD & 0 & 2 & Master--slave & TBD & TBD & TBD & TBD \\
+TBD & TBD & 0 & 4 & Master--slave & TBD & TBD & TBD & TBD \\
+TBD & TBD & 0 & 8 & Master--slave & TBD & TBD & TBD & TBD \\
+TBD & TBD & 512 & 1--8 & Master--slave & TBD & TBD & TBD & TBD \\
+TBD & TBD & 4096 & 1--8 & Master--slave & TBD & TBD & TBD & TBD \\
+TBD & TBD & 0--4096 & 1--8 & Particle-parallel & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabularx}
+\end{table*}
 
-\IfFileExists{figures/internal_pilots/fig_03_parallel_efficiency.pdf}{%
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_03_parallel_efficiency.pdf}
-  \caption{Efficienza parallela per i backend sincroni.}
-  \label{fig:parallel-efficiency}
-\end{figure}}{}
+\begin{figure*}[t]
+\centering
+\IfFileExists{figures/results/fig_strong_scaling.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_strong_scaling.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_strong\_scaling.pdf}\par Curve tempo vs worker per i carichi sintetici.}}}
+\caption{Strong scaling dei backend sincroni per i tre livelli di lavoro della funzione sintetica.}
+\label{fig:result-strong-scaling}
+\end{figure*}
 
-\subsection{Aggiornamento asincrono}
-\label{sec:results-async}
+La decomposizione temporale per componente è riportata nell'Appendice~\ref{app:extended-results}, Tabella~\ref{tab:app-timing-breakdown} e Figura~\ref{fig:app-runtime-decomposition}.
 
-Da riportare: qualità best-so-far e successo a budget FE fissato, distribuzione
-dei tempi, sensibilità al numero di worker e alla topologia sociale. Il
-confronto con il seriale è algoritmico, non uno speedup a traiettoria invariata.
+\subsection{Aggiornamento asincrono e modello a isole (RQ3)}
+\label{sec:results-async-islands}
 
-\IfFileExists{figures/internal_pilots/fig_05_asynchronous_quality.pdf}{%
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_05_asynchronous_quality.pdf}
-  \caption{Confronto esplorativo della qualità per la modalità event-driven.}
-  \label{fig:asynchronous-quality}
-\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: \texttt{fig\_05\_asynchronous\_quality.pdf}.}}}
+L'asincronia e il modello a isole vengono confrontati con il riferimento seriale a popolazione e FE totali fissati, ma le differenze sono interpretate come effetti di una dinamica diversa. Per l'asincronia si riportano curve anytime, distribuzioni dei valori finali, successi e variabilità tra ripetizioni; i tempi non sono chiamati speedup. Per le isole si separano il numero di sottopopolazioni, la topologia intra-isola e la politica di migrazione.
 
-\subsection{Architettura a isole}
-\label{sec:results-islands}
+\begin{table*}[t]
+\centering
+\caption{Template per la qualità dell'aggiornamento asincrono. Le statistiche aggregate devono conservare la gerarchia funzione--dimensione--seed.}
+\label{tab:result-async}
+\small
+\begin{tabularx}{\textwidth}{@{}lrrlrrrrX@{}}
+\toprule
+Metodo & $D$ & Worker & Topologia & Mediana $\log_{10}(f-f^*)$ & IQR & Successi/Run & ERT & Nota \\
+\midrule
+Event-driven & TBD & 1 & Global & TBD & TBD & TBD & TBD & TBD \\
+Event-driven & TBD & 4 & Global & TBD & TBD & TBD & TBD & TBD \\
+Event-driven & TBD & 1 & Ring & TBD & TBD & TBD & TBD & TBD \\
+Event-driven & TBD & 4 & Ring & TBD & TBD & TBD & TBD & TBD \\
+Event-driven & TBD & 1 & Von Neumann & TBD & TBD & TBD & TBD & TBD \\
+Event-driven & TBD & 4 & Von Neumann & TBD & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabularx}
+\end{table*}
 
-Da riportare: confronto FE-matched al variare di numero di isole, topologia
-intra-isola e politica di migrazione; quota di migrazioni accettate e costi di
-comunicazione, se disponibili. Distinguere l'effetto della decomposizione da
-quello della migrazione.
+\begin{table*}[t]
+\centering
+\caption{Template per il modello a isole. L'accettazione delle migrazioni è definita come sostituzioni effettivamente applicate diviso tentativi di migrazione.}
+\label{tab:result-islands}
+\small
+\begin{tabularx}{\textwidth}{@{}rrrrllrrrr@{}}
+\toprule
+Isole & Pop./isola & Worker & Migrazione & Topologia & Intervallo & Accettate (\%) & Valore finale & Successi & FE/run \\
+\midrule
+2 & TBD & 2 & Nessuna & Global & -- & -- & TBD & TBD & TBD \\
+4 & TBD & 4 & Nessuna & Global & -- & -- & TBD & TBD & TBD \\
+8 & TBD & 8 & Nessuna & Global & -- & -- & TBD & TBD & TBD \\
+4 & TBD & 4 & Ring & Ring & 5 & TBD & TBD & TBD & TBD \\
+4 & TBD & 4 & Ring & Ring & 20 & TBD & TBD & TBD & TBD \\
+4 & TBD & 4 & Ring & Ring & 50 & TBD & TBD & TBD & TBD \\
+4 & TBD & 4 & Fully connected & Global & 20 & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabularx}
+\end{table*}
 
-\IfFileExists{figures/internal_pilots/fig_06_island_quality.pdf}{%
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_06_island_quality.pdf}
-  \caption{Confronto esplorativo della qualità nel modello a isole.}
-  \label{fig:island-quality}
-\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: \texttt{fig\_06\_island\_quality.pdf}.}}}
+\begin{figure*}[t]
+\centering
+\IfFileExists{figures/results/fig_async_island_anytime.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_async_island_anytime.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_async\_island\_anytime.pdf}\par Curve best-so-far vs FE per asincronia e configurazioni a isole.}}}
+\caption{Confronto anytime tra riferimento sincrono, aggiornamento event-driven e modelli a isole a budget FE abbinato.}
+\label{fig:result-async-island-anytime}
+\end{figure*}
 
-\subsection{Espansione alle sette topologie}
+\subsection{Topologie sociali (RQ4)}
 \label{sec:results-topologies}
 
-Da riportare: qualità per funzione e dimensione, ranghi aggregati con unità
-statistiche corrette, costo della selezione sociale e verifica dell'equivalenza
-tra esecutori sincroni per topologia. La campagna a sette topologie non è
-confusa con la campagna architetturale principale a tre topologie.
+Le sette topologie sono confrontate come famiglie complete. La tabella~\ref{tab:result-topologies} riporta le statistiche di grafo insieme alla qualità; il confronto non deve essere interpretato causalmente come effetto della sola forma della rete, poiché grado e connettività non sono controllati a parità. Le tabelle complete per funzione e dimensione sono demandate all'Appendice~\ref{app:extended-results}.
 
-\IfFileExists{figures/internal_pilots/fig_08_current_topology_quality.pdf}{%
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/internal_pilots/fig_08_current_topology_quality.pdf}
-  \caption{Confronto delle sette famiglie topologiche nel pilot dedicato.}
-  \label{fig:seven-topologies}
-\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: \texttt{fig\_08\_current\_topology\_quality.pdf}.}}}
+\begin{table*}[t]
+\centering
+\caption{Template congiunto per statistiche della rete e qualità. Le statistiche del grafo sono calcolate sulla rete effettivamente generata per run.}
+\label{tab:result-topologies}
+\small
+\begin{tabularx}{\textwidth}{@{}lrrrrrrrr@{}}
+\toprule
+Topologia & Grado medio & SD grado & Diametro & Cammino medio & Clustering & Componenti & Mediana errore & Rango \\
+\midrule
+Global-best & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+Ring & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+Von Neumann & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+Wheel & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+Random connessa & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+Watts--Strogatz & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+Barabási--Albert & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabularx}
+\end{table*}
 
-\subsection{Benchmark esterni: COCO BBOB e BBOB-LargeScale}
+\begin{figure*}[t]
+\centering
+\IfFileExists{figures/results/fig_topology_quality.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_topology_quality.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_topology\_quality.pdf}\par Distribuzioni per funzione e confronto aggregato delle sette topologie.}}}
+\caption{Qualità della ricerca per le sette famiglie topologiche nella campagna dedicata.}
+\label{fig:result-topology-quality}
+\end{figure*}
+
+\subsection{Benchmark esterni: COCO BBOB e BBOB-LargeScale (RQ5)}
 \label{sec:results-bbob}
 
-Per ogni suite saranno riportate le ECDF e le misure runtime-to-target prodotte
-con il post-processing ufficiale COCO. Le tabelle accessorie con i ranghi
-finali sono descrittive e non sostituiscono le metriche anytime. I risultati
-BBOB standard e BBOB-LargeScale saranno analizzati separatamente.
+Le ECDF e le curve runtime-to-target prodotte dal post-processing COCO costituiscono gli esiti principali; i ranghi aggregati sono soltanto descrittivi. BBOB standard e BBOB-LargeScale sono analizzati separatamente. Gli indicatori finali devono essere riportati per target e dimensione, conservando la funzione benchmark come unità di aggregazione.
 
-\IfFileExists{figures/external_pilots/rank_cpso_bbob_stageC_pilot_v1_final_best_value.pdf}{%
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/external_pilots/rank_cpso_bbob_stageC_pilot_v1_final_best_value.pdf}
-  \caption{Ranghi finali appaiati nel pilot COCO BBOB; analisi descrittiva.}
-  \label{fig:bbob-pilot-ranks}
-\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: report COCO/cocopp e ranghi descrittivi BBOB.}}}
+\begin{table*}[t]
+\centering
+\caption{Template per il riepilogo COCO. Compilare separatamente per BBOB e BBOB-LargeScale; riportare ECDF/ERT per più target, non soltanto il valore finale.}
+\label{tab:result-bbob}
+\small
+\begin{tabularx}{\textwidth}{@{}lrrrrrX@{}}
+\toprule
+Metodo & Funzioni coperte & Run complete & Successi & ERT target 1 & ERT target 2 & ECDF/RTT riferimento \\
+\midrule
+CPSO (Orlando--Ricciardello) & TBD & TBD & TBD & TBD & TBD & TBD \\
+Classic gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
+Inertia gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
+Constriction gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
+Inertia lbest ring & TBD & TBD & TBD & TBD & TBD & TBD \\
+CLPSO & TBD & TBD & TBD & TBD & TBD & TBD \\
+SL-PSO (configurazione implementata) & TBD & TBD & TBD & TBD & TBD & TBD \\
+SPSO-2011 & TBD & TBD & TBD & TBD & TBD & TBD \\
+FIPS ring & TBD & TBD & TBD & TBD & TBD & TBD \\
+Competitive Swarm Optimizer & TBD & TBD & TBD & TBD & TBD & TBD \\
+DMS-PSO & TBD & TBD & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\begin{figure*}[t]
+\centering
+\IfFileExists{figures/results/fig_coco_bbob_ecdf.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_coco_bbob_ecdf.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_coco\_bbob\_ecdf.pdf}\par ECDF COCO BBOB con intervalli e target pre-specificati.}}}
+\caption{ECDF del benchmark COCO BBOB ottenute con il post-processing ufficiale.}
+\label{fig:result-bbob-ecdf}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\IfFileExists{figures/results/fig_coco_bbob_ls_ecdf.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_coco_bbob_ls_ecdf.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_coco\_bbob\_ls\_ecdf.pdf}\par ECDF COCO BBOB-LargeScale.}}}
+\caption{ECDF del benchmark COCO BBOB-LargeScale.}
+\label{fig:result-bbob-ls-ecdf}
+\end{figure*}
 
 \subsection{Benchmark esterno: CEC 2013 LSGO}
 \label{sec:results-cec}
 
-Da riportare: andamento best-so-far ai checkpoint FE, statistiche per funzione,
-mediane aggregate e confronti appaiati. I risultati del pilot a sei funzioni,
-tre semi e 120\,000 FE saranno esplicitamente descritti come preliminari; le
-conclusioni sulla suite richiederanno tutte le funzioni, i seed e il budget
-confirmatory.
+Per CEC 2013 LSGO si riportano i valori best-so-far ai tre checkpoint FE previsti, le distribuzioni per funzione e il riepilogo dei successi. Le funzioni F13 e F14 vengono identificate con la loro dimensione effettiva pari a 905. Le classifiche aggregate non sostituiscono i valori per funzione.
 
-\IfFileExists{figures/external_pilots/rank_cpso_cec2013_stageC_pilot_v1_best_at_120000_FE.pdf}{%
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/external_pilots/rank_cpso_cec2013_stageC_pilot_v1_best_at_120000_FE.pdf}
-  \caption{Ranghi al checkpoint finale del pilot CEC 2013 LSGO.}
-  \label{fig:cec-pilot-ranks}
-\end{figure}}{\noindent\fbox{\parbox{0.95\columnwidth}{\centering Da generare: riepilogo CEC ai checkpoint FE.}}}
+\begin{table*}[t]
+\centering
+\caption{Template per CEC 2013 LSGO ai checkpoint FE predefiniti. Ogni cella riporta mediana [IQR] tra i 25 seed della funzione; l'aggregazione tra funzioni è separata.}
+\label{tab:result-cec}
+\small
+\begin{tabularx}{\textwidth}{@{}lrrrrrX@{}}
+\toprule
+Metodo & Run complete & Successi & $1.2\cdot10^5$ FE & $6\cdot10^5$ FE & $3\cdot10^6$ FE & Rango medio \\
+\midrule
+CPSO (Orlando--Ricciardello) & TBD & TBD & TBD & TBD & TBD & TBD \\
+Classic gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
+Inertia gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
+Constriction gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
+Inertia lbest ring & TBD & TBD & TBD & TBD & TBD & TBD \\
+CLPSO & TBD & TBD & TBD & TBD & TBD & TBD \\
+SL-PSO (configurazione implementata) & TBD & TBD & TBD & TBD & TBD & TBD \\
+SPSO-2011 & TBD & TBD & TBD & TBD & TBD & TBD \\
+FIPS ring & TBD & TBD & TBD & TBD & TBD & TBD \\
+Competitive Swarm Optimizer & TBD & TBD & TBD & TBD & TBD & TBD \\
+DMS-PSO & TBD & TBD & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabularx}
+\end{table*}
 
-\subsection{Sintesi dei risultati}
+\begin{figure*}[t]
+\centering
+\IfFileExists{figures/results/fig_cec2013_checkpoints.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_cec2013_checkpoints.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_cec2013\_checkpoints.pdf}\par Distribuzione best-so-far ai tre checkpoint.}}}
+\caption{Confronto CEC 2013 LSGO ai checkpoint FE del protocollo.}
+\label{fig:result-cec-checkpoints}
+\end{figure*}
+
+\subsection{Riepilogo delle domande di ricerca}
 \label{sec:results-summary}
 
-Questa sottosezione conterrà una sintesi delle risposte alle RQ1--RQ5,
-separando invarianti dimostrate e verificate, osservazioni empiriche e ipotesi
-non supportate. Non saranno formulate graduatorie universali sulla base dei
-soli pilot locali.
+La tabella~\ref{tab:rq-summary} sarà compilata dopo le campagne. Ogni risposta dovrà distinguere una proprietà matematica dimostrata, un controllo implementativo superato, un risultato empirico e un'ipotesi non verificata.
+
+\begin{table*}[t]
+\centering
+\caption{Template di sintesi delle RQ. Le conclusioni non devono eccedere la copertura effettivamente completata.}
+\label{tab:rq-summary}
+\small
+\begin{tabularx}{\textwidth}{@{}lX X@{}}
+\toprule
+Domanda & Evidenza quantitativa da riportare & Risposta supportata dai dati \\
+\midrule
+RQ1 & Identità delle traiettorie, mismatch e condizioni di equivalenza & TBD \\
+RQ2 & Speedup, efficienza, costo per componente e intervalli & TBD \\
+RQ3 & Qualità anytime e successi a FE matched per asincronia/isole & TBD \\
+RQ4 & Qualità e statistiche dei grafi per sette topologie & TBD \\
+RQ5 & ECDF/ERT COCO e checkpoint CEC per le undici implementazioni & TBD \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+I risultati estesi per funzione, dimensione, seed, topologia e baseline saranno collocati nell'Appendice~\ref{app:extended-results}, così da mantenere il corpo principale concentrato sulle risposte alle RQ.

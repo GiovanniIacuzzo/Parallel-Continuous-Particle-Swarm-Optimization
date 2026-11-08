@@ -1,55 +1,37 @@
-# Stato del manoscritto e workflow dei risultati
+# Manoscritto: stato e workflow
 
-`paper.tex`, `sections/` e `references.bib` sono le fonti LaTeX autorevoli. La bozza aggiornata descrive: il problema sperimentale; la letteratura su parallel PSO, topologie e island models; le cinque modalità di esecuzione; le sette topologie implementate; la campagna architetturale principale a tre topologie; l'espansione complementare a sette topologie; dieci baseline PSO; COCO BBOB, BBOB-LargeScale e CEC 2013 LSGO.
+`paper.tex`, `sections/`, `appendices/` e `references.bib` sono le fonti LaTeX autorevoli. Il manoscritto è stato riallineato al codice attuale e distingue il modello matematico, le semantiche dei cinque esecutori, il protocollo sperimentale, i risultati da compilare e i dettagli supplementari.
 
-La formulazione matematica CPSO è considerata verificata e fissata nella fase di sviluppo del modello. Il presente manoscritto non riapre tale verifica: si concentra sulle semantiche degli esecutori, sul disegno sperimentale e sulla valutazione empirica. Non sono ancora inseriti risultati confirmatory, discussione empirica o conclusioni: le relative sezioni verranno completate dopo l'esecuzione dei codici e la generazione dei risultati. Nessun valore di pilot o smoke test va presentato come evidenza confirmatory.
+## Convenzione terminologica
 
-## Sequenza operativa
+Nel paper **CPSO** identifica esclusivamente la *Continuous Particle Swarm Optimization* di Orlando e Ricciardello (2021). Non viene usato per il Cooperative PSO, per altre formulazioni continue precedenti o per le dieci baseline discrete. Le baseline sono nominate con il proprio nome: CLPSO, SL-PSO, SPSO-2011, FIPS, Competitive Swarm Optimizer, DMS-PSO e le varianti classiche.
 
-Il piano dettagliato di comandi per il MacBook Air M2 è in [`MACBOOK_AIR_M2_RUNBOOK.md`](MACBOOK_AIR_M2_RUNBOOK.md). Le campagne già definite sono:
+## Stato scientifico dei risultati
 
-- `configs/campaigns/cpso_serial_parallel_pilot.json` — equivalenza sincrona e scaling (1.400 run);
-- `configs/campaigns/cpso_dynamics_pilot.json` — asincronia e isole (720 run);
-- `configs/campaigns/cpso_topology_expansion_pilot.json` — sette topologie (1.050 run);
-- `configs/benchmarks/bbob_stageC_pilot.json` — COCO BBOB (770 run);
-- `configs/benchmarks/bbob_largescale_preconfirmatory.json` — BBOB-LargeScale pre-confirmatory (1.056 run);
-- `configs/benchmarks/cec2013_stageC_pilot.json` — CEC 2013 LSGO (198 run).
+La versione corrente è una bozza di protocollo e manoscritto, non un articolo con risultati confirmatory completi. Le celle `TBD` e i riquadri "Figura da generare" sono segnaposto intenzionali. I pilot e gli smoke test presenti nel repository non vengono presentati come risultati confermativi. Non sono formulate conclusioni di superiorità.
 
-Le directory di output suggerite sono parte delle convenzioni del post-processing; non sovrascriverle con campagne differenti. I runner salvano manifest e JSONL riprendibili.
+La sezione principale dei risultati contiene i riepiloghi per RQ1–RQ5. L'Appendice E raccoglie i breakdown per funzione/dimensione, statistiche topologiche, migrazioni, decomposizione temporale e sensibilità a `dt`, così da mantenere il corpo dell'articolo leggibile. L'Appendice A rende esplicito il propagatore; B documenta le baseline; C riporta la proprietà condizionale dello span dovuta alla casualità scalare; D documenta le configurazioni e la contabilità FE.
 
-## Figure
+## Configurazioni da cui partire
 
-Le figure interne si generano con:
+- `configs/campaigns/definitive_architecture_campaign.json`: campagna interna architetturale, profilo corrente con `dt=0.35`.
+- `configs/campaigns/cpso_topology_expansion_pilot.json`: espansione esplorativa delle sette topologie.
+- `configs/campaigns/cpso_dt_sensitivity_m2_screening.json`: screening esplorativo del passo temporale su MacBook Air M2; il campo `reference_dt=30` è solo un riferimento del grafico, non il passo congelato delle campagne.
+- `configs/benchmarks/bbob_confirmatory.json`, `bbob_largescale_confirmatory.json` e `cec2013_confirmatory.json`: profili esterni pianificati. Non avviare le campagne complete prima del pilot di costo e della verifica del budget.
 
-```bash
-python analysis/postprocess_publication_figures.py \
-  --results-root results \
-  --output paper/figures/internal_pilots
-```
+Per i dettagli sui vincoli statistici, i conteggi FE e le decisioni aperte, vedere `../CODE_AUDIT.md` e l'Appendice D.
 
-I riepiloghi descrittivi dei benchmark esterni si generano con:
+## Figure definitive
 
-```bash
-python analysis/postprocess_external_benchmarks.py \
-  --results-root results/external_benchmarks \
-  --output paper/figures/external_pilots
-```
+I percorsi previsti sono elencati in [`figures/results/README.md`](figures/results/README.md). Le figure devono essere preferibilmente PDF vettoriali. Non sovrascrivere i pilot in `figures/internal_pilots/`, `figures/atlas/` o `figures/dt_m2_screening/`.
 
-Per COCO, le ECDF e i grafici runtime-to-target ufficiali devono essere generati con `cocopp` sui dati Observer prodotti in `coco_data/<method>/`; i riepiloghi per rango finale sono supplementari. Non aggregare risultati con suite, budget, hardware o versioni software differenti.
+## Compilazione
 
-## Compilazione LaTeX
-
-Dalla directory `paper/`, con `pdflatex` e BibTeX installati:
+Dalla directory `paper/`, con `pdflatex`, `latexmk` e `bibtex8` installati:
 
 ```bash
-pdflatex -interaction=nonstopmode -halt-on-error paper.tex
-bibtex paper
-pdflatex -interaction=nonstopmode -halt-on-error paper.tex
-pdflatex -interaction=nonstopmode -halt-on-error paper.tex
+latexmk -pdf -interaction=nonstopmode -halt-on-error \
+  -e '$bibtex = "bibtex8 %O %B";' paper.tex
 ```
 
-`paper_pre_revision.pdf` è un artefatto storico non sincronizzato e non deve essere usato. `paper.pdf` va rigenerato dalle fonti sopra dopo ogni modifica.
-
-## Regola di interpretazione
-
-Il confronto esterno attuale include CPSO e dieci PSO discrete, non CMA-ES o differential evolution: non consente affermazioni di superiorità sull'intero stato dell'arte degli ottimizzatori continui. Le modalità sincrone parallele possono essere confrontate in termini di speedup solo dopo avere verificato l'equivalenza di traiettoria. Asincronia e isole cambiano la dinamica e vanno confrontate a FE budget fissato, non chiamate accelerazioni equivalenti del seriale.
+`paper.pdf` viene generato dalle fonti sopra. `paper_pre_revision.pdf` è un artefatto storico e non è sincronizzato con la revisione corrente.

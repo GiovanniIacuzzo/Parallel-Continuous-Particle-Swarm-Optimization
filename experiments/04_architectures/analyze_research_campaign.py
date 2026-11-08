@@ -716,6 +716,7 @@ def analyze_campaign_directory(
     rank_rows: list[dict[str, Any]] = []
     friedman_rows: list[dict[str, Any]] = []
     speedup_rows: list[dict[str, Any]] = []
+    equivalence_rows: list[dict[str, Any]] = []
     stage_status: list[dict[str, Any]] = []
 
     for stage in campaign["stages"]:
@@ -727,7 +728,36 @@ def analyze_campaign_directory(
             records = _read_jsonl(path)
             validate_completed_study(study_item["study"], records, label)
             if study_item["study"].get("check_equivalence", True):
+                # The verifier raises on the first mismatch. Only after it
+                # returns do we materialize an auditable count of exact pairs.
                 verify_exact_equivalence(records)
+                expected_pairs = (
+                    len(study_item["study"]["benchmarks"])
+                    * len(study_item["study"]["dimensions"])
+                    * len(study_item["study"]["seeds"])
+                )
+                methods_by_name = {
+                    method["name"]: method for method in study_item["study"]["methods"]
+                }
+                for method_name, method in methods_by_name.items():
+                    if method.get("architecture") not in {"master_slave", "particle_parallel"}:
+                        continue
+                    verified_pairs = sum(
+                        1 for record in records if record.get("method") == method_name
+                    )
+                    equivalence_rows.append({
+                        "stage": stage["id"],
+                        "study": study_item["id"],
+                        "method": method_name,
+                        "architecture": method["architecture"],
+                        "topology": method.get("topology", "global"),
+                        "workers": int(method.get("workers", 1)),
+                        "verified_pairs": verified_pairs,
+                        "expected_pairs": expected_pairs,
+                        "fraction_verified": verified_pairs / expected_pairs if expected_pairs else math.nan,
+                        "status": "exact_match" if verified_pairs == expected_pairs else "incomplete",
+                        "checked_fields": "best_value;best_position;best_history;history_evaluations;function_evaluations",
+                    })
             study_records[(stage["id"], study_item["id"])] = records
             for record in records:
                 all_runs.append({"stage": stage["id"], "study": study_item["id"], **record})
@@ -766,15 +796,33 @@ def analyze_campaign_directory(
         else:
             row["friedman_p_holm_campaign"] = math.nan
 
+    evidence_class = campaign.get("evidence_class", "exploratory")
+    if evidence_class not in {"confirmatory", "exploratory", "integration_only"}:
+        raise ValueError(f"Unsupported evidence_class: {evidence_class!r}")
+
     _write_csv(campaign_root / "campaign_runs.csv", all_runs)
     _write_csv(campaign_root / "campaign_validation.csv", stage_status)
-    _write_csv(campaign_root / "confirmatory_pairwise_tests.csv", comparison_rows)
+    _write_csv(campaign_root / "pairwise_effects.csv", comparison_rows)
+    # Keep the historical filename only for campaigns explicitly designated
+    # confirmatory. Exploratory results must never acquire a confirmatory label.
+    if evidence_class == "confirmatory":
+        _write_csv(campaign_root / "confirmatory_pairwise_tests.csv", comparison_rows)
+    elif (campaign_root / "confirmatory_pairwise_tests.csv").exists():
+        (campaign_root / "confirmatory_pairwise_tests.csv").unlink()
+    _write_csv(
+        campaign_root / "equivalence_audit.csv",
+        equivalence_rows,
+        fields=["stage", "study", "method", "architecture", "topology", "workers",
+                "verified_pairs", "expected_pairs", "fraction_verified", "status", "checked_fields"],
+    )
     _write_csv(campaign_root / "method_average_ranks.csv", rank_rows)
     _write_csv(campaign_root / "omnibus_friedman_tests.csv", friedman_rows)
     _write_csv(campaign_root / "strong_scaling_summary.csv", speedup_rows)
 
     report = [
         f"# Research campaign analysis — {campaign['campaign_id']}",
+        "",
+        f"Evidence class: `{evidence_class}`",
         "",
         f"Completed optimization runs: {len(all_runs):,}",
         f"Completed studies: {len(stage_status)}",
@@ -805,7 +853,9 @@ def analyze_campaign_directory(
         "",
         "- `campaign_runs.csv`: all run records with stage/study identifiers.",
         "- `campaign_validation.csv`: run-count and FE-budget audit.",
-        "- `confirmatory_pairwise_tests.csv`: paired effects, exact signed-rank sign-flip p-values and Holm-adjusted p-values.",
+        "- `pairwise_effects.csv`: paired effect summaries and associated inferential diagnostics; interpret them according to the campaign evidence class above.",
+        "- `confirmatory_pairwise_tests.csv`: compatibility copy emitted only when evidence_class is explicitly `confirmatory`.",
+        "- `equivalence_audit.csv`: exact synchronous trajectory-pair counts after the record-by-record verifier passed.",
         "- `omnibus_friedman_tests.csv` and `method_average_ranks.csv`: multi-method rank analysis.",
         "- `strong_scaling_summary.csv`: paired speedup, bootstrap interval and parallel efficiency.",
     ]

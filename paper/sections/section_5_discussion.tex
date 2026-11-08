@@ -1,40 +1,24 @@
 \section{Discussione}
 \label{sec:discussion}
 
-La discussione sarà organizzata intorno alla distinzione fra equivalenza
-semantica e prestazione dell'esecutore. Per le modalità sincrone, ogni
-accelerazione dovrà essere interpretata alla luce del controllo di traiettoria
-esatta e del costo della funzione obiettivo. Per asincronia e isole, le
-variazioni della qualità saranno discusse come effetti di una diversa dinamica
-di aggiornamento e comunicazione, non come accelerazioni del medesimo
-algoritmo.
+La discussione definitiva dipenderà dai risultati confermativi e non viene anticipata in questa versione. La sua struttura separa deliberatamente proprietà del modello, correttezza dell'implementazione, qualità della ricerca e prestazioni dell'esecutore: nessuno di questi livelli può sostituire gli altri.
 
-\subsection{Implicazioni per la parallelizzazione CPSO}
+\subsection{Semantica ed equivalenza degli esecutori}
 
-Da completare con il rapporto fra granularità del lavoro, overhead di
-scheduling, sincronizzazione, dimensione della popolazione e costo della
-valutazione. Il confronto con PAPSO, le implementazioni CPU/GPU e i recenti
-lavori multicore dovrà essere qualitativo e contestualizzato, senza confrontare
-tempi assoluti ottenuti su hardware, algoritmi o protocolli differenti.
+L'interpretazione di RQ1 dovrà riportare se l'identità osservata sia stata verificata sull'intera cronologia e per quali combinazioni di worker e topologia. Eventuali mismatch dovranno essere classificati (RNG, ordine di commit, floating-point, funzione obiettivo o gestione dello stato) prima di utilizzare i tempi per uno speedup. La Proposizione~\ref{prop:synchronous-equivalence} definisce le ipotesi del contratto, ma non implica equivalenza per obiettivi non deterministici o non thread-safe.
 
-\subsection{Ruolo delle topologie e della migrazione}
+\subsection{Granularità del lavoro e scaling}
 
-Da completare distinguendo qualità, densità/connettività, grado medio, costo
-della selezione dei vicini e frequenza delle comunicazioni. In assenza di un
-disegno degree-matched, non attribuire causalmente le differenze alla sola
-geometria del grafo.
+La risposta a RQ2 dovrà essere interpretata alla luce del rapporto fra costo della propagazione analitica, valutazione obiettivo e sincronizzazione. Lo strong scaling su \texttt{sphere\_work} è un test controllato dell'esecutore, non una simulazione fisica costosa. Le misure su hardware fanless non consentono inferenze generali su nodi HPC; un eventuale caso d'uso con valutazione costosa ed eterogenea sarebbe un'estensione distinta. L'asincronia non viene presentata come intrinsecamente migliore o peggiore: la qualità su costo uniforme e il load balancing con costo eterogeneo sono due domande diverse.
 
-\subsection{Confronto con le baseline e validità esterna}
+\subsection{Casualità scalare e validità algoritmica}
 
-Da completare discutendo gli esiti per famiglia di benchmark e meccanismo PSO.
-Il confronto rimane limitato alle dieci baseline PSO implementate e non
-permette conclusioni di superiorità rispetto a CMA-ES, differential evolution
-o all'intero stato dell'arte dell'ottimizzazione continua.
+La casualità scalare condivisa tra coordinate è mantenuta per fedeltà alla CPSO di Orlando--Ricciardello. La limitazione di sottospazio descritta nell'Appendice~\ref{app:scalar-randomness} vale in assenza di interventi della mappa non lineare dei vincoli; non dimostra da sola l'irraggiungibilità dell'ottimo. La sua possibile rilevanza in alta dimensione deve essere valutata con indicatori di rango, frequenza di attivazione dei vincoli e benchmark con ottimi traslati/ruotati. Una variante a casualità per coordinata, se introdotta, sarà trattata esclusivamente come ablation separata e non come CPSO di riferimento.
 
-\subsection{Minacce alla validità e limiti}
+\subsection{Topologie, isole e migrazione}
 
-Da documentare: numero di funzioni e unità statistiche; hardware locale
-fanless e variabilità termica; differenze di generatore casuale e
-inizializzazione fra implementazioni; adattamenti delle baseline per FE parity;
-callback Python seriali nei benchmark esterni; differenze fra pilot locale e
-campagne HPC; generalizzazione a obiettivi costosi, GPU e sistemi distribuiti.
+I risultati topologici saranno letti insieme a grado, clustering, diametro e connettività. In assenza di un disegno degree-matched, non si attribuiranno le differenze alla sola geometria del grafo. Nel modello a isole la dimensione delle sottopopolazioni e la politica di migrazione cambiano simultaneamente l'organizzazione informativa; i risultati dovranno quindi distinguere l'effetto della decomposizione da quello della migrazione e riconoscere il limite delle isole piccole.
+
+\subsection{Posizionamento e minacce alla validità}
+
+Il confronto con le dieci baseline consente conclusioni soltanto entro la famiglia PSO e con le configurazioni dichiarate. Non implica superiorità rispetto a CMA-ES, differential evolution o a tutte le metaeuristiche di ottimizzazione continua. Le principali minacce da discutere saranno: sei sole funzioni interne e insufficiente potenza per i test pairwise Holm; center bias dell'insieme interno; casualità scalare della CPSO; popolazione esterna fissa $N=40$; differenze tra generatori casuali e inizializzazioni; adattamenti delle baseline; callback Python seriali; budget esterno di 65.439 miliardi di FE; hardware locale e variabilità termica; non determinismo di scheduling asincrono. L'Appendice~\ref{app:campaigns} e i manifest delle run dovranno documentare ogni deviazione dal protocollo congelato.

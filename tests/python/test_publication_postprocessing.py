@@ -83,7 +83,7 @@ def test_publication_postprocessor_emits_only_confirmatory_result_figures(tmp_pa
             ("pp_global_w1", 1, 0.92), ("pp_global_w2", 2, 1.70),
         ):
             strong_scaling.append({
-                "stage": "04_strong_scaling", "work_iterations": 4096,
+                "stage": "04_strong_scaling", "study": "n64_work4096", "work_iterations": 4096,
                 "population_size": 64, "dimension": dimension, "method": method,
                 "workers": workers, "median_speedup": speedup + dimension / 1000.0,
                 "bootstrap_95_low": speedup - 0.1, "bootstrap_95_high": speedup + 0.1,
@@ -101,8 +101,8 @@ def test_publication_postprocessor_emits_only_confirmatory_result_figures(tmp_pa
     }
     for method, components in method_timings.items():
         run_rows.append({
-            "stage": "04_strong_scaling", "study": "n64_work4096", "work_iterations": 4096,
-            "population_size": 64, "dimension": 100, "method": method,
+            "stage": "04_strong_scaling", "study": "n64_work4096", "benchmark": "sphere_work",
+            "work_iterations": 4096, "population_size": 64, "dimension": 100, "method": method,
             "elapsed_seconds": sum(components) + 0.005,
             "initialization_seconds": components[0], "topology_setup_seconds": components[1],
             "evaluation_wall_seconds": components[2], "propagation_wall_seconds": components[3],
@@ -117,7 +117,21 @@ def test_publication_postprocessor_emits_only_confirmatory_result_figures(tmp_pa
          "median_function_family_log10_delta": 0.05,
          "hierarchical_bootstrap_95_low": -0.05, "hierarchical_bootstrap_95_high": 0.15},
     ]
-    _write_csv(architecture / "confirmatory_pairwise_tests.csv", pair_rows)
+    _write_csv(architecture / "pairwise_effects.csv", pair_rows)
+    equivalence_rows = [
+        {"stage": "01_exact_quality_equivalence", "study": "native", "method": method,
+         "architecture": architecture_name, "topology": "global", "workers": workers,
+         "verified_pairs": 24, "expected_pairs": 24, "fraction_verified": 1.0,
+         "status": "exact_match", "checked_fields": "best_value;best_position;best_history;history_evaluations;function_evaluations"}
+        for method, architecture_name, workers in (
+            ("ms_global_w1", "master_slave", 1), ("ms_global_w2", "master_slave", 2),
+            ("pp_global_w1", "particle_parallel", 1), ("pp_global_w2", "particle_parallel", 2),
+        )
+    ]
+    _write_csv(architecture / "equivalence_audit.csv", equivalence_rows)
+    (architecture / "campaign_manifest.json").write_text(
+        json.dumps({"campaign": {"evidence_class": "confirmatory"}}), encoding="utf-8"
+    )
 
     topology_rows = []
     for benchmark, scale in (("sphere", 1.0), ("rastrigin", 4.0)):
@@ -136,6 +150,10 @@ def test_publication_postprocessor_emits_only_confirmatory_result_figures(tmp_pa
         / "01_serial_topology_quality/native_benchmarks_d30_d100/runs.csv"
     )
     _write_csv(topology_path, topology_rows)
+    topology_campaign = results / "raw/cpso_topology_expansion_confirmatory_073"
+    (topology_campaign / "campaign_manifest.json").write_text(
+        json.dumps({"campaign": {"evidence_class": "confirmatory"}}), encoding="utf-8"
+    )
 
     output = tmp_path / "figures"
     output.mkdir()
@@ -144,14 +162,114 @@ def test_publication_postprocessor_emits_only_confirmatory_result_figures(tmp_pa
     figures, missing = build_figures(results, output)
     assert not missing
     expected = {
-        "fig_parallel_speedup.pdf", "fig_parallel_efficiency.pdf", "fig_runtime_decomposition.pdf",
-        "fig_asynchronous_quality_effects.pdf", "fig_island_quality_effects.pdf",
-        "fig_topology_quality_effects.pdf",
+        "fig_01_synchronous_equivalence.pdf", "fig_02_strong_scaling.pdf",
+        "fig_03_parallel_efficiency.pdf", "fig_04_runtime_components.pdf",
+        "fig_05_asynchronous_quality.pdf", "fig_06_island_quality.pdf",
+        "fig_08_current_topology_quality.pdf",
     }
     assert {path.name for path in figures} == expected
     assert all(path.read_bytes().startswith(b"%PDF-") for path in figures)
     assert not stale_schematic.exists()
     assert not any("table" in path.name or "schematic" in path.name for path in output.glob("*.pdf"))
     catalogue = (output / "FIGURE_CATALOGUE.md").read_text(encoding="utf-8")
-    assert "does not generate tables" in catalogue
-    assert "Topology effects use the dedicated confirmatory topology records only" in catalogue
+    assert "Figures are generated only from completed, measured campaign records." in catalogue
+    assert "Evidence profile: **confirmatory**" in catalogue
+    assert "Synchronous equivalence is plotted only after the run-level exact verifier succeeds." in catalogue
+
+
+
+def test_exploratory_profile_generates_only_from_explicit_pilot_inputs(tmp_path: Path) -> None:
+    results = tmp_path / "results"
+    synchronous = results / "raw/cpso_serial_parallel_m2_pilot"
+    dynamics = results / "raw/cpso_dynamics_m2_pilot"
+    topology = results / "raw/cpso_topology_expansion_m2_pilot"
+    for campaign in (synchronous, dynamics, topology):
+        campaign.mkdir(parents=True, exist_ok=True)
+        (campaign / "campaign_manifest.json").write_text(
+            json.dumps({"campaign": {"evidence_class": "exploratory"}}), encoding="utf-8"
+        )
+
+    equivalence = [
+        {"stage": "01_exact_quality_equivalence", "study": "native", "method": method,
+         "architecture": architecture, "topology": "global", "workers": workers,
+         "verified_pairs": 30, "expected_pairs": 30, "fraction_verified": 1.0,
+         "status": "exact_match", "checked_fields": "best_value;best_position;best_history"}
+        for method, architecture, workers in (
+            ("ms_global_w1", "master_slave", 1), ("ms_global_w2", "master_slave", 2),
+            ("pp_global_w1", "particle_parallel", 1), ("pp_global_w2", "particle_parallel", 2),
+        )
+    ]
+    _write_csv(synchronous / "equivalence_audit.csv", equivalence)
+
+    scaling = []
+    runs = []
+    for dimension in (30, 100):
+        for method, workers, speedup in (
+            ("ms_global_w1", 1, 0.9), ("ms_global_w2", 2, 1.4),
+            ("pp_global_w1", 1, 0.95), ("pp_global_w2", 2, 1.6),
+        ):
+            scaling.append({
+                "study": "sphere_work_n64_cost4096", "work_iterations": 4096,
+                "population_size": 64, "dimension": dimension, "method": method,
+                "workers": workers, "median_speedup": speedup,
+                "bootstrap_95_low": speedup - 0.1, "bootstrap_95_high": speedup + 0.1,
+                "parallel_efficiency": speedup / workers,
+            })
+        for method, workers in (("serial_global", 1), ("ms_global_w1", 1),
+                                ("ms_global_w2", 2), ("pp_global_w1", 1), ("pp_global_w2", 2)):
+            runs.append({
+                "stage": "02_synthetic_cost_scaling", "study": "sphere_work_n64_cost4096",
+                "benchmark": "sphere_work", "work_iterations": 4096,
+                "population_size": 64, "dimension": dimension, "method": method,
+                "elapsed_seconds": 0.05 / workers,
+                "initialization_seconds": 0.001, "topology_setup_seconds": 0.001,
+                "evaluation_wall_seconds": 0.03 / workers,
+                "propagation_wall_seconds": 0.005,
+            })
+    _write_csv(synchronous / "strong_scaling_summary.csv", scaling)
+    _write_csv(synchronous / "campaign_runs.csv", runs)
+
+    _write_csv(dynamics / "pairwise_effects.csv", [
+        {"stage": "01_asynchronous_quality", "method": "async_global_w2",
+         "median_function_family_log10_delta": -0.05,
+         "hierarchical_bootstrap_95_low": -0.12, "hierarchical_bootstrap_95_high": 0.02},
+        {"stage": "02_island_quality", "method": "islands_ring",
+         "median_function_family_log10_delta": 0.03,
+         "hierarchical_bootstrap_95_low": -0.04, "hierarchical_bootstrap_95_high": 0.10},
+    ])
+
+    topology_rows = []
+    for benchmark, base in (("sphere", 1.0), ("rastrigin", 4.0)):
+        for dimension in (30, 100):
+            for seed in (1, 2, 3):
+                topology_rows.extend([
+                    {"benchmark": benchmark, "dimension": dimension, "seed": seed,
+                     "topology": "global", "best_value": base},
+                    {"benchmark": benchmark, "dimension": dimension, "seed": seed,
+                     "topology": "ring", "best_value": base * 1.2},
+                    {"benchmark": benchmark, "dimension": dimension, "seed": seed,
+                     "topology": "wheel", "best_value": base * 1.1},
+                ])
+    _write_csv(
+        topology / "01_serial_topology_quality/native_benchmarks_d30_d100/runs.csv",
+        topology_rows,
+    )
+
+    output = tmp_path / "figures"
+    figures, missing = build_figures(
+        results, output, profile="exploratory",
+        synchronous_campaign_arg=synchronous,
+        dynamics_campaign_arg=dynamics,
+        topology_campaign_arg=topology,
+    )
+    assert not missing
+    assert {path.name for path in figures} == {
+        "fig_01_synchronous_equivalence.pdf", "fig_02_strong_scaling.pdf",
+        "fig_03_parallel_efficiency.pdf", "fig_04_runtime_components.pdf",
+        "fig_05_asynchronous_quality.pdf", "fig_06_island_quality.pdf",
+        "fig_08_current_topology_quality.pdf",
+    }
+    catalogue = (output / "FIGURE_CATALOGUE.md").read_text(encoding="utf-8")
+    assert "Evidence profile: **exploratory**" in catalogue
+    for path in figures:
+        assert path.read_bytes().startswith(b"%PDF-")

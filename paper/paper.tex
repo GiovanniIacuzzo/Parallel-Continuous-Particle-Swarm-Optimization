@@ -119,10 +119,10 @@
 
 % --- Abstract ---
 \begin{abstract}
-La parallelizzazione della Particle Swarm Optimization (PSO) non è una scelta puramente implementativa: a seconda del punto in cui si introducono sincronizzazione, pubblicazione degli aggiornamenti e migrazione, essa può preservare la traiettoria del metodo seriale oppure definire una dinamica di ricerca differente. Questo lavoro studia cinque modalità di esecuzione di una formulazione continua della PSO (CPSO), implementate in un motore CPU a memoria condivisa: seriale sincrona, master--slave sincrona, particle-parallel sincrona, asincrona event-driven e a isole. Per le due modalità sincrone parallele il contratto di aggiornamento è costruito per preservare la traiettoria seriale; per le modalità asincrona e a isole la variazione della dinamica è oggetto esplicito dell'analisi. Il software implementa sette topologie di comunicazione tra particelle: global-best, ring, von Neumann, wheel, random connessa, small-world e scale-free. La campagna architetturale principale studia le tre topologie canoniche global-best, ring e von Neumann; una campagna complementare estende il confronto a tutte e sette. Il protocollo interno utilizza sei funzioni analitiche deterministiche in dimensione 30 e 100, mentre la misurazione dello scaling è separata e usa un carico sintetico controllabile. Un livello esterno confronta la CPSO con dieci baseline PSO discrete in spazio continuo su COCO BBOB, BBOB-LargeScale e CEC 2013 LSGO, a budget di valutazioni della funzione obiettivo (FE) abbinato. Il manoscritto specifica problema, architetture, motivazioni bibliografiche e protocolli riproducibili; i risultati confirmatory sono deliberatamente lasciati da inserire dopo l'esecuzione delle campagne e non vengono anticipati.
+La parallelizzazione della Particle Swarm Optimization (PSO) non è una scelta puramente implementativa: a seconda del punto in cui si introducono sincronizzazione, pubblicazione degli aggiornamenti e migrazione, essa può preservare la traiettoria del metodo seriale oppure definire una dinamica di ricerca differente.In questo studio sono formulate cinque modalità di esecuzione del \emph{Continuous Particle Swarm Optimization}, implementate in un motore CPU a memoria condivisa: seriale sincrona, master--slave sincrona, particle-parallel sincrona, asincrona event-driven e a isole. Per le due modalità sincrone parallele il contratto di aggiornamento è progettato per preservare la traiettoria seriale; per le modalità asincrona e a isole la variazione della dinamica è oggetto esplicito dell'analisi. Il software implementa sette topologie di comunicazione tra particelle. Il protocollo interno comprende sei funzioni analitiche in dimensione 30 e 100 e un test separato di strong scaling con carico sintetico. Un livello esterno confronta la CPSO con dieci baseline PSO discrete in spazio continuo su COCO BBOB, BBOB-LargeScale e CEC 2013 LSGO, a budget FE abbinato. Il manoscritto rende espliciti il propagatore analitico, i parametri, le semantiche degli esecutori, gli adattamenti delle baseline e le limitazioni statistiche e computazionali.
 \end{abstract}
 
-\noindent\textbf{Parole chiave:} Particle Swarm Optimization; PSO a tempo continuo; parallelizzazione; algoritmi sincroni e asincroni; modelli a isole; equivalenza algoritmica; analisi sperimentale.
+\noindent\textbf{Parole chiave:} Continuous Particle Swarm Optimization; parallelizzazione; algoritmi sincroni e asincroni; modelli a isole; equivalenza algoritmica; analisi sperimentale.
 \newpage
 
 \section{Introduzione}
@@ -152,10 +152,8 @@ Il codice sorgente e le configurazioni sperimentali sono inclusi nella repositor
 % Ringraziamenti da aggiungere, se necessari.
 
 % =============================================================
-% BIBLIOGRAFIA
+% APPENDICI TECNICHE E RISULTATI ESTESI
 % =============================================================
-\bibliographystyle{unsrtnat}
-\bibliography{references}
 \clearpage
 \onecolumn
 \appendix
@@ -165,5 +163,17 @@ Il codice sorgente e le configurazioni sperimentali sono inclusi nella repositor
 \renewcommand{\theHfigure}{app.\thesection.\arabic{figure}}
 \renewcommand{\theHtable}{app.\thesection.\arabic{table}}
 \renewcommand{\theHequation}{app.\thesection.\arabic{equation}}
+\input{appendices/appendix_A_propagator.tex}
+\input{appendices/appendix_B_baselines.tex}
+\input{appendices/appendix_C_scalar_randomness.tex}
+\input{appendices/appendix_D_campaigns.tex}
+\input{appendices/appendix_E_extended_results.tex}
+
+% =============================================================
+% BIBLIOGRAFIA
+% =============================================================
+\clearpage
+\bibliographystyle{unsrtnat}
+\bibliography{references}
 
 \end{document}

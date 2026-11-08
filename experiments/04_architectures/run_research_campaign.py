@@ -54,6 +54,11 @@ def validate_campaign(campaign: dict[str, Any]) -> None:
         raise ValueError("schedule_seed must be an integer")
     if not isinstance(campaign["stages"], list) or not campaign["stages"]:
         raise ValueError("stages must be a non-empty array")
+    evidence_class = campaign.get("evidence_class", "exploratory")
+    if evidence_class not in {"confirmatory", "exploratory", "integration_only"}:
+        raise ValueError(
+            "evidence_class must be one of: confirmatory, exploratory, integration_only"
+        )
 
     stage_ids: set[str] = set()
     study_ids: set[str] = set()

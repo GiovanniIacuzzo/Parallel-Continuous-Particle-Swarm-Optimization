@@ -1,8 +1,11 @@
 results/
 data/
 build/
+build-m2/
 .pytest_cache/
 __pycache__/
+figures/
+repository/
 cpso_hpc.egg-info/
 cpso_parallel.egg-info/
 compiler/
