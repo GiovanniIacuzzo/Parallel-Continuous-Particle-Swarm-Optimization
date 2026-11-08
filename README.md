@@ -1,7 +1,6 @@
-# CPSO — continuous particle-swarm optimization and parallel execution
+# Parallel execution framework for the Orlando–Ricciardello CPSO
 
-This repository contains a C++20 implementation of a continuous-time PSO
-(CPSO) model, a Python `ctypes` interface, five execution architectures, and a
+This repository contains a C++20 implementation of the Continuous Particle Swarm Optimization (CPSO) formulation introduced by Orlando and Ricciardello (2021), a Python `ctypes` interface, five execution architectures, and a
 separate external-benchmark layer with discrete-PSO reference baselines. This
 root `README.md` is the authoritative repository and operations guide; the
 project intentionally has no separate `docs/` directory. The code distinguishes
@@ -19,8 +18,13 @@ island modes intentionally change information flow.
 | `asynchronous` | Event-driven particle updates | Different, schedule-dependent update dynamics for multiple workers |
 | `islands` | Independent sub-swarms and optional migration | Different population information flow |
 
-Social topologies are global-best, periodic ring and periodic toroidal von
-Neumann grid. The internal architecture studies keep the total objective
+The acronym CPSO is reserved exclusively for the Orlando–Ricciardello continuous formulation. Discrete PSO variants in the Python benchmark suite are referred to by their specific algorithm names, never as CPSO variants.
+
+## Fidelity to the Orlando–Ricciardello source
+
+The analytic C++ propagator implements the frozen second-order O-R oscillator using the random-weighted forcing from Eq. (5) of the 2021 article. The article prints a different, unweighted expression for `f_k` below Eq. (9); its repeated-root coefficient in Eq. (18) also omits an exponential factor required by the stated initial conditions. The source additionally contains inconsistencies in the damping-ratio range, pseudocode branch labels and interval labels in Eqs. (14)/(16). The PDF does not specify the probability distribution of `r1,r2` or resolve whether they are sampled per particle or shared by the swarm. The code makes explicit project choices (uniform draws on `[0,1)`, one pair per particle and interval) and adds initialization and bounded-domain clamp–restitution conventions. It must therefore be described as a **bounded project implementation of the O-R CPSO analytic kernel**, not as a verbatim reproduction of every algorithmic detail in the article. The complete equation-by-equation comparison is in [`ORIGINAL_PAPER_CONFORMANCE.md`](ORIGINAL_PAPER_CONFORMANCE.md).
+
+The native engine implements seven social topology families: global-best, periodic ring, periodic toroidal von Neumann grid, wheel, connected ER-like random graph, Watts–Strogatz small-world and Barabási–Albert scale-free. The principal architecture campaign uses a three-topology subset; a separate topology expansion evaluates all seven. The internal architecture studies keep the total objective
 budget at `N * (K + 1)` for population `N` and `K` update steps.
 
 ## External optimization benchmarks
@@ -34,7 +38,7 @@ campaigns do not measure or claim parallel speedup.
 |---|---|---|
 | COCO `bbob` | 24 noiseless single-objective functions; dimensions 2, 3, 5, 10, 20, 40; instances 1–15 | `configs/benchmarks/bbob_confirmatory.json` |
 | COCO `bbob-largescale` | 24 noiseless single-objective functions; dimensions 20, 40, 80, 160, 320, 640; instances 1–15 | `configs/benchmarks/bbob_largescale_confirmatory.json` |
-| CEC 2013 LSGO | 15 large-scale functions; D=1000; 25 seeds; 3,000,000 FE per run | `configs/benchmarks/cec2013_confirmatory.json` |
+| CEC 2013 LSGO | 15 large-scale functions; D=1000 nominal (F13/F14 use 905 effective variables); 25 seeds; 3,000,000 FE per run | `configs/benchmarks/cec2013_confirmatory.json` |
 
 Both COCO suites are driven through the official `coco-experiment` (`cocoex`)
 package; the functions are not reimplemented locally. COCO observer data are
@@ -66,7 +70,10 @@ CLPSO, SL-PSO, SPSO-2011, FIPS, CSO and DMS-PSO add literature-derived
 learning, neighborhood, competition and multi-swarm mechanisms. This is a
 representative comparison set, not a universal or exhaustive current SOTA set.
 The SL-PSO implementation uses the project-fixed population to preserve equal
-FE accounting, rather than the paper's dimension-dependent population default.
+FE accounting, rather than the paper's dimension-dependent population default
+$m=M+\lfloor D/10\rfloor$. Its learning-probability and social-influence
+formulas are aligned with Cheng and Jin after conversion to zero-based rank
+indexing; the population is an explicit project adaptation.
 The implemented update laws, fixed parameters, initialization choices and
 boundary-handling policies are defined in `python/cpso_serial/pso_baselines.py`
 and the external-suite adapters. Methods share population, search bounds,
@@ -338,18 +345,19 @@ reference PSO variants (including SPSO-2011, FIPS, CSO and DMS-PSO) are
 implemented in a separate serial evaluation layer;
 this does not make the native parallel execution backends compatible with
 arbitrary Python objectives. COCO/CEC runs compare search quality at matched FE
-budgets, not parallel wall-time speedup. No external benchmark results are
-included in this development snapshot, and no superiority or state-of-the-art
-claim follows from the integration tests.
+budgets, not parallel wall-time speedup. Exploratory pilot artefacts are retained in the repository for diagnostics,
+but they are not used as confirmatory evidence in the manuscript. No
+superiority or state-of-the-art claim follows from the integration tests.
 
-The native CPSO implementation is a documented numerical reconstruction of
-the continuous-time model attributed to Orlando and Ricciardello (2021). The
-current repository regression tests establish software properties and
-executor contracts; they do not certify mathematical fidelity to the complete
-source article. A traceable equation-by-equation comparison with the primary
-source, including the stochastic coefficients, frozen-coefficient
-assumption, analytic propagator, initialization and boundary conventions,
-remains required before describing the code as a strict reproduction.
+The native CPSO implementation follows the Continuous Particle Swarm
+Optimization formulation of Orlando and Ricciardello (2021); in this repository
+CPSO is reserved exclusively for that method. The manuscript states the
+coefficient-frozen ODE, closed-form propagator, scalar random coefficients,
+initialization and discrete boundary map. Regression tests cover the three
+damping regimes, the degenerate case, semigroup consistency and synchronous
+backend agreement. An expanded numerical-error sweep near the critical
+damping threshold remains a pre-confirmatory validation task; passing the
+current regression suite is not a substitute for that sweep.
 
 ## Audit status and remaining release decisions
 
@@ -372,7 +380,7 @@ OS/architecture after the native build and external adapters have been tested.
 
 Two decisions cannot safely be guessed by a code change: (i) the rights holder
 must choose the project's redistribution license and add a matching `LICENSE`
-file; (ii) strict mathematical reproduction of the primary CPSO source still
+file; (ii) independent numerical validation of the Orlando–Ricciardello propagator still
 requires the equation-by-equation audit described above. Until these are
 resolved, do not claim an assigned project license or strict source-paper
 reproduction.

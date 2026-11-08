@@ -76,14 +76,16 @@ inline void propagate_particle(
     const std::size_t iteration,
     std::vector<double>& next_position,
     std::vector<double>& next_velocity) {
-    // The thesis writes r1,r2 as scalar random variables: draw one pair per
-    // particle and frozen interval, then share it across all coordinates.
+    // Orlando-Ricciardello write r1,r2 as scalar random variables, but do not
+    // specify whether the pair is shared by the swarm or sampled per particle.
+    // This implementation draws one pair per particle and frozen interval,
+    // then shares each scalar across all coordinates of that particle.
     const double r1 = uniform01(particle.random_engine);
     const double r2 = uniform01(particle.random_engine);
     const double cognitive_weight = config.cognitive * r1;
     const double social_weight = config.social * r2;
     const double omega2 = cognitive_weight + social_weight;
-    // mu is the inertia weight w_k in the thesis ODE coefficient (1 - w_k).
+    // mu is the Orlando-Ricciardello inertia weight in the ODE coefficient (1 - mu).
     const double mu = inertia_at(config, iteration);
     const std::size_t dimension = config.lower_bounds.size();
 
