@@ -1,8 +1,6 @@
 \section{Modello matematico e semantica operativa}
 \label{sec:model}
 
-\subsection{Formulazione continua di riferimento: Orlando--Ricciardello}
-
 Indichiamo con $N_p$ il numero di particelle, con $D$ la dimensione dello spazio decisionale e con $K$ il numero di sottointervalli temporali utilizzati nell'implementazione. Nelle sezioni sperimentali, $N$ sarà talvolta usato come abbreviazione di $N_p$ per mantenere la notazione delle tabelle di campagna.
 
 La costruzione parte dalla PSO discreta. Per la particella $i$, posizione e velocità soddisfano
@@ -98,7 +96,7 @@ Il codice risolve, coordinata per coordinata,
  =F_{i,j}^k,
  \label{eq:or-code-frozen-ode}
 \end{equation}
-utilizzando la mappa analitica di estremità descritta nell'Appendice~\ref{app:propagator}. Sotto l'interpretazione del termine forzante pesato dai numeri casuali, questa è algebricamente la stessa equazione dell'oscillatore congelato in~\eqref{eq:or-frozen-cauchy}. Quando la topologia configurata è global-best il codice utilizza il migliore globale; le configurazioni con leader di vicinato sostituiscono $\boldsymbol p_{gb}^k$ con un attrattore locale e costituiscono estensioni.
+Sotto l'interpretazione del termine forzante pesato dai numeri casuali, questa è algebricamente la stessa equazione dell'oscillatore congelato in~\eqref{eq:or-frozen-cauchy}. Quando la topologia configurata è global-best il codice utilizza il migliore globale; le configurazioni con leader di vicinato sostituiscono $\boldsymbol p_{gb}^k$ con un attrattore locale e costituiscono estensioni.
 
 \paragraph{Estensioni operative: dominio limitato e topologie sociali}
 

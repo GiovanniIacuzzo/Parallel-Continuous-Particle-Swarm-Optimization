@@ -60,7 +60,7 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
         "milestones": milestones,
         "expected_run_count": len(function_ids) * len(seeds) * len(methods),
         "benchmark_reference_protocol": {
-            "official_dimension": 1000,
+            "official_dimension": "1000 (F13/F14: 905)",
             "official_runs_per_function": 25,
             "official_max_evaluations": 3_000_000,
             "official_checkpoints": [120_000, 600_000, 3_000_000],
@@ -78,10 +78,11 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
     completed = load_existing_run_keys(result_path)
     for function_id in function_ids:
         problem = adapter.get_problem(function_id)
-        if problem.dimension != 1000:
+        expected_dimension = 905 if function_id in (13, 14) else 1000
+        if problem.dimension != expected_dimension:
             raise RuntimeError(
-                f"CEC 2013 LSGO function F{function_id} reported dimension {problem.dimension}; "
-                "the official LSGO protocol expects D=1000"
+                f"CEC 2013 LSGO F{function_id} must use D={expected_dimension}, "
+                f"but the adapter reports D={problem.dimension}"
             )
         for seed in seeds:
             for method in methods:

@@ -1,62 +1,61 @@
 \section{Risultati sperimentali}
 \label{sec:results}
 
-Questa sezione è predisposta per l'inserimento dei risultati delle campagne congelate. Alla data della presente versione non vengono presentati valori confirmatory: le celle contrassegnate con \texttt{TBD} e i riquadri grafici sono segnaposto intenzionali, non risultati stimati. I pilot locali e gli smoke test non vengono incorporati nelle tabelle principali. Ogni tabella definitiva dovrà riportare il numero di run completate, le FE effettive, la copertura dei problemi e le esclusioni motivate.
+Questa sezione è predisposta per l'inserimento dei risultati delle campagne congelate. Alla data della presente versione non vengono presentati valori confirmatory: le celle contrassegnate con \texttt{TBD} sono segnaposto intenzionali, non risultati stimati. I pilot locali possono essere visualizzati esclusivamente in figure identificate come esplorative, ma non vengono usati per compilare le tabelle confirmatory. Ogni tabella definitiva dovrà riportare il numero di run completate, le FE effettive, la copertura dei problemi e le esclusioni motivate.
 
 \subsection{Equivalenza delle modalità sincrone (RQ1)}
 \label{sec:results-equivalence}
 
-Il controllo di equivalenza deve confrontare l'intera cronologia osservata, non soltanto il valore finale. La tabella~\ref{tab:result-equivalence} registra run verificate, mismatch e massima differenza numerica; il confronto viene separato per topologia e numero di worker nell'Appendice~\ref{app:extended-results}.
+Il controllo confronta l'intero record osservato rispetto al riferimento seriale: valore e posizione migliori, storia best-so-far, checkpoint FE e numero di valutazioni. L'audit implementato registra il numero di coppie verificate e attese mediante uguaglianza esatta dei campi; non registra una norma di errore numerica massima. La tabella riassume il disegno del pilot M2 (sei funzioni, due dimensioni e cinque seed: 60 coppie per backend e numero di worker).
 
 \begin{table*}[t]
 \centering
-\caption{Template per il controllo di equivalenza rispetto al backend seriale. Le percentuali sono calcolate sulle sole run completate e appaiate.}
+\caption{Audit esplorativo di equivalenza per le modalità sincrone. Ogni riga del pilot contiene 60 confronti appaiati (sei funzioni, due dimensioni, cinque seed). ``Identiche'' indica l'uguaglianza esatta dei campi di traiettoria registrati; i mismatch sono calcolati come coppie attese meno coppie verificate.}
 \label{tab:result-equivalence}
 \small
-\begin{tabularx}{\textwidth}{@{}llrrrrX@{}}
+\begin{tabularx}{\textwidth}{@{}lrrrrr@{}}
 \toprule
-Backend & Worker & Run appaiate & Identiche & Identità (\%) & Max $|\Delta f|$ & Esito/mismatch \\
+Backend & Worker & Coppie attese & Coppie identiche & Mismatch & Identità (\%) \\
 \midrule
-Master--slave & 1 & TBD & TBD & TBD & TBD & TBD \\
-Master--slave & 2 & TBD & TBD & TBD & TBD & TBD \\
-Master--slave & 4 & TBD & TBD & TBD & TBD & TBD \\
-Master--slave & 8 & TBD & TBD & TBD & TBD & TBD \\
-Particle-parallel & 1 & TBD & TBD & TBD & TBD & TBD \\
-Particle-parallel & 2 & TBD & TBD & TBD & TBD & TBD \\
-Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD \\
-Particle-parallel & 8 & TBD & TBD & TBD & TBD & TBD \\
+Master--slave & 1 & 60 & TBD & TBD & TBD \\
+Master--slave & 2 & 60 & TBD & TBD & TBD \\
+Master--slave & 4 & 60 & TBD & TBD & TBD \\
+Particle-parallel & 1 & 60 & TBD & TBD & TBD \\
+Particle-parallel & 2 & 60 & TBD & TBD & TBD \\
+Particle-parallel & 4 & 60 & TBD & TBD & TBD \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
 \begin{figure*}[t]
 \centering
-\IfFileExists{figures/results/fig_sync_equivalence.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_sync_equivalence.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_sync\_equivalence.pdf}\par Mismatch per run, backend e numero di worker.}}}
-\caption{Equivalenza delle traiettorie e degli incumbent tra il riferimento seriale e gli esecutori sincroni.}
+\IfFileExists{figures/results/fig_sync_equivalence.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_sync_equivalence.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_sync\_equivalence.pdf}\par Percentuale di coppie con uguaglianza esatta dei record di traiettoria per backend e numero di worker.}}}
+\caption{Equivalenza delle traiettorie e degli incumbent tra il riferimento seriale e gli esecutori sincroni. Risultati del pilot M2, riportati a fini esplorativi.}
 \label{fig:result-sync-equivalence}
 \end{figure*}
 
 \subsection{Strong scaling e costo dell'esecutore (RQ2)}
 \label{sec:results-scaling}
 
-Lo scaling è riportato esclusivamente per configurazioni che superano il controllo di equivalenza. I risultati vengono stratificati per dimensione, popolazione e lavoro per valutazione; tempi mediani, intervalli e speedup devono essere calcolati sulle ripetizioni appaiate. La decomposizione temporale distingue inizializzazione, propagazione, valutazione, sincronizzazione e overhead.
+Lo scaling è riportato esclusivamente per configurazioni che superano il controllo di equivalenza. Il pilot M2 usa la funzione sintetica \texttt{sphere\_work}, popolazione $N=64$, dimensioni $D\in\{30,100\}$, due carichi (512 e 4096 iterazioni di lavoro per valutazione) e worker $p\in\{1,2,4\}$. La tabella riassume il caso a quattro worker; la figura mostra l'intera curva per $p=1,2,4$. Le misure sono locali alla macchina M2 e non costituiscono una caratterizzazione HPC generalizzabile.
 
 \begin{table*}[t]
 \centering
-\caption{Template per strong scaling. $T_p$ è la mediana del tempo di run; intervalli e speedup sono calcolati solo dopo la verifica di equivalenza.}
+\caption{Template di riepilogo dello strong scaling al punto $p=4$. Il pilot usa $N=64$, $K=80$ e quindi 5\,184 FE/run; i due carichi sintetici sono 512 e 4096 iterazioni per valutazione. La Figura~\ref{fig:result-strong-scaling} mostra anche $p=1,2,4$.}
 \label{tab:result-scaling}
 \small
 \begin{tabularx}{\textwidth}{@{}rrrrlrrrr@{}}
 \toprule
-$D$ & $N$ & Lavoro & Worker & Backend & $T_p$ (s) & IC 95\% & $S(p)$ & $E(p)$ \\
+$D$ & $N$ & Lavoro & FE/run & Backend & $T_{4}$ (s) & $S(4)$ & IC 95\% $S(4)$ & $E(4)$ \\
 \midrule
-TBD & TBD & 0 & 1 & Master--slave & TBD & TBD & TBD & TBD \\
-TBD & TBD & 0 & 2 & Master--slave & TBD & TBD & TBD & TBD \\
-TBD & TBD & 0 & 4 & Master--slave & TBD & TBD & TBD & TBD \\
-TBD & TBD & 0 & 8 & Master--slave & TBD & TBD & TBD & TBD \\
-TBD & TBD & 512 & 1--8 & Master--slave & TBD & TBD & TBD & TBD \\
-TBD & TBD & 4096 & 1--8 & Master--slave & TBD & TBD & TBD & TBD \\
-TBD & TBD & 0--4096 & 1--8 & Particle-parallel & TBD & TBD & TBD & TBD \\
+30 & 64 & 512  & 5\,184 & Master--slave & TBD & TBD & TBD & TBD \\
+30 & 64 & 512  & 5\,184 & Particle-parallel & TBD & TBD & TBD & TBD \\
+30 & 64 & 4096 & 5\,184 & Master--slave & TBD & TBD & TBD & TBD \\
+30 & 64 & 4096 & 5\,184 & Particle-parallel & TBD & TBD & TBD & TBD \\
+100 & 64 & 512  & 5\,184 & Master--slave & TBD & TBD & TBD & TBD \\
+100 & 64 & 512  & 5\,184 & Particle-parallel & TBD & TBD & TBD & TBD \\
+100 & 64 & 4096 & 5\,184 & Master--slave & TBD & TBD & TBD & TBD \\
+100 & 64 & 4096 & 5\,184 & Particle-parallel & TBD & TBD & TBD & TBD \\
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -64,52 +63,55 @@ TBD & TBD & 0--4096 & 1--8 & Particle-parallel & TBD & TBD & TBD & TBD \\
 \begin{figure*}[t]
 \centering
 \IfFileExists{figures/results/fig_strong_scaling.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_strong_scaling.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_strong\_scaling.pdf}\par Curve tempo vs worker per i carichi sintetici.}}}
-\caption{Strong scaling dei backend sincroni per i tre livelli di lavoro della funzione sintetica.}
+\caption{Strong scaling dei backend sincroni su \texttt{sphere\_work} per $D=30,100$, due carichi sintetici e $p=1,2,4$ worker. Tempi del pilot esplorativo misurati sul MacBook Air M2.}
 \label{fig:result-strong-scaling}
 \end{figure*}
 
-La decomposizione temporale per componente è riportata nell'Appendice~\ref{app:extended-results}, Tabella~\ref{tab:app-timing-breakdown} e Figura~\ref{fig:app-runtime-decomposition}.
+La decomposizione temporale misurata (inizializzazione, setup topologico, propagazione, selezione sociale, valutazione e residuo) è riportata nell'Appendice~\ref{app:extended-results}, Tabella~\ref{tab:app-timing-breakdown} e Figura~\ref{fig:app-runtime-decomposition}. Il residuo non viene interpretato come una misura isolata della sincronizzazione: comprende tutte le attività non strumentate.
 
 \subsection{Aggiornamento asincrono e modello a isole (RQ3)}
 \label{sec:results-async-islands}
 
-L'asincronia e il modello a isole vengono confrontati con il riferimento seriale a popolazione e FE totali fissati, ma le differenze sono interpretate come effetti di una dinamica diversa. Per l'asincronia si riportano curve anytime, distribuzioni dei valori finali, successi e variabilità tra ripetizioni; i tempi non sono chiamati speedup. Per le isole si separano il numero di sottopopolazioni, la topologia intra-isola e la politica di migrazione.
+L'asincronia e il modello a isole vengono confrontati con riferimenti seriali a popolazione $N=64$ e budget $N(K+1)=12\,864$ FE/run ($K=200$). Le differenze sono interpretate come effetti di dinamiche differenti, non come speedup. Il pilot asincrono considera topologie global e ring con 2 e 4 worker; il pilot a isole considera due o quattro sottopopolazioni, migrazione assente oppure migrazione ring/fully-connected ogni 20 iterazioni. Le configurazioni effettivamente eseguite sono riportate nella tabella; non sono inclusi livelli di worker, topologie o intervalli non simulati.
 
 \begin{table*}[t]
 \centering
-\caption{Template per la qualità dell'aggiornamento asincrono. Le statistiche aggregate devono conservare la gerarchia funzione--dimensione--seed.}
+\caption{Template per la qualità dell'aggiornamento asincrono nel pilot M2. Ogni riga aggrega 30 run (sei funzioni per cinque seed) a dimensione fissata; la mediana e l'IQR sono ottenuti prima sui seed entro funzione e poi tra le sei funzioni. Il target di successo è $10^{-8}$; FE/run $=12\,864$.}
 \label{tab:result-async}
-\small
-\begin{tabularx}{\textwidth}{@{}lrrlrrrrX@{}}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}lrrlXrr@{}}
 \toprule
-Metodo & $D$ & Worker & Topologia & Mediana $\log_{10}(f-f^*)$ & IQR & Successi/Run & ERT & Nota \\
+Metodo & $D$ & Worker & Topologia & Mediana tra funzioni di $\log_{10}(f_{\mathrm{best}})$ [IQR] & Successi/30 & ERT (FE) \\
 \midrule
-Event-driven & TBD & 1 & Global & TBD & TBD & TBD & TBD & TBD \\
-Event-driven & TBD & 4 & Global & TBD & TBD & TBD & TBD & TBD \\
-Event-driven & TBD & 1 & Ring & TBD & TBD & TBD & TBD & TBD \\
-Event-driven & TBD & 4 & Ring & TBD & TBD & TBD & TBD & TBD \\
-Event-driven & TBD & 1 & Von Neumann & TBD & TBD & TBD & TBD & TBD \\
-Event-driven & TBD & 4 & Von Neumann & TBD & TBD & TBD & TBD & TBD \\
+Event-driven & 30 & 2 & Global & TBD & TBD & TBD \\
+Event-driven & 30 & 4 & Global & TBD & TBD & TBD \\
+Event-driven & 30 & 2 & Ring & TBD & TBD & TBD \\
+Event-driven & 30 & 4 & Ring & TBD & TBD & TBD \\
+Event-driven & 100 & 2 & Global & TBD & TBD & TBD \\
+Event-driven & 100 & 4 & Global & TBD & TBD & TBD \\
+Event-driven & 100 & 2 & Ring & TBD & TBD & TBD \\
+Event-driven & 100 & 4 & Ring & TBD & TBD & TBD \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
 \begin{table*}[t]
 \centering
-\caption{Template per il modello a isole. L'accettazione delle migrazioni è definita come sostituzioni effettivamente applicate diviso tentativi di migrazione.}
+\caption{Template per le quattro configurazioni a isole effettivamente eseguite nel pilot M2. Ogni configurazione è stata simulata per $D=30$ e $D=100$, sei funzioni e cinque seed; FE/run $=12\,864$. Per quattro isole e intervallo 20 si hanno nove epoche di migrazione e 36 tentativi per run (uno per isola e per epoca).}
 \label{tab:result-islands}
-\small
-\begin{tabularx}{\textwidth}{@{}rrrrllrrrr@{}}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}rrrrllllrr@{}}
 \toprule
-Isole & Pop./isola & Worker & Migrazione & Topologia & Intervallo & Accettate (\%) & Valore finale & Successi & FE/run \\
+$D$ & Isole & Pop./isola & Worker & Topologia intra & Migrazione & Intervallo & Accettate (\%) & Successi/30 & FE/run \\
 \midrule
-2 & TBD & 2 & Nessuna & Global & -- & -- & TBD & TBD & TBD \\
-4 & TBD & 4 & Nessuna & Global & -- & -- & TBD & TBD & TBD \\
-8 & TBD & 8 & Nessuna & Global & -- & -- & TBD & TBD & TBD \\
-4 & TBD & 4 & Ring & Ring & 5 & TBD & TBD & TBD & TBD \\
-4 & TBD & 4 & Ring & Ring & 20 & TBD & TBD & TBD & TBD \\
-4 & TBD & 4 & Ring & Ring & 50 & TBD & TBD & TBD & TBD \\
-4 & TBD & 4 & Fully connected & Global & 20 & TBD & TBD & TBD & TBD \\
+30 & 2 & 32 & 2 & Global & Nessuna & -- & -- & TBD & 12\,864 \\
+100 & 2 & 32 & 2 & Global & Nessuna & -- & -- & TBD & 12\,864 \\
+30 & 4 & 16 & 4 & Global & Ring & 20 & TBD & TBD & 12\,864 \\
+100 & 4 & 16 & 4 & Global & Ring & 20 & TBD & TBD & 12\,864 \\
+30 & 4 & 16 & 4 & Global & Fully connected & 20 & TBD & TBD & 12\,864 \\
+100 & 4 & 16 & 4 & Global & Fully connected & 20 & TBD & TBD & 12\,864 \\
+30 & 4 & 16 & 4 & Ring & Ring & 20 & TBD & TBD & 12\,864 \\
+100 & 4 & 16 & 4 & Ring & Ring & 20 & TBD & TBD & 12\,864 \\
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -117,46 +119,46 @@ Isole & Pop./isola & Worker & Migrazione & Topologia & Intervallo & Accettate (\
 \begin{figure*}[t]
 \centering
 \IfFileExists{figures/results/fig_async_island_anytime.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_async_island_anytime.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_async\_island\_anytime.pdf}\par Curve best-so-far vs FE per asincronia e configurazioni a isole.}}}
-\caption{Confronto anytime tra riferimento sincrono, aggiornamento event-driven e modelli a isole a budget FE abbinato.}
+\caption{Confronto anytime tra riferimento sincrono, aggiornamento event-driven e modelli a isole a budget FE abbinato. Curve ricavate dal pilot esplorativo M2; bande e linee sono aggregazioni descrittive.}
 \label{fig:result-async-island-anytime}
 \end{figure*}
 
 \subsection{Topologie sociali (RQ4)}
 \label{sec:results-topologies}
 
-Le sette topologie sono confrontate come famiglie complete. La tabella~\ref{tab:result-topologies} riporta le statistiche di grafo insieme alla qualità; il confronto non deve essere interpretato causalmente come effetto della sola forma della rete, poiché grado e connettività non sono controllati a parità. Le tabelle complete per funzione e dimensione sono demandate all'Appendice~\ref{app:extended-results}.
+Le sette topologie sono confrontate sulla stessa popolazione ($N=64$), sulle sei funzioni native, su $D=30,100$ e su cinque seed. La tabella~\ref{tab:result-topologies} riporta le specifiche dichiarate nella configurazione, la mediana degli effetti appaiati rispetto al global-best e il rango medio (rango 1 = migliore; i pareggi ricevono rango medio). Le statistiche effettive dei grafi (grado, clustering, diametro e cammino medio) non sono presenti nei record del pilot e non vengono ricostruite dalle sole etichette topologiche; la loro esportazione richiederà una modifica strumentale separata.
 
 \begin{table*}[t]
 \centering
-\caption{Template congiunto per statistiche della rete e qualità. Le statistiche del grafo sono calcolate sulla rete effettivamente generata per run.}
+\caption{Topologie e parametri di generazione dichiarati nella configurazione del pilot M2. Le statistiche misurate del grafo non sono contenute nei record e restano da strumentare.}
 \label{tab:result-topologies}
 \small
-\begin{tabularx}{\textwidth}{@{}lrrrrrrrr@{}}
+\begin{tabularx}{\textwidth}{@{}lXrr@{}}
 \toprule
-Topologia & Grado medio & SD grado & Diametro & Cammino medio & Clustering & Componenti & Mediana errore & Rango \\
+Topologia & Specifica dichiarata & Mediana $\Delta\log_{10}(f_{\mathrm{best}})$ vs global & Rango medio \\
 \midrule
-Global-best & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-Ring & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-Von Neumann & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-Wheel & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-Random connessa & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-Watts--Strogatz & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-Barabási--Albert & TBD & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+Global-best & Informazione globale condivisa & 0 (riferimento) & TBD \\
+Ring & Anello periodico a due vicini & TBD & TBD \\
+Von Neumann & Griglia toroidale $8\times8$ & TBD & TBD \\
+Wheel & Grafo wheel su 64 particelle & TBD & TBD \\
+Random & Grafo random, parametro di grado 4 & TBD & TBD \\
+Watts--Strogatz & Grado configurato 4, probabilità di rewiring 0.15 & TBD & TBD \\
+Barabási--Albert & Parametro di grado configurato 4 & TBD & TBD \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
 \begin{figure*}[t]
 \centering
-\IfFileExists{figures/results/fig_topology_quality.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_topology_quality.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_topology\_quality.pdf}\par Distribuzioni per funzione e confronto aggregato delle sette topologie.}}}
-\caption{Qualità della ricerca per le sette famiglie topologiche nella campagna dedicata.}
+\IfFileExists{figures/results/fig_topology_quality.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_topology_quality.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_topology\_quality.pdf}\par Effetti appaiati di qualità delle sei topologie non-global rispetto al global-best, con aggregazione per famiglia di funzione.}}}
+\caption{Effetti appaiati di qualità per le sette famiglie topologiche nella campagna dedicata. I punti rappresentano le sei funzioni; valori negativi favoriscono la topologia rispetto al global-best. Pilot M2 esplorativo.}
 \label{fig:result-topology-quality}
 \end{figure*}
 
 \subsection{Benchmark esterni: COCO BBOB e BBOB-LargeScale (RQ5)}
 \label{sec:results-bbob}
 
-Le ECDF e le curve runtime-to-target prodotte dal post-processing COCO costituiscono gli esiti principali; i ranghi aggregati sono soltanto descrittivi. BBOB standard e BBOB-LargeScale sono analizzati separatamente. Gli indicatori finali devono essere riportati per target e dimensione, conservando la funzione benchmark come unità di aggregazione.
+Le ECDF e le curve runtime-to-target COCO sono le figure confermative previste. Il pilot BBOB M2 attualmente disponibile copre sette funzioni (F1, F5, F8, F13, F17, F21, F24), dimensioni 5 e 20, istanze 1--5 e undici metodi. I record JSONL permettono analisi descrittive per istanza; non sostituiscono gli output Observer richiesti per ECDF/ERT. L'ECDF verrà inserita solo dopo aver verificato la copertura dei file \texttt{.info} per tutti i metodi. BBOB-LargeScale resta separato e non dispone ancora di risultati.
 
 \begin{table*}[t]
 \centering
@@ -167,7 +169,7 @@ Le ECDF e le curve runtime-to-target prodotte dal post-processing COCO costituis
 \toprule
 Metodo & Funzioni coperte & Run complete & Successi & ERT target 1 & ERT target 2 & ECDF/RTT riferimento \\
 \midrule
-CPSO (Orlando--Ricciardello) & TBD & TBD & TBD & TBD & TBD & TBD \\
+CPSO & TBD & TBD & TBD & TBD & TBD & TBD \\
 Classic gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
 Inertia gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
 Constriction gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
@@ -199,7 +201,7 @@ DMS-PSO & TBD & TBD & TBD & TBD & TBD & TBD \\
 \subsection{Benchmark esterno: CEC 2013 LSGO}
 \label{sec:results-cec}
 
-Per CEC 2013 LSGO si riportano i valori best-so-far ai tre checkpoint FE previsti, le distribuzioni per funzione e il riepilogo dei successi. Le funzioni F13 e F14 vengono identificate con la loro dimensione effettiva pari a 905. Le classifiche aggregate non sostituiscono i valori per funzione.
+Per CEC 2013 LSGO si riportano i valori best-so-far ai tre checkpoint FE previsti, le distribuzioni per funzione e il riepilogo dei successi. Le funzioni F13 e F14 hanno dimensione effettiva pari a 905. La campagna non è ancora presente nei risultati disponibili e il driver deve essere verificato per accettare esplicitamente queste due dimensioni prima dell'esecuzione.
 
 \begin{table*}[t]
 \centering
@@ -210,7 +212,7 @@ Per CEC 2013 LSGO si riportano i valori best-so-far ai tre checkpoint FE previst
 \toprule
 Metodo & Run complete & Successi & $1.2\cdot10^5$ FE & $6\cdot10^5$ FE & $3\cdot10^6$ FE & Rango medio \\
 \midrule
-CPSO (Orlando--Ricciardello) & TBD & TBD & TBD & TBD & TBD & TBD \\
+CPSO & TBD & TBD & TBD & TBD & TBD & TBD \\
 Classic gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
 Inertia gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
 Constriction gbest & TBD & TBD & TBD & TBD & TBD & TBD \\
@@ -249,10 +251,10 @@ Domanda & Evidenza quantitativa da riportare & Risposta supportata dai dati \\
 RQ1 & Identità delle traiettorie, mismatch e condizioni di equivalenza & TBD \\
 RQ2 & Speedup, efficienza, costo per componente e intervalli & TBD \\
 RQ3 & Qualità anytime e successi a FE matched per asincronia/isole & TBD \\
-RQ4 & Qualità e statistiche dei grafi per sette topologie & TBD \\
+RQ4 & Effetti appaiati di qualità e specifiche di generazione delle sette topologie; descrittori misurati dei grafi ancora da strumentare & TBD \\
 RQ5 & ECDF/ERT COCO e checkpoint CEC per le undici implementazioni & TBD \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
-I risultati estesi per funzione, dimensione, seed, topologia e baseline saranno collocati nell'Appendice~\ref{app:extended-results}, così da mantenere il corpo principale concentrato sulle risposte alle RQ.
+I risultati estesi per funzione, dimensione, seed, topologia e baseline saranno collocati nell'Appendice~\ref{app:extended-results}, così da mantenere il corpo principale concentrato sulle risposte alle RQ. Tutte le figure ottenute dai pilot M2 sono contrassegnate come esplorative; i valori delle tabelle restano TBD fino al congelamento e all'esecuzione delle campagne confermative.

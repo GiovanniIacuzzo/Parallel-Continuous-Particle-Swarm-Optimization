@@ -1,7 +1,7 @@
 \section{Tabelle e figure estese dei risultati}
 \label{app:extended-results}
 
-Questa appendice è destinata ai dettagli che appesantirebbero il corpo principale: risultati per singola funzione e dimensione, breakdown per worker, seed e topologia, statistiche di rete, configurazioni di migrazione e figure diagnostiche. Le celle TBD sono intenzionalmente vuote fino alla generazione dei risultati confermativi.
+Questa appendice raccoglie i dettagli che appesantirebbero il corpo principale. I risultati interni di asincronia/isole/topologie usano $N=64$, $K=200$ e 12\,864 FE/run; lo screening di $\Delta t$ usa $K=500$ e 32\,064 FE/run. Le celle TBD sono intenzionalmente vuote. I grafi e le curve ricavati dai pilot M2 hanno valore esplorativo, non confirmatory.
 
 \subsection{Risultati interni per funzione e dimensione}
 
@@ -14,18 +14,18 @@ Questa appendice è destinata ai dettagli che appesantirebbero il corpo principa
 \toprule
 Funzione & $D$ & Metodo & Run valide & Mediana $\log_{10}(f-f^*)$ & IQR & Successi & FE/run \\
 \midrule
-Sphere & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Sphere & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Rastrigin & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Rastrigin & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Rosenbrock & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Rosenbrock & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Ackley & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Ackley & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Griewank & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Griewank & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Salomon & 30 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
-Salomon & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
+Sphere & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Sphere & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Rastrigin & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Rastrigin & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Rosenbrock & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Rosenbrock & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Ackley & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Ackley & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Griewank & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Griewank & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Salomon & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+Salomon & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -33,7 +33,7 @@ Salomon & 100 & TBD & TBD & TBD & TBD & TBD & 32\,064 \\
 \subsection{Sensibilità al passo temporale}
 \label{app:dt-sensitivity-results}
 
-Il profilo locale di screening valuta i valori di $\Delta t$ indicati nell'Appendice~\ref{app:campaigns}. La tabella seguente è un template: le statistiche devono essere calcolate separatamente per funzione e dimensione prima di qualsiasi sintesi. Il parametro $\Delta t=30$ è il riferimento grafico del pilot, non il valore congelato nella campagna architetturale ($0.35$) e non deve essere interpretato come ottimo a priori.
+Il pilot locale di screening comprende 900 run: sei funzioni, due dimensioni ($D=30,100$), 15 valori di $\Delta t$ e cinque seed appaiati; $N=64$, $K=500$ e 32\,064 FE/run. La tabella riporta le differenze appaiate rispetto al riferimento grafico $\Delta t=30$. Tale riferimento non è un optimum dimostrato. Le campagne architetturali, asincrone e topologiche attualmente disponibili usano invece $\Delta t=0.35$; i due protocolli non devono essere confusi.
 
 \begin{table}[H]
 \centering
@@ -65,8 +65,8 @@ $\Delta t$ & $D=30$: mediana [IQR] & $D=100$: mediana [IQR] & FE/run & Run valid
 
 \begin{figure}[H]
 \centering
-\IfFileExists{figures/results/fig_dt_sensitivity_summary.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_dt_sensitivity_summary.pdf}}{\fbox{\parbox[c][4.2cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_dt\_sensitivity\_summary.pdf}\par Curve di qualità/target attainment in funzione di $\Delta t$, separate per dimensione e funzione.}}}
-\caption{Sensibilità della qualità della CPSO al passo temporale $\Delta t$.}
+\IfFileExists{figures/results/fig_dt_sensitivity_summary.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_dt_sensitivity_summary.pdf}}{\fbox{\parbox[c][4.2cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_dt\_sensitivity\_summary.pdf}\par Heatmap della differenza appaiata mediana $\Delta\log_{10}(f_{\mathrm{best}})$ rispetto al riferimento $\Delta t=30$, per funzione e dimensione.}}}
+\caption{Sensibilità della qualità della CPSO al passo temporale $\Delta t$. Differenze appaiate rispetto al riferimento grafico $\Delta t=30$, non assunto come optimum. Pilot M2 esplorativo.}
 \label{fig:app-dt-sensitivity}
 \end{figure}
 
@@ -74,26 +74,35 @@ $\Delta t$ & $D=30$: mediana [IQR] & $D=100$: mediana [IQR] & FE/run & Run valid
 
 \begin{table}[H]
 \centering
-\caption{Template per la decomposizione temporale. Tutti i tempi sono mediane tra ripetizioni sulla stessa piattaforma.}
+\caption{Template per il breakdown temporale nel pilot \texttt{sphere\_work}. Sono mostrate le configurazioni seriale e a quattro worker per ciascuna combinazione di dimensione e carico; la figura include anche i casi a uno e due worker. I valori sono medie aritmetiche tra cinque run, così le componenti e il residuo sommano alla media del tempo totale.}
 \label{tab:app-timing-breakdown}
-\small
-\begin{tabular}{@{}rrrlrrrrrr@{}}
+\scriptsize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}rrrlrrrrrrrr@{}}
 \toprule
-$D$ & $N$ & Lavoro & Backend & Worker & Init. & Propag. & Eval. & Sync/commit & Totale \\
+$D$ & $N$ & Lavoro & Backend & Worker & Init. & Setup topol. & Propag. & Selez. soc. & Eval. & Residuo & Totale \\
 \midrule
-TBD & TBD & TBD & Serial & 1 & TBD & TBD & TBD & TBD & TBD \\
-TBD & TBD & TBD & Master--slave & 1 & TBD & TBD & TBD & TBD & TBD \\
-TBD & TBD & TBD & Master--slave & 4 & TBD & TBD & TBD & TBD & TBD \\
-TBD & TBD & TBD & Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD \\
-TBD & TBD & TBD & Particle-parallel & 8 & TBD & TBD & TBD & TBD & TBD \\
+30 & 64 & 512  & Serial & 1 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+30 & 64 & 512  & Master--slave & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+30 & 64 & 512  & Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+30 & 64 & 4096 & Serial & 1 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+30 & 64 & 4096 & Master--slave & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+30 & 64 & 4096 & Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+100 & 64 & 512  & Serial & 1 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+100 & 64 & 512  & Master--slave & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+100 & 64 & 512  & Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+100 & 64 & 4096 & Serial & 1 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+100 & 64 & 4096 & Master--slave & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+100 & 64 & 4096 & Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{figure}[H]
 \centering
-\IfFileExists{figures/results/fig_runtime_decomposition.pdf}{\includegraphics[width=0.78\textwidth]{figures/results/fig_runtime_decomposition.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.90\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_runtime\_decomposition.pdf}\par Decomposizione del tempo in inizializzazione, propagazione, valutazione, sincronizzazione e overhead.}}}
-\caption{Decomposizione del tempo di esecuzione per backend e numero di worker.}
+\IfFileExists{figures/results/fig_runtime_decomposition.pdf}{\includegraphics[width=0.78\textwidth]{figures/results/fig_runtime_decomposition.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.90\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_runtime\_decomposition.pdf}\par Decomposizione media in inizializzazione, setup topologico, propagazione, selezione sociale, valutazione obiettivo e residuo non strumentato.}}}
+\caption{Decomposizione del wall time medio per il carico sintetico \texttt{sphere\_work} ($N=64$, $D=30,100$, lavoro 512/4096), separata per backend e numero di worker. Il residuo chiude il bilancio rispetto al tempo totale e non è una misura diretta della sola sincronizzazione. Pilot M2 esplorativo.}
 \label{fig:app-runtime-decomposition}
 \end{figure}
 
@@ -101,50 +110,50 @@ TBD & TBD & TBD & Particle-parallel & 8 & TBD & TBD & TBD & TBD & TBD \\
 
 \begin{table}[H]
 \centering
-\caption{Template per qualità e struttura del grafo, conservando il breakdown per funzione e dimensione.}
+\caption{Parametri di costruzione delle topologie dichiarati nel pilot M2. I descrittori del grafo effettivamente realizzato (grado medio e deviazione standard, diametro, cammino medio, clustering e componenti) non sono esportati nei record attuali e non vengono inferiti dalle etichette.}
 \label{tab:app-topology-function}
 \small
-\begin{tabular}{@{}llrrrrrrrr@{}}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
 \toprule
-Funzione & $D$ & Topologia & Grado medio & SD grado & Diametro & Cammino medio & Clustering & Mediana errore & Rango \\
+Topologia & Parametri dichiarati nella configurazione \\
 \midrule
-TBD & TBD & Global-best & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-TBD & TBD & Ring & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-TBD & TBD & Von Neumann & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-TBD & TBD & Wheel & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-TBD & TBD & Random connessa & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-TBD & TBD & Watts--Strogatz & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-TBD & TBD & Barabási--Albert & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
+Global-best & Migliore personale globale come informazione sociale \\
+Ring & Anello periodico \\
+Von Neumann & Griglia toroidale $8\times8$ \\
+Wheel & Grafo wheel su $N=64$ vertici \\
+Random & Parametro di grado configurato pari a 4 \\
+Watts--Strogatz & Parametro di grado 4; probabilità di rewiring 0.15 \\
+Barabási--Albert & Parametro di grado configurato pari a 4 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \subsection{Figure supplementari}
 
 \begin{figure}[H]
 \centering
-\IfFileExists{figures/results/fig_internal_function_forest.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_internal_function_forest.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_internal\_function\_forest.pdf}\par Forest plot per funzione e dimensione, con intervalli.}}}
-\caption{Breakdown degli effetti per funzione e dimensione nelle campagne interne.}
+\IfFileExists{figures/results/fig_internal_function_forest.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_internal_function_forest.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_internal\_function\_forest.pdf}\par Effetti appaiati per funzione e dimensione rispetto al riferimento seriale appropriato, con intervalli bootstrap al 95\%.}}}
+\caption{Breakdown degli effetti appaiati per funzione e dimensione nelle campagne interne. Gli intervalli bootstrap sono condizionati alle sei funzioni e ricampionano i seed appaiati all'interno di ciascuna cella funzione--dimensione. Pilot M2 esplorativo.}
 \label{fig:app-internal-forest}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\IfFileExists{figures/results/fig_migration_diagnostics.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_migration_diagnostics.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_migration\_diagnostics.pdf}\par Numero e percentuale delle migrazioni tentate/accettate per isola e intervallo.}}}
-\caption{Diagnostica delle migrazioni nelle diverse configurazioni a isole.}
+\IfFileExists{figures/results/fig_migration_diagnostics.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_migration_diagnostics.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_migration\_diagnostics.pdf}\par Tentativi ricostruiti dalle epoche di migrazione e dal numero di isole; sostituzioni accettate dal contatore registrato nel C++.}}}
+\caption{Diagnostica delle migrazioni nelle configurazioni a isole. I tentativi sono ricostruiti dal calendario deterministico delle epoche; le sostituzioni accettate sono registrate dal motore C++. Pilot M2 esplorativo.}
 \label{fig:app-migration-diagnostics}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\IfFileExists{figures/results/fig_external_function_heatmaps.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_external_function_heatmaps.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_external\_function\_heatmaps.pdf}\par Heatmap per funzione/dimensione: log-error, ERT o target attainment.}}}
-\caption{Prestazioni esterne per funzione e dimensione, in forma di heatmap.}
+\IfFileExists{figures/results/fig_external_function_heatmaps.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_external_function_heatmaps.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_external\_function\_heatmaps.pdf}\par Heatmap dei ranghi mediani finali entro la stessa istanza COCO BBOB (rango 1 = migliore), per funzione e dimensione; non è una ECDF.}}}
+\caption{Ranghi mediani finali per funzione e dimensione nel pilot COCO BBOB. I ranghi sono calcolati entro la stessa istanza, così l'offset obiettivo comune dell'istanza non altera il confronto. Non rappresentano log-error, ERT o ECDF.}
 \label{fig:app-external-heatmaps}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \IfFileExists{figures/results/fig_cec_function_breakdown.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_cec_function_breakdown.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_cec\_function\_breakdown.pdf}\par Risultati per funzione CEC ai tre checkpoint FE.}}}
-\caption{Breakdown per funzione del benchmark CEC 2013 LSGO.}
+\caption{Breakdown per funzione CEC 2013 LSGO ai checkpoint FE; figura da produrre dopo la campagna CEC e la correzione del driver per F13/F14 a 905 dimensioni.}
 \label{fig:app-cec-breakdown}
 \end{figure}

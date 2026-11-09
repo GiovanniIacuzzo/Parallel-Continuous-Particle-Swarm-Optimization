@@ -57,7 +57,17 @@ class CEC2013LSGOAdapter:
                 raise RuntimeError("Unsupported cec2013lsgo wrapper: missing get_info")
             info = benchmark.get_info()
 
-        dimension = int(info["dimension"])
+        metadata_dimension = int(info["dimension"])
+        # The commonly used dmolina/cec2013lsgo package reports 1000 for ALL
+        # functions in get_info(). The official overlapping F13/F14 are 905-D.
+        # Keep the original metadata visible as a consistency guard.
+        expected_dimension = 905 if function_id in (13, 14) else 1000
+        if metadata_dimension not in (expected_dimension, 1000):
+            raise RuntimeError(
+                f"CEC F{function_id} unexpected library dimension "
+                f"{metadata_dimension}; expected metadata 1000 or actual {expected_dimension}"
+            )
+        dimension = expected_dimension
         lower = float(info["lower"])
         upper = float(info["upper"])
         optimum = float(info.get("best", 0.0))
@@ -88,6 +98,16 @@ class CEC2013LSGOAdapter:
                     "the optional benchmark requirements"
                 ) from exc
             vector = np.asarray(point, dtype=np.float64)
+            if function_id in (13, 14) and metadata_dimension > dimension:
+                # The upstream Cython extension allocates a buffer matching its
+                # input length, while its native metadata hardcodes D=1000.
+                # Keep a 1000-element buffer for memory safety but expose only
+                # 905 decision variables to the optimizer. The unused tail is
+                # fixed to zero and MUST be checked for irrelevance by the
+                # independent probe before publishing benchmark results.
+                native_vector = np.zeros(metadata_dimension, dtype=np.float64)
+                native_vector[:dimension] = vector
+                vector = native_vector
             return float(fitness(vector))
 
         return CEC2013LSGOProblem(

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import os
+from contextlib import contextmanager
 import json
 import math
 from pathlib import Path
@@ -29,6 +31,23 @@ from common import (  # noqa: E402
     run_method,
     write_campaign_manifest,
 )
+
+
+@contextmanager
+def _coco_output_workdir(directory: Path):
+    """COCO writes result_folder under ./exdata; use a short relative name.
+
+    COCO observer options are stored in a fixed-size C buffer. Passing an
+    absolute path through result_folder can trigger coco_vstrdupf() fatal error.
+    No working-directory changes escape this scope.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    old = Path.cwd()
+    try:
+        os.chdir(directory)
+        yield
+    finally:
+        os.chdir(old)
 
 
 def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
@@ -76,71 +95,89 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
         print(json.dumps(plan, indent=2))
         return 0
 
+    output = output.resolve()
     cocoex = load_coco_experiment()
     output.mkdir(parents=True, exist_ok=True)
+    # Fail before COCO execution when a previous run left JSONL records in this
+    # output tree. Existing Observer logs may not correspond to skipped runs.
+    existing_records = sorted((output / "records").glob("*.jsonl"))
+    if any(p.stat().st_size > 0 for p in existing_records):
+        raise RuntimeError(
+            "Output already contains BBOB run records. To preserve complete "
+            "COCO Observer traces, rerun in a NEW empty --output directory."
+        )
     write_campaign_manifest(output / "campaign_manifest.json", plan, config_path)
-    for method in methods:
-        method_directory = output / "coco_data" / method
-        observer = make_bbob_observer(
-            cocoex,
-            output_directory=str(method_directory.resolve()),
-            algorithm_name=method,
-            suite_name=suite_name,
-        )
-        suite = make_bbob_suite(
-            cocoex,
-            suite_name=suite_name,
-            instances=plan["suite_instances"],
-            options=plan["suite_options"],
-        )
-        result_path = output / "records" / f"{method}.jsonl"
-        completed = load_existing_run_keys(result_path)
-        for raw_problem in suite:
-            problem = wrap_coco_problem(raw_problem)
-            raw_problem.observe_with(observer)
-            seed = deterministic_problem_seed(problem.problem_id, int(config.get("seed", 20261105)))
-            max_evaluations = budget_multiplier * problem.dimension
-            if max_evaluations % population != 0:
-                raise ValueError(
-                    f"FE budget {max_evaluations} for {problem.problem_id} is not divisible by population {population}"
-                )
-            record_key = "|".join((suite_name, problem.problem_id, method, str(seed)))
-            if record_key in completed:
-                continue
-            print(f"{method}: {problem.problem_id} (D={problem.dimension}, FE={max_evaluations})")
-            result = run_method(
-                method,
-                problem.objective,
-                problem.lower_bounds,
-                problem.upper_bounds,
-                population_size=population,
-                max_evaluations=max_evaluations,
-                seed=seed,
-                cpso_dt=cpso_dt,
+    # Raw COCO output is stored under output/exdata/<method>/, not an
+    # absolute result_folder path or the repository root exdata directory.
+    # Use a NEW output folder: resuming existing JSONL without Observer traces
+    # would silently produce incomplete official COCO logs.
+    with _coco_output_workdir(output):
+        for method in methods:
+            observer = make_bbob_observer(
+                cocoex,
+                output_directory=method,
+                algorithm_name=method,
+                suite_name=suite_name,
             )
-            coco_evaluations = int(getattr(raw_problem, "evaluations", result.function_evaluations))
-            if coco_evaluations != result.function_evaluations:
+            suite = make_bbob_suite(
+                cocoex,
+                suite_name=suite_name,
+                instances=plan["suite_instances"],
+                options=plan["suite_options"],
+            )
+            result_path = output / "records" / f"{method}.jsonl"
+            completed = load_existing_run_keys(result_path)
+            if completed:
                 raise RuntimeError(
-                    f"COCO FE counter mismatch on {problem.problem_id}: "
-                    f"COCO={coco_evaluations}, optimizer={result.function_evaluations}"
+                    f"COCO Observer completeness cannot be guaranteed when resuming {result_path}. "
+                    "Use a new --output directory for an uninterrupted campaign."
                 )
-            record = build_run_record(
-                suite=suite_name,
-                problem_id=problem.problem_id,
-                problem_name=problem.name,
-                function_id=None,
-                dimension=problem.dimension,
-                method=method,
-                seed=seed,
-                max_evaluations=max_evaluations,
-                result=result,
-                cpso_dt=cpso_dt,
-            )
-            record["coco_evaluations"] = coco_evaluations
-            append_jsonl_durable(result_path, record_with_key(record))
-            completed.add(record_key)
-        del suite
-        del observer
+            for raw_problem in suite:
+                problem = wrap_coco_problem(raw_problem)
+                raw_problem.observe_with(observer)
+                seed = deterministic_problem_seed(problem.problem_id, int(config.get("seed", 20261105)))
+                max_evaluations = budget_multiplier * problem.dimension
+                if max_evaluations % population != 0:
+                    raise ValueError(
+                        f"FE budget {max_evaluations} for {problem.problem_id} is not divisible by population {population}"
+                    )
+                record_key = "|".join((suite_name, problem.problem_id, method, str(seed)))
+                if record_key in completed:
+                    continue
+                print(f"{method}: {problem.problem_id} (D={problem.dimension}, FE={max_evaluations})")
+                result = run_method(
+                    method,
+                    problem.objective,
+                    problem.lower_bounds,
+                    problem.upper_bounds,
+                    population_size=population,
+                    max_evaluations=max_evaluations,
+                    seed=seed,
+                    cpso_dt=cpso_dt,
+                )
+                coco_evaluations = int(getattr(raw_problem, "evaluations", result.function_evaluations))
+                if coco_evaluations != result.function_evaluations:
+                    raise RuntimeError(
+                        f"COCO FE counter mismatch on {problem.problem_id}: "
+                        f"COCO={coco_evaluations}, optimizer={result.function_evaluations}"
+                    )
+                record = build_run_record(
+                    suite=suite_name,
+                    problem_id=problem.problem_id,
+                    problem_name=problem.name,
+                    function_id=None,
+                    dimension=problem.dimension,
+                    method=method,
+                    seed=seed,
+                    max_evaluations=max_evaluations,
+                    result=result,
+                    cpso_dt=cpso_dt,
+                )
+                record["coco_evaluations"] = coco_evaluations
+                append_jsonl_durable(result_path, record_with_key(record))
+                completed.add(record_key)
+            del suite
+            del observer
     return 0
 
 
