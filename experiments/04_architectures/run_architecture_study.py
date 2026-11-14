@@ -60,7 +60,7 @@ SUPPORTED_ARCHITECTURES = {
     "serial", "master_slave", "particle_parallel", "asynchronous", "islands"
 }
 SUPPORTED_BENCHMARKS = {
-    "sphere", "rastrigin", "rosenbrock", "ackley", "griewank", "salomon", "sphere_work"
+    "sphere", "rastrigin", "rosenbrock", "ackley", "griewank", "salomon", "sphere_work", "inverse_diffusion"
 }
 LOG_FLOOR = 1.0e-16
 
@@ -72,6 +72,7 @@ DEFAULT_BOUNDS: dict[str, tuple[float, float]] = {
     "griewank": (-600.0, 600.0),
     "salomon": (-100.0, 100.0),
     "sphere_work": (-100.0, 100.0),
+    "inverse_diffusion": (-2.0, 2.0),
 }
 
 
@@ -280,8 +281,12 @@ def validate_study(study: dict[str, Any]) -> None:
     work_iterations = work_iterations_value
     if work_iterations < 0 or work_iterations > 100_000_000:
         raise ValueError("work_iterations must lie in [0,100000000]")
-    if "sphere_work" not in study["benchmarks"] and work_iterations != 0:
-        raise ValueError("work_iterations is only valid when sphere_work is included")
+    if not set(study["benchmarks"]) & {"sphere_work", "inverse_diffusion"} and work_iterations != 0:
+        raise ValueError("work_iterations is only valid with a controlled-cost objective")
+    if "inverse_diffusion" in study["benchmarks"] and (
+        work_iterations < 16 or work_iterations > 100_000 or work_iterations % 4 != 0
+    ):
+        raise ValueError("inverse_diffusion requires a multiple-of-four work_iterations in [16,100000]")
 
     # Validate every objective/dimension/method combination during dry-runs too,
     # so malformed bounds, grid layouts, or CPSO coefficients fail before a
@@ -330,7 +335,7 @@ def make_cpso_config(study: dict[str, Any], benchmark: str, dimension: int, seed
 
 def invoke_method(config: CpsoConfig, benchmark: str, method: dict[str, Any], work_iterations: int):
     architecture = method["architecture"]
-    effective_work_iterations = work_iterations if benchmark == "sphere_work" else 0
+    effective_work_iterations = work_iterations if benchmark in {"sphere_work", "inverse_diffusion"} else 0
     if architecture == "serial":
         return run_serial(config, benchmark, work_iterations=effective_work_iterations)
     if architecture == "master_slave":

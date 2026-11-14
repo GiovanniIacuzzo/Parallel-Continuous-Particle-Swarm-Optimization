@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Build a PDF-only research figure atlas from existing results/ campaigns.
+"""Build PDF-only figures from existing campaign data; never execute optimizers.
 
-No optimizer is run. Never writes to paper/; per-campaign failures are logged.
+Parallel campaigns now use the compact publication scaling post-processor.
+Historical per-topology scaling/runtime PDFs are replaced in the atlas output;
+other analysis modules (dt and external benchmarks) are unchanged.
 """
 from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
 from plot_results.atlas_common import read_json
-from plot_results.plot_internal_atlas import generate as plot_parallel
+from plot_results.plot_parallel_publication import generate as plot_parallel
 from plot_results.plot_dt_atlas import generate as plot_dt
 from plot_results.plot_external_atlas import generate as plot_external
 from cpso_serial.output_policy import results_output, REPOSITORY_ROOT
@@ -57,10 +59,12 @@ def main() -> int:
                 "n_pdf": len(pdf), "status": status, "warnings": warnings,
             })
             print(f"[{status}] {kind}/{campaign.name}: {len(pdf)} PDF")
+            for warning in warnings:
+                print(f"  {warning}")
     output.mkdir(parents=True, exist_ok=True)
     (output / "atlas_manifest.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     print(f"Atlas: {output}")
-    print("Only vector PDFs are created by the built-in plotters. paper/ is never modified.")
+    print("Only vector PDFs are generated; no experiment is executed and paper/ is unchanged.")
     return 0 if not any(x["status"] == "error" for x in summary) else 2
 
 

@@ -129,9 +129,9 @@ def validate_performance_study(
     study = study_item["study"]
     if stage.get("kind") != "performance":
         raise ValueError(f"Study {stage['id']}/{study_item['id']}: speedup validator requires a performance stage")
-    if study.get("benchmarks") != ["sphere_work"]:
+    if study.get("benchmarks") not in (["sphere_work"], ["inverse_diffusion"]):
         raise ValueError(
-            f"Study {stage['id']}/{study_item['id']}: performance studies must use only sphere_work"
+            f"Study {stage['id']}/{study_item['id']}: performance studies require sphere_work or inverse_diffusion"
         )
     if study.get("check_equivalence", True) is not True:
         raise ValueError(

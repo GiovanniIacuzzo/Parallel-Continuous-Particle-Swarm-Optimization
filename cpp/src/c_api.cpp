@@ -2,6 +2,7 @@
 #include "cpso/c_api.h"
 
 #include "cpso/objectives.hpp"
+#include "cpso/inverse_diffusion_benchmark.hpp"
 #include "cpso/optimizer.hpp"
 
 #include <algorithm>
@@ -199,10 +200,17 @@ int run_impl(
                 const std::vector<double>& position) {
                 return cpso::evaluate_synthetic_sphere_work(position, work_iterations);
             };
+        } else if (config->benchmark_id == CPSO_INVERSE_DIFFUSION) {
+            // The integration step count controls an actual numerical solve,
+            // not a busy wait. All architectures use the identical function.
+            objective = [steps = config->objective_work_iterations](
+                const std::vector<double>& position) {
+                return cpso::evaluate_inverse_diffusion_benchmark(position, steps);
+            };
         } else {
             if (config->objective_work_iterations != 0U) {
                 throw std::invalid_argument(
-                    "objective_work_iterations is only valid for sphere_work");
+                    "objective_work_iterations is only valid for sphere_work/inverse_diffusion");
             }
             const cpso::Benchmark benchmark = to_benchmark(config->benchmark_id);
             objective = [benchmark](const std::vector<double>& position) {

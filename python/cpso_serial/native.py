@@ -28,6 +28,7 @@ _BENCHMARK_IDS = {
     "griewank": 5,
     "salomon": 6,
     "sphere_work": 7,
+    "inverse_diffusion": 8,
 }
 _ARCHITECTURE_IDS = {
     "serial": 0,
@@ -194,8 +195,12 @@ def _run(
         raise ValueError("work_iterations must be in [0,100000000]")
     if custom_objective is not None and work_iterations != 0:
         raise ValueError("work_iterations cannot be combined with a custom objective")
-    if custom_objective is None and benchmark != "sphere_work" and work_iterations != 0:
-        raise ValueError("work_iterations is only valid for benchmark='sphere_work'")
+    if custom_objective is None and benchmark not in {"sphere_work", "inverse_diffusion"} and work_iterations != 0:
+        raise ValueError("work_iterations is only valid for sphere_work/inverse_diffusion")
+    if custom_objective is None and benchmark == "inverse_diffusion" and (
+        work_iterations < 16 or work_iterations > 100_000 or work_iterations % 4 != 0
+    ):
+        raise ValueError("inverse_diffusion requires work_iterations divisible by 4 in [16,100000]")
     if config.dimension > 2_147_483_647 or config.population_size > 2_147_483_647:
         raise ValueError("dimension and population_size must fit a signed 32-bit integer")
     if config.iterations > 2_147_483_646:

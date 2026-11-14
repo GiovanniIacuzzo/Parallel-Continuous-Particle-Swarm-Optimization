@@ -4,6 +4,9 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstddef>
+#include <cstdlib>
+#include <cerrno>
+#include <limits>
 #include <exception>
 #include <functional>
 #include <future>
@@ -74,6 +77,23 @@ public:
         }
 
         const std::size_t task_count = std::min(workers_.size(), count);
+        // Default: original one-particle dynamic dispatch. Set
+        // CPSO_THREADPOOL_CHUNK=4/8/16 to claim adjacent particles per atomically
+        // scheduled block. All numeric results remain independent of chunk size.
+        // Parse per invocation so experiments may change it within one process.
+        std::size_t chunk_size = 1U;
+        if (const char* text = std::getenv("CPSO_THREADPOOL_CHUNK")) {
+            if (*text != '\0') {
+                errno = 0;
+                char* end = nullptr;
+                const unsigned long long parsed = std::strtoull(text, &end, 10);
+                if (errno != 0 || end == text || *end != '\0' || parsed == 0ULL
+                    || parsed > static_cast<unsigned long long>(std::numeric_limits<std::size_t>::max())) {
+                    throw std::invalid_argument("CPSO_THREADPOOL_CHUNK must be a positive integer");
+                }
+                chunk_size = static_cast<std::size_t>(parsed);
+            }
+        }
         std::atomic<std::size_t> next_index{0U};
         auto shared_function = std::make_shared<std::decay_t<Function>>(
             std::forward<Function>(function));
@@ -81,13 +101,16 @@ public:
         std::vector<std::future<void>> completions;
         completions.reserve(task_count);
         for (std::size_t task = 0; task < task_count; ++task) {
-            completions.emplace_back(submit([shared_function, &next_index, count] {
+            completions.emplace_back(submit([shared_function, &next_index, count, chunk_size] {
                 while (true) {
-                    const std::size_t index = next_index.fetch_add(1U, std::memory_order_relaxed);
-                    if (index >= count) {
+                    const std::size_t first = next_index.fetch_add(chunk_size, std::memory_order_relaxed);
+                    if (first >= count) {
                         break;
                     }
-                    (*shared_function)(index);
+                    const std::size_t length = std::min(chunk_size, count - first);
+                    for (std::size_t offset = 0U; offset < length; ++offset) {
+                        (*shared_function)(first + offset);
+                    }
                 }
             }));
         }

@@ -25,7 +25,8 @@ enum CpsoBenchmarkId {
     CPSO_ACKLEY = 4,
     CPSO_GRIEWANK = 5,
     CPSO_SALOMON = 6,
-    CPSO_SPHERE_WORK = 7
+    CPSO_SPHERE_WORK = 7,
+    CPSO_INVERSE_DIFFUSION = 8
 };
 
 enum CpsoTopologyId {
