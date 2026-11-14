@@ -565,12 +565,14 @@ def build_figures(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-root", type=Path, default=Path("results"))
-    parser.add_argument("--output", type=Path, default=Path("paper/figures/internal_pilots"))
+    parser.add_argument("--output", type=Path, default=Path("results/figures/internal_pilots"))
     parser.add_argument("--profile", choices=("confirmatory", "exploratory"), default="confirmatory")
     parser.add_argument("--synchronous-campaign", type=Path, default=None)
     parser.add_argument("--dynamics-campaign", type=Path, default=None)
     parser.add_argument("--topology-campaign", type=Path, default=None)
     args = parser.parse_args()
+    from cpso_serial.output_policy import results_output
+    args.output = results_output(args.output)
     figures, missing = build_figures(
         args.results_root, args.output, profile=args.profile,
         synchronous_campaign_arg=args.synchronous_campaign,

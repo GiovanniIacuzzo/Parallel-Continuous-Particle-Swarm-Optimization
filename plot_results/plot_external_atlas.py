@@ -201,27 +201,6 @@ def plot_bbob(records, manifest, output):
 
 
 
-def plot_coco_observer(campaign: Path, output: Path):
-    """Run official cocopp post-processing when genuine Observer .info files exist."""
-    folders = sorted({p.parent.resolve() for p in campaign.rglob("*.info")})
-    if not folders:
-        return [], ["No COCO Observer .info files found; official ECDF/runtime-to-target figures are unavailable. JSONL ranks are not a substitute."]
-    try:
-        import cocopp
-    except ImportError:
-        return [], ["COCO Observer .info files exist, but cocopp is not installed in this Python environment."]
-    target = output / "cocopp_official"
-    target.mkdir(parents=True, exist_ok=True)
-    argv = ["-o", str(target), *[str(folder) for folder in folders]]
-    try:
-        cocopp.main(argv)
-    except Exception as exc:
-        return [], [f"cocopp failed while processing Observer data: {type(exc).__name__}: {exc}"]
-    index = target / "index.html"
-    if not index.is_file():
-        return [], [f"cocopp did not produce the expected index.html in {target}; inspect its log output."]
-    files = sorted([p for p in target.rglob("*") if p.is_file() and p.suffix.lower() in {".pdf", ".png"}])
-    return files, []
 
 def generate(campaign: Path, output: Path):
     manifest=read_json(campaign/"campaign_manifest.json");records=load_external_records(campaign)
@@ -232,8 +211,7 @@ def generate(campaign: Path, output: Path):
         generated=plot_cec(records,manifest,output);title="CEC 2013 LSGO"
     elif "bbob" in suite:
         generated=plot_bbob(records,manifest,output);title=suite.upper()
-        coco_files,coco_warnings=plot_coco_observer(campaign,output)
-        generated.extend(coco_files)
+        coco_warnings=["Official cocopp processing is manual; the atlas does not generate HTML/JS outputs."]
     else:
         raise ValueError(f"Unsupported external suite {suite!r}")
     expected=finite_float(manifest.get("expected_run_count",manifest.get("expected_method_runs")),math.nan)
@@ -252,7 +230,9 @@ def generate(campaign: Path, output: Path):
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument("--campaign",type=Path,required=True);ap.add_argument("--output",type=Path,default=None);args=ap.parse_args()
-    campaign=args.campaign.expanduser().resolve();out=args.output.expanduser().resolve() if args.output else campaign/"figure_atlas"
+    campaign=args.campaign.expanduser().resolve();out=args.output.expanduser().resolve() if args.output else Path(__file__).resolve().parents[1]/"results/figures/external"/campaign.name
+    from cpso_serial.output_policy import results_output
+    out = results_output(out)
     files,warnings=generate(campaign,out);pdfs=[p for p in files if p.suffix==".pdf"]
     print(f"Generated {len(pdfs)} PDF and {len(files)-len(pdfs)} PNG figures in {out}")
     for w in warnings:print("WARNING:",w)

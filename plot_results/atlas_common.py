@@ -42,13 +42,12 @@ def configure_style() -> None:
 
 
 def save_figure(fig: plt.Figure, output: Path, stem: str, *, dpi: int = 320) -> list[Path]:
+    """Save only vector PDF; the dpi argument remains for old call compatibility."""
     output.mkdir(parents=True, exist_ok=True)
     pdf = output / f"{stem}.pdf"
-    png = output / f"{stem}.png"
     fig.savefig(pdf, format="pdf", metadata={"Creator": "CPSO plot_results atlas"})
-    fig.savefig(png, format="png", dpi=dpi)
     plt.close(fig)
-    return [pdf, png]
+    return [pdf]
 
 
 def safe_slug(value: str) -> str:

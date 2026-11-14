@@ -248,7 +248,9 @@ def generate(campaign: Path, output: Path):
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument("--campaign",type=Path,required=True);ap.add_argument("--output",type=Path,default=None);args=ap.parse_args()
-    campaign=args.campaign.expanduser().resolve();out=args.output.expanduser().resolve() if args.output else campaign/"figure_atlas"
+    campaign=args.campaign.expanduser().resolve();out=args.output.expanduser().resolve() if args.output else Path(__file__).resolve().parents[1]/"results/figures/dt"/campaign.name
+    from cpso_serial.output_policy import results_output
+    out = results_output(out)
     generated,warnings=generate(campaign,out);pdfs=[p for p in generated if p.suffix==".pdf"]
     print(f"Generated {len(pdfs)} PDF and {len(generated)-len(pdfs)} PNG figures in {out}")
     for w in warnings:print("WARNING:",w)

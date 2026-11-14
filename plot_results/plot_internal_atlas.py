@@ -865,7 +865,9 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=None, help="Figure output directory")
     args = parser.parse_args()
     campaign = args.campaign.expanduser().resolve()
-    output = args.output.expanduser().resolve() if args.output else campaign / "figure_atlas"
+    output = args.output.expanduser().resolve() if args.output else Path(__file__).resolve().parents[1] / "results/figures/parallel" / campaign.name
+    from cpso_serial.output_policy import results_output
+    output = results_output(output)
     generated, missing = generate(campaign, output)
     pdfs = [p for p in generated if p.suffix == ".pdf"]
     print(f"Generated {len(pdfs)} PDF figures ({len(generated)-len(pdfs)} PNG) from {campaign}")

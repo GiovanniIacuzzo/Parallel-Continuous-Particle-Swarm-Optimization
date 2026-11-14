@@ -1,24 +1,17 @@
 \section{Discussione}
 \label{sec:discussion}
 
-La discussione definitiva dipenderà dai risultati confermativi e non viene anticipata in questa versione. La sua struttura separa deliberatamente proprietà del modello, correttezza dell'implementazione, qualità della ricerca e prestazioni dell'esecutore: nessuno di questi livelli può sostituire gli altri.
+\subsection{Esecuzione e qualità della ricerca}
+L'equivalenza dei record sincroni permette di interpretare lo speedup come una riduzione del costo della stessa ricerca osservata. Il maggior carico per valutazione tende ad aumentare la frazione di lavoro utile rispetto al coordinamento. La differenza tra master--slave e particle-parallel evidenzia inoltre il ruolo della propagazione locale nella granularità del calcolo. Le misure coprono fino a quattro worker sulla piattaforma M2 e descrivono questo regime di esecuzione.
 
-\subsection{Semantica ed equivalenza degli esecutori}
+Asincronia e isole intervengono invece sulla disponibilità dell'informazione. Le curve interne mostrano un andamento iniziale rapido seguito da miglioramenti più graduali, con dispersione rilevante tra funzioni. Le percentuali di migrazione accettata descrivono quanto spesso una soluzione esterna sostituisce il peggiore destinatario; il loro rapporto con il progresso globale dipende anche dalla diversità delle sottopopolazioni e dalla qualità dei leader.
 
-L'interpretazione di RQ1 dovrà riportare se l'identità osservata sia stata verificata sull'intera cronologia e per quali combinazioni di worker e topologia. Eventuali mismatch dovranno essere classificati (RNG, ordine di commit, floating-point, funzione obiettivo o gestione dello stato) prima di utilizzare i tempi per uno speedup.
+\subsection{Dimensione, vicinati e budget}
+I risultati topologici dipendono congiuntamente da struttura del vicinato, grado e diffusione dell'informazione. Le differenze tra ranghi ed effetti aggregati suggeriscono di mantenere il dettaglio per funzione nella lettura dei risultati. Analogamente, BBOB e CEC mostrano che qualità relativa e budget devono essere considerati insieme: la frazione di target raggiunti e il rango a un checkpoint misurano aspetti distinti del processo di ottimizzazione.
 
-\subsection{Granularità del lavoro e scaling}
+La proprietà geometrica della casualità scalare, discussa in Appendice~\ref{app:scalar-randomness}, suggerisce di affiancare ai confronti in alta dimensione misure dell'attivazione dei vincoli e del rango degli stati.
 
-La risposta a RQ2 dovrà essere interpretata alla luce del rapporto fra costo della propagazione analitica, valutazione obiettivo e sincronizzazione. Lo strong scaling su \texttt{sphere\_work} è un test controllato dell'esecutore, non una simulazione fisica costosa. Le misure su hardware fanless non consentono inferenze generali su nodi HPC; un eventuale caso d'uso con valutazione costosa ed eterogenea sarebbe un'estensione distinta. L'asincronia non viene presentata come intrinsecamente migliore o peggiore: la qualità su costo uniforme e il load balancing con costo eterogeneo sono due domande diverse.
+\subsection{Ambito dell'evidenza e sviluppi}
+La copertura disponibile comprende cinque semi negli esperimenti interni, cinque istanze BBOB e tre semi CEC. Le funzioni restano le unità di riferimento per valutare la generalità dei comportamenti. La presente sintesi descrive le configurazioni registrate e rende visibili le variazioni tra problemi; una successiva campagna potrà estendere repliche, funzioni e budget mantenendo questa gerarchia.
 
-\subsection{Casualità scalare e validità algoritmica}
-
-La casualità scalare condivisa tra coordinate è mantenuta per fedeltà alla CPSO di Orlando--Ricciardello. La limitazione di sottospazio descritta nell'Appendice~\ref{app:scalar-randomness} vale in assenza di interventi della mappa non lineare dei vincoli; non dimostra da sola l'irraggiungibilità dell'ottimo. La sua possibile rilevanza in alta dimensione deve essere valutata con indicatori di rango, frequenza di attivazione dei vincoli e benchmark con ottimi traslati/ruotati. Una variante a casualità per coordinata, se introdotta, sarà trattata esclusivamente come ablation separata e non come CPSO di riferimento.
-
-\subsection{Topologie, isole e migrazione}
-
-I risultati topologici saranno letti insieme a grado, clustering, diametro e connettività. In assenza di un disegno degree-matched, non si attribuiranno le differenze alla sola geometria del grafo. Nel modello a isole la dimensione delle sottopopolazioni e la politica di migrazione cambiano simultaneamente l'organizzazione informativa; i risultati dovranno quindi distinguere l'effetto della decomposizione da quello della migrazione e riconoscere il limite delle isole piccole.
-
-\subsection{Posizionamento e minacce alla validità}
-
-Il confronto con le dieci baseline consente conclusioni soltanto entro la famiglia PSO e con le configurazioni dichiarate. Non implica superiorità rispetto a CMA-ES, differential evolution o a tutte le metaeuristiche di ottimizzazione continua. Le principali minacce da discutere saranno: sei sole funzioni interne e insufficiente potenza per i test pairwise Holm; center bias dell'insieme interno; casualità scalare della CPSO; popolazione esterna fissa $N=40$; differenze tra generatori casuali e inizializzazioni; adattamenti delle baseline; callback Python seriali; budget esterno di 65.439 miliardi di FE; hardware locale e variabilità termica; non determinismo di scheduling asincrono. L'Appendice~\ref{app:campaigns} e i manifest delle run dovranno documentare ogni deviazione dal protocollo congelato.
+L'estensione della copertura COCO, dei checkpoint CEC e delle misure temporali per componente permetterà di approfondire questi risultati mantenendo distinti i parametri delle singole campagne.

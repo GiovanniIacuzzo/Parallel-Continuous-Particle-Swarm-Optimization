@@ -1,52 +1,55 @@
-\section{Stato dell'arte e posizionamento}
+\section{Stato dell'arte}
 \label{sec:related-work}
 
-\subsection{Modelli continui della PSO e posizione della CPSO di Orlando--Ricciardello}
+\subsection{Dinamica continua e apprendimento dello sciame}
+La lettura della PSO come sistema dinamico collega l'evoluzione dello sciame a smorzamento, oscillazione e stabilità. Le formulazioni continue di Emara e Abdel Fattah e di Fernández-Martínez e García-Gonzalo analizzano questi aspetti e il ruolo del passo temporale \citep{Emara2004,FernandezMartinezGarciaGonzalo2008,FernandezMartinezGarciaGonzalo2009,FernandezMartinezGarciaGonzalo2011}. Orlando e Ricciardello propongono una formulazione continua con soluzione analitica locale, che costituisce il nucleo del presente studio \citep{Orlando2021}. Un filone complementare interpreta la dinamica collettiva mediante modelli stocastici e di campo medio \citep{GrassiPareschi2021}.
 
-L'interpretazione della dinamica PSO come sistema del secondo ordine precede la formulazione qui studiata. Emara e Fattah hanno proposto una tecnica di ottimizzazione swarm a tempo continuo con analisi di stabilità \citep{Emara2004}. Fernández-Martínez e García-Gonzalo hanno sviluppato il modello continuo della PSO associato all'analogia di una massa soggetta a molla e smorzamento e hanno introdotto una generalizzazione con passo temporale non unitario, analizzandone attenuazione, oscillazione e stabilità deterministica e stocastica \citep{FernandezMartinezGarciaGonzalo2008,FernandezMartinezGarciaGonzalo2009,FernandezMartinezGarciaGonzalo2011}. Questi lavori sono essenziali per collocare storicamente la dinamica continua, ma non vengono identificati con la CPSO nel senso adottato nel presente articolo.
+La rassegna di Bonyadi e Michalewicz collega proprietà dinamiche, casualità, topologie e gestione del dominio \citep{BonyadiMichalewicz2017}. Questi elementi spiegano perché il comportamento di una popolazione dipenda sia dalla regola di movimento sia dalla distribuzione dell'informazione. Nel confronto qui proposto la dinamica locale della CPSO rimane comune alle architetture, mentre sincronizzazione e comunicazione costituiscono i fattori sperimentali.
 
-La rassegna di Bonyadi e Michalewicz organizza i principali aspetti della PSO in spazio continuo, inclusi stabilità, struttura della casualità, topologie, rotazione e gestione dei vincoli \citep{BonyadiMichalewicz2017}. Grassi e Pareschi sviluppano invece una modellazione stocastica e di campo medio che collega lo swarm a equazioni di tipo McKean--Vlasov e alla consensus-based optimization \citep{GrassiPareschi2021}. Si tratta di un filone teorico complementare: non è una derivazione del propagatore analitico impiegato qui.
+\subsection{Parallelismo e organizzazione della popolazione}
+Le tassonomie del calcolo evolutivo distinguono la distribuzione delle valutazioni, il parallelismo interno alla popolazione e la decomposizione in isole \citep{Alba2002,CantuPaz2001}. Nella PSO, tali scelte sono state studiate su architetture master--slave, esecutori asincroni e GPU \citep{Schutte2004,Koh2006,Mussi2011,Lalwani2019}. Il costo delle valutazioni e la granularità dei compiti determinano il bilancio tra lavoro utile e coordinamento.
 
-Nel presente manoscritto, \textbf{CPSO} è riservato alla specifica formulazione \emph{Continuous Particle Swarm Optimization} \citep{Orlando2021}. Il suo tratto operativo distintivo, per il problema affrontato, è la propagazione analitica della dinamica locale a coefficienti congelati tra due osservazioni successive. Il nostro lavoro indaga le semantiche di esecuzione e le architetture parallele applicate a questa formulazione. Per evitare collisioni terminologiche, le altre formulazioni sono nominate con autore, anno o denominazione originale, senza riutilizzare l'acronimo CPSO.
+Gli sviluppi più recenti comprendono esecutori multicore con work stealing, comunicazione tra unità parallele e implementazioni eterogenee \citep{LiEtAl2023PAPSO,Charilogis2023ParallelPSO,YazdanpanahAlaei2024ALCPSO}. Nel 2026, Sato et al. studiano la condivisione del migliore globale virtuale e la partizione dello spazio degli obiettivi per MOPSO/D \citep{SatoEtAl2026MOPSOD}; altre applicazioni considerano l'offloading multicore e l'addestramento di reti neurali \citep{VermaEtAl2026MCLyPSO,BarkasEtAl2026ParallelPSO}. La Tabella~\ref{tab:literature-map} sintetizza la relazione tra questi filoni e le scelte del presente lavoro.
 
-\subsection{Parallelizzazione della PSO: esecutori e semantica}
-
-La letteratura sulla parallel PSO comprende modelli master--slave, parallelismo a grana fine, aggiornamenti asincroni, accelerazione GPU e modelli a isole. Le analisi generali del parallelismo negli algoritmi evolutivi distinguono distribuzione delle valutazioni, parallelismo interno alla popolazione e decomposizione in sottopopolazioni \citep{Alba2002,CantuPaz2001}; le rassegne specifiche PSO organizzano i metodi in funzione della granularità, sincronizzazione e piattaforma \citep{Lalwani2019}. Le valutazioni indipendenti delle particelle sono state sfruttate in architetture globali o master--slave \citep{Schutte2004}; lavori successivi hanno studiato esplicitamente l'aggiornamento asincrono e gli effetti dei carichi di valutazione non uniformi \citep{Koh2006}, nonché implementazioni GPU \citep{Mussi2011}.
-
-PAPSO di Li et al. combina thread pool fork--join, comunicazione non bloccante e work stealing per una PSO asincrona su CPU multicore \citep{LiEtAl2023PAPSO}. Charilogis et al. propongono modifiche e meccanismi di propagazione tra unità parallele \citep{Charilogis2023ParallelPSO}. Un'implementazione di ALC-PSO combina OmpSs e CUDA \citep{YazdanpanahAlaei2024ALCPSO}. Sato et al. studiano la parallelizzazione multicore di MOPSO/D attraverso un virtual global best e una partizione dello spazio degli obiettivi \citep{SatoEtAl2026MOPSOD}; altri lavori recenti riguardano PSO multicore-aware per edge offloading e varianti parallelizzate per il training di reti neurali \citep{VermaEtAl2026MCLyPSO,BarkasEtAl2026ParallelPSO}. Questi contributi sono pertinenti al contesto HPC, ma non sono baseline numeriche dirette per l'ottimizzazione single-objective del presente protocollo: problema, dinamica, hardware e budget differiscono.
-
-La distinzione qui proposta fra esecutori sincroni e algoritmi con dinamica modificata è complementare a tali lavori.
-
-I modelli a isole sono un paradigma più generale degli algoritmi evolutivi: ciascuna isola evolve una popolazione locale e scambia individui secondo una topologia e una politica di migrazione. Vanneschi, Codecasa e Mauri confrontano metodi paralleli e distribuiti basati su co-evoluzione di sciami e multi-swarm a isole \citep{VanneschiCodecasaMauri2011}. Da Silveira et al. analizzano topologie e politiche di migrazione in modelli a isole sincroni e asincroni \citep{DaSilveiraEtAl2023PIM}, mentre lavori successivi considerano isole eterogenee e riconfigurabili \citep{DaSilveiraDeLimaAyala2024}. Nel nostro modello le isole eseguono la stessa CPSO locale; la variabile sperimentale è la decomposizione della popolazione e la politica di migrazione.
-
-\subsection{Topologie sociali}
-
-La struttura del vicinato è una componente fondativa della PSO. Kennedy e Mendes documentano il ruolo della struttura di popolazione e delle topologie di informazione \citep{Kennedy1999Topology,KennedyMendes2002}. Ring e global-best rappresentano riferimenti locali e globali; la griglia toroidale di von Neumann è un vicinato regolare bidimensionale. Le quattro famiglie aggiuntive ampliano lo spettro: wheel separa hub e periferie; il random connesso introduce irregolarità; Watts--Strogatz controlla il rewiring di un reticolo locale; Barabási--Albert introduce attaccamento preferenziale. Le ultime due richiamano modelli di rete indipendenti dalla PSO \citep{WattsStrogatz1998,BarabasiAlbert1999}; topologie scale-free sono state studiate anche direttamente in algoritmi PSO \citep{LiuScaleFreePSO2014}.
-
-Deng e Liu ricostruiscono reti di interazione emergenti dalla dinamica PSO e riportano proprietà small-world e distribuzioni dei gradi a coda pesante \citep{DengLiu2025NetworkPSO}. Il risultato motiva l'inclusione di grafi non regolari, ma non dimostra che imporre una famiglia small-world o scale-free migliori le prestazioni.
-
-\begin{table*}[t]
-\centering
-\caption{Motivazione sperimentale delle sette topologie implementate.}
-\label{tab:topology-rationale}
-\small
-\begin{tabularx}{\textwidth}{@{}l p{0.29\textwidth} X@{}}
+\begin{table*}[b]
+\centering\small
+\caption{Filoni di ricerca e collocazione dello studio.}
+\label{tab:literature-map}
+\begin{tabularx}{\textwidth}{@{}p{3.0cm}X X@{}}
 \toprule
-Topologia & Proprietà strutturale & Motivazione e ruolo nel disegno \\
+Filone e riferimenti & Aspetto centrale & Collegamento con questo studio \\
 \midrule
-Global-best & Informazione del migliore personale globale disponibile a tutti & Riferimento a massima diffusione informativa. \\
-Ring & Vicinato locale periodico a basso grado & Riferimento classico local-best e diffusione locale dell'informazione \citep{KennedyMendes2002}. \\
-Von Neumann & Griglia toroidale con vicini ortogonali & Topologia locale regolare bidimensionale \citep{Kennedy1999Topology}. \\
-Wheel & Un hub collegato ai nodi periferici, senza archi tra periferie & Caso di centralizzazione e dipendenza da un nodo. \\
-Random connessa & Archi campionati casualmente con aggiunta di ponti tra componenti & Irregolarità controllata dalla regola di connessione del codice. \\
-Small-world & Reticolo locale con rewiring di Watts--Strogatz & Compromesso tra clustering e scorciatoie \citep{WattsStrogatz1998,DengLiu2025NetworkPSO}. \\
-Scale-free & Attaccamento preferenziale e nodi ad alto grado & Eterogeneità della distribuzione dei gradi \citep{BarabasiAlbert1999,LiuScaleFreePSO2014}. \\
+Modelli continui \citep{FernandezMartinezGarciaGonzalo2008,Orlando2021} & Evoluzione dello stato, smorzamento e integrazione della dinamica. & Propagatore analitico comune a tutte le modalità CPSO.\\
+Parallelismo PSO \citep{Schutte2004,Koh2006,Lalwani2019} & Distribuzione del lavoro e frequenza degli aggiornamenti sociali. & Confronto tra equivalenza sincrona, asincronia e costo dell'esecutore.\\
+CPU multicore e sistemi eterogenei \citep{LiEtAl2023PAPSO,YazdanpanahAlaei2024ALCPSO,SatoEtAl2026MOPSOD} & Scheduling, condivisione dei risultati e uso delle risorse. & Misura dello scaling su CPU a memoria condivisa.\\
+Modelli a isole \citep{VanneschiCodecasaMauri2011,DaSilveiraEtAl2023PIM,DaSilveiraDeLimaAyala2024} & Evoluzione locale e scambio tra sottopopolazioni. & CPSO locale omogenea con politiche di migrazione controllate.\\
+Topologie sociali \citep{KennedyMendes2002,LiuScaleFreePSO2014,DengLiu2025NetworkPSO} & Vicinato, centralizzazione e diffusione dell'informazione. & Confronto di sette configurazioni sociali a popolazione fissata.\\
+Benchmarking \citep{Hansen2021,HansenEtAl2022Anytime,Li2013} & Qualità a budget assegnato, target e profili anytime. & Valutazione descrittiva su BBOB e CEC con copertura dichiarata.\\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
-\subsection{Baseline e testbed}
+Nei modelli a isole, la frequenza e la direzione degli scambi regolano il rapporto tra esplorazione locale e condivisione dei risultati \citep{VanneschiCodecasaMauri2011,DaSilveiraEtAl2023PIM}. Le architetture eterogenee aggiungono la possibilità di utilizzare strategie differenti nelle sottopopolazioni \citep{DaSilveiraDeLimaAyala2024}. Qui tutte le isole impiegano lo stesso metodo locale, così da studiare l'organizzazione della popolazione e la migrazione.
 
-Le dieci baseline sono selezionate per coprire meccanismi distinti: PSO global-best classica, inerzia lineare, fattore di costrizione, local-best ad anello, CLPSO, SL-PSO, SPSO-2011, FIPS, Competitive Swarm Optimizer e DMS-PSO. I riferimenti fondativi sono Kennedy ed Eberhart per la PSO originale \citep{Kennedy1995}, Shi ed Eberhart per l'inerzia \citep{ShiEberhart1998}, Shi ed Eberhart per lo studio empirico e la schedule lineare dell'inerzia \citep{ShiEberhart1999}, Clerc e Kennedy per il fattore di costrizione \citep{Clerc2002}, CLPSO e SL-PSO per l'apprendimento sociale \citep{Liang2006CLPSO,ChengJin2015SLPSO}, SPSO-2011 come riferimento standardizzato \citep{ZambranoBigiarini2013}, FIPS per l'informazione fully-informed \citep{MendesKennedyNeves2004}, CSO per l'apprendimento competitivo \citep{Cheng2015} e DMS-PSO per i sottosciami dinamici \citep{LiangSuganthan2005DMS}. Le implementazioni Python includono adattamenti per uniformare popolazione, budget FE e gestione dei vincoli; i dettagli e le deviazioni rilevanti sono esplicitati nell'Appendice~\ref{app:baselines}.
+\subsection{Vicinati e metodi di confronto}
+Global-best, ring e von Neumann rappresentano modelli consolidati di diffusione globale e locale dell'informazione \citep{Kennedy1999Topology,KennedyMendes2002}. Le reti random, small-world e scale-free aggiungono eterogeneità e collegamenti a lunga distanza \citep{ErdosRenyi1959,WattsStrogatz1998,BarabasiAlbert1999,LiuScaleFreePSO2014}. La prospettiva di rete applicata alla PSO offre inoltre strumenti per descrivere le interazioni emergenti tra particelle \citep{DengLiu2025NetworkPSO}. Nel presente disegno si confrontano le famiglie di vicinato nelle configurazioni dichiarate in Appendice~\ref{app:dynamics}.
 
-I benchmark esterni comprendono COCO BBOB e BBOB-LargeScale e CEC 2013 LSGO \citep{Hansen2021,HansenEtAl2022Anytime,Varelas2020,Li2013}. Le metriche anytime/ECDF e runtime-to-target sono preferite al solo rango del valore finale.
+Le dieci baseline coprono inerzia e costrizione, apprendimento da esemplari, informazione multipla, competizione e riorganizzazione dei sottosciami. La Tabella~\ref{tab:baseline-family} ne riassume il ruolo; le formule e i parametri sono riportati in Appendice~\ref{app:baselines}. Il confronto comprende implementazioni a popolazione controllata e budget di valutazione abbinato.
+
+\begin{table}[hbp]
+\centering\small
+\caption{Meccanismi rappresentati dalle baseline.}
+\label{tab:baseline-family}
+\begin{tabularx}{\columnwidth}{@{}p{2.6cm}X@{}}
+\toprule
+Metodi & Meccanismo \\
+\midrule
+Classic / inertia gbest & Attrazione globale e peso d'inerzia \citep{Kennedy1995,ShiEberhart1998,ShiEberhart1999}.\\
+Constriction gbest & Controllo della dinamica mediante costrizione \citep{Clerc2002}.\\
+Inertia ring / FIPS & Leader locale o contributi di più vicini \citep{KennedyMendes2002,MendesKennedyNeves2004}.\\
+CLPSO / SL-PSO & Apprendimento da esemplari o dimostratori \citep{Liang2006CLPSO,ChengJin2015SLPSO}.\\
+SPSO-2011 & Regola di movimento geometrica e informant \citep{ZambranoBigiarini2013}.\\
+CSO / DMS-PSO & Competizione a coppie o sottosciami dinamici \citep{Cheng2015,LiangSuganthan2005DMS}.\\
+\bottomrule
+\end{tabularx}
+\end{table}

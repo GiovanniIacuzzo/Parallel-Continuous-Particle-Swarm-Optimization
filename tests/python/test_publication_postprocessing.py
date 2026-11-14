@@ -38,15 +38,15 @@ def _campaign_run_count(path: Path) -> int:
 
 
 def test_topology_expansion_campaign_sizes_are_frozen() -> None:
-    pilot = ROOT / "configs/campaigns/cpso_topology_expansion_pilot.json"
-    confirmatory = ROOT / "configs/campaigns/cpso_topology_expansion_confirmatory.json"
+    pilot = ROOT / "tests/fixtures/configs/campaigns/cpso_topology_expansion_pilot.json"
+    confirmatory = ROOT / "tests/fixtures/configs/campaigns/cpso_topology_expansion_confirmatory.json"
     assert _campaign_run_count(pilot) == 1_050
     assert _campaign_run_count(confirmatory) == 3_150
 
 
 def test_topology_expansion_covers_seven_particle_graph_families() -> None:
     campaign = json.loads(
-        (ROOT / "configs/campaigns/cpso_topology_expansion_pilot.json").read_text(encoding="utf-8")
+        (ROOT / "tests/fixtures/configs/campaigns/cpso_topology_expansion_pilot.json").read_text(encoding="utf-8")
     )
     quality = campaign["stages"][0]["studies"][0]["study"]
     topologies = {method["topology"] for method in quality["methods"]}

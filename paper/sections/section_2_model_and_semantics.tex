@@ -1,124 +1,50 @@
-\section{Modello matematico e semantica operativa}
+\section{CPSO e modalità di esecuzione}
 \label{sec:model}
 
-Indichiamo con $N_p$ il numero di particelle, con $D$ la dimensione dello spazio decisionale e con $K$ il numero di sottointervalli temporali utilizzati nell'implementazione. Nelle sezioni sperimentali, $N$ sarà talvolta usato come abbreviazione di $N_p$ per mantenere la notazione delle tabelle di campagna.
+\subsection{Dinamica locale}
+Si considera la minimizzazione di $f:\Omega\subset\mathbb R^D\to\mathbb R$ in un dominio rettangolare. Lo sciame contiene $N$ particelle. Per la particella $i$, $\boldsymbol x_i$ e $\boldsymbol v_i$ indicano posizione e velocità, $\boldsymbol p_i$ la migliore posizione personale e $\boldsymbol s_i$ il leader sociale selezionato nel vicinato.
 
-La costruzione parte dalla PSO discreta. Per la particella $i$, posizione e velocità soddisfano
-\begin{align}
- \boldsymbol p_i^{\lambda+1}
-   &=\boldsymbol p_i^{\lambda}+\boldsymbol v_i^{\lambda+1},
- \label{eq:or-discrete-position}\\
- \boldsymbol v_i^{\lambda+1}
-   &=\mu\boldsymbol v_i^{\lambda}
-     +c_c r_1\bigl(\boldsymbol p_i^b-\boldsymbol p_i^{\lambda}\bigr)
-     +c_s r_2\bigl(\boldsymbol p_{gb}-\boldsymbol p_i^{\lambda}\bigr),
- \label{eq:or-discrete-velocity}
-\end{align}
-qui $\mu$ è il peso d'inerzia, $c_c$ e $c_s$ sono i coefficienti cognitivo e sociale, $\boldsymbol p_i^b$ è la migliore posizione personale e $\boldsymbol p_{gb}$ è la migliore posizione globale. Le variabili casuali $r_1,r_2$ sono scalari e appartengono a $[0,1]$ nella formulazione sorgente. L'articolo afferma che variano con l'indice di iterazione, ma non introduce per esse un indice di particella e non specifica esplicitamente se la stessa coppia sia condivisa dall'intero sciame oppure estratta indipendentemente per ogni particella. Questa distinzione è rilevante per l'implementazione, ma non è risolta dalla notazione dell'articolo.
-
-Seguendo la costruzione a tempo continuo di~\citep{Orlando2021}, la posizione di una particella è rappresentata da una funzione vettoriale $\boldsymbol p_i(t)\in\mathbb R^D$, la cui velocità è $\dot{\boldsymbol p}_i(t)$. Si ottiene il seguente problema di Cauchy:
+La CPSO di Orlando--Ricciardello \citep{Orlando2021} aggiorna lo stato attraverso la dinamica
 \begin{equation}
-\begin{aligned}
- \ddot{\boldsymbol p}_i(t)&+(1-\mu(t))\dot{\boldsymbol p}_i(t)\\
- &+\bigl(c_c r_1(t)+c_s r_2(t)\bigr)\boldsymbol p_i(t)=\boldsymbol f_i(t),\\
- \boldsymbol p_i(0)&=\boldsymbol p_i^0,\qquad
- \dot{\boldsymbol p}_i(0)=\boldsymbol v_i^0.
-\end{aligned}
-\label{eq:or-continuous-cauchy}
+\begin{split}
+\ddot{\boldsymbol x}_i+(1-\mu_k)\dot{\boldsymbol x}_i
++(a_i^k+b_i^k)\boldsymbol x_i
+= a_i^k\boldsymbol p_i^k+b_i^k\boldsymbol s_i^k,
+\end{split}
+\label{eq:cpso-model}
 \end{equation}
-con termine forzante
+con $a_i^k=c_c r_{1,i}^k$ e $b_i^k=c_s r_{2,i}^k$. I coefficienti casuali sono scalari, estratti per particella e aggiornamento. Durante ciascun intervallo di ampiezza $\Delta t$, coefficienti e attrattori restano costanti. La soluzione analitica dell'equazione fornisce la nuova posizione e la nuova velocità; seguono il trattamento del dominio e la valutazione della funzione obiettivo. L'inerzia $\mu_k$ decresce linearmente lungo gli aggiornamenti programmati.
+
+Il passo $\Delta t$ controlla l'evoluzione tra due valutazioni successive. La soluzione locale è analitica, mentre i migliori personali e sociali vengono aggiornati alle osservazioni discrete. Il caso global-best utilizza il migliore personale dell'intera popolazione; gli altri vicinati selezionano il leader tra i nodi adiacenti. Il propagatore e le regole operative sono raccolti in Appendice~\ref{app:dynamics}.
+
+\subsection{Distribuzione del lavoro e informazione sociale}
+Le cinque modalità condividono la dinamica locale e differiscono per distribuzione del lavoro e disponibilità degli attrattori (Tabella~\ref{tab:execution-modes}). Nel passo sincrono tutte le particelle leggono lo stesso stato sociale all'inizio della generazione. I risultati vengono poi applicati secondo un ordine deterministico. Questa organizzazione consente di confrontare direttamente i tempi dei due esecutori paralleli con quelli del riferimento seriale, dopo il controllo di equivalenza.
+
+\begin{table*}[b]
+\centering\small
+\caption{Modalità di esecuzione della CPSO. L'invarianza sincrona richiede inizializzazione e stream casuali identici, obiettivo deterministico e medesime regole di aggiornamento.}
+\label{tab:execution-modes}
+\begin{tabularx}{\textwidth}{@{}p{2.7cm}X X p{3.0cm}@{}}
+\toprule
+Modalità & Lavoro distribuito & Informazione sociale & Relazione con il seriale \\
+\midrule
+Seriale sincrona & Un solo flusso di esecuzione. & Stato comune a inizio generazione. & Riferimento.\\
+Master--slave & Valutazioni dell'obiettivo. & Stato comune e aggiornamento ordinato. & Stessa traiettoria.\\
+Particle-parallel & Inizializzazione, propagazione locale e valutazioni. & Stato comune e aggiornamento ordinato. & Stessa traiettoria.\\
+Asincrona & Eventi di propagazione e valutazione. & Risultati disponibili al completamento. & Dinamica dipendente dall'ordine degli eventi.\\
+Isole & Evoluzione di sottopopolazioni. & Informazione locale e scambi periodici. & Dinamica con comunicazione intermittente.\\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+Nella modalità asincrona ogni particella esegue una sequenza di eventi. Un risultato completato può aggiornare subito l'informazione sociale letta dagli eventi successivi. Nel modello a isole, la popolazione è divisa in sottopopolazioni che evolvono in modo sincrono al proprio interno. La migrazione trasferisce soluzioni già valutate secondo una rete di scambio tra isole.
+
+Per $K$ aggiornamenti di ciascuna particella il costo in valutazioni, inclusa l'inizializzazione, è
 \begin{equation}
- \boldsymbol f_i(t)
- =c_c r_1(t)\boldsymbol p_i^b(t)
-  +c_s r_2(t)\boldsymbol p_{gb}(t).
- \label{eq:or-forcing}
+N_{\mathrm{FE}}=N(K+1).
+\label{eq:fe-budget}
 \end{equation}
-Introducendo la frequenza naturale non smorzata $\omega(t)$ e il rapporto di smorzamento $\zeta(t)$ si ottengono le definizioni utilizzate nell'articolo sorgente:
-\begin{equation}
- 2\zeta(t)\omega(t)=1-\mu(t),\qquad
- \omega^2(t)=c_c r_1(t)+c_s r_2(t).
- \label{eq:or-damping-frequency}
-\end{equation}
-Il modello continuo è quindi un oscillatore armonico smorzato.  La legge del peso d'inerzia è lineare nell'indice di iterazione, da $\mu_{\max}$ all'inizio a $\mu_{\min}$ all'ultimo passo:
-\begin{equation}
- \mu(\lambda)=\mu_{\max}
- -\frac{\mu_{\max}-\mu_{\min}}{\lambda_{\max}}\lambda.
- \label{eq:or-inertia-schedule}
-\end{equation}
-Nell'implementazione, per $K>1$, l'indice di aggiornamento è $k=0,\ldots,K-1$ e la legge effettivamente utilizzata è
-\begin{equation}
- \mu_k=\mu_{\max}
- -\frac{\mu_{\max}-\mu_{\min}}{K-1}k.
- \label{eq:code-inertia-schedule}
-\end{equation}
-Questa identificazione pone $\lambda_{\max}=K-1$; per $K\leq1$ il codice mantiene $\mu_k=\mu_{\max}$. È una convenzione d'indicizzazione dell'implementazione, coerente con una schedule che raggiunge $\mu_{\min}$ all'ultimo aggiornamento.
+Questa contabilità rende confrontabili le modalità CPSO a budget fissato. Nei benchmark con altri metodi il budget è invece contabilizzato direttamente in FE, poiché il numero di particelle rivalutate per generazione dipende dall'algoritmo.
 
-
-\paragraph{Problemi di Cauchy a coefficienti costanti a tratti.}
-$\omega(t)$ e $\zeta(t)$ vengono approssimate come costanti a tratti su $K$ sottointervalli di uguale ampiezza $\Delta t=T/K$:
-\begin{equation}
-\begin{aligned}
- \omega(t)&=\omega_k,\qquad \zeta(t)=\zeta_k,\\
- t&\in[k\Delta t,(k+1)\Delta t],
- \qquad k=0,\ldots,K-1.
-\end{aligned}
- \label{eq:or-piecewise-coefficients}
-\end{equation}
-In ciascun sottointervallo, lo stato e le posizioni best sono assunti al suo estremo sinistro. Il corrispondente problema di Cauchy a coefficienti costanti è
-\begin{equation}
-\begin{cases}
- \ddot{\boldsymbol p}_i(t)+2\zeta_k\omega_k\dot{\boldsymbol p}_i(t)
- +\omega_k^2\boldsymbol p_i(t)=\boldsymbol f_{i,k},\\
- \boldsymbol p_i(k\Delta t)=\boldsymbol p_i^k,\qquad
- \dot{\boldsymbol p}_i(k\Delta t)=\boldsymbol v_i^k.
-\end{cases}
-\label{eq:or-frozen-cauchy}
-\end{equation}
-L'estremo della soluzione analitica fornisce $(\boldsymbol p_i^{k+1},\boldsymbol v_i^{k+1})$ e diventa la condizione iniziale del sottointervallo successivo.
-
-\subsection{Corrispondenza tra il modello congelato e il nucleo C++}
-
-Nel caso di riferimento global-best, l'implementazione estrae per ogni particella $i$ e intervallo $k$ una coppia di valori scalari $r_{1,i}^k,r_{2,i}^k\in[0,1)$ e condivide ciascun valore fra tutte le $D$ coordinate della particella. Si definiscano
-\begin{equation}
-\begin{aligned}
- a_i^k&=c_c r_{1,i}^k, & b_i^k&=c_s r_{2,i}^k,\\
- q_i^k&=a_i^k+b_i^k=\omega_{i,k}^2,
- &\boldsymbol F_i^k&=a_i^k\boldsymbol p_i^{b,k}
-                   +b_i^k\boldsymbol p_{gb}^k,\\
- \alpha_{i,k}&=\zeta_{i,k}\omega_{i,k}
-              =\frac{1-\mu_k}{2}.
-\end{aligned}
-\label{eq:or-code-coefficients}
-\end{equation}
-Il codice risolve, coordinata per coordinata,
-\begin{equation}
- \ddot x_{i,j}+2\alpha_{i,k}\dot x_{i,j}+q_i^k x_{i,j}
- =F_{i,j}^k,
- \label{eq:or-code-frozen-ode}
-\end{equation}
-Sotto l'interpretazione del termine forzante pesato dai numeri casuali, questa è algebricamente la stessa equazione dell'oscillatore congelato in~\eqref{eq:or-frozen-cauchy}. Quando la topologia configurata è global-best il codice utilizza il migliore globale; le configurazioni con leader di vicinato sostituiscono $\boldsymbol p_{gb}^k$ con un attrattore locale e costituiscono estensioni.
-
-\paragraph{Estensioni operative: dominio limitato e topologie sociali}
-
-Le sette topologie di comunicazione implementate sono: global-best; anello periodico di raggio uno; griglia toroidale di von Neumann con sé stessa e quattro vicini ortogonali; wheel; grafo random di tipo ER reso connesso mediante archi ponte; small-world di Watts--Strogatz con $k=4$ e probabilità di riconnessione $0.15$; Barabási--Albert con clique iniziale di dimensione $m+1$ e parametro di attaccamento $m=2$. Soltanto global-best corrisponde alla regola sociale dell'articolo originale; le altre sei scelte sono estensioni. Queste famiglie sono motivate da modelli di rete consolidati e da studi sulle topologie PSO~\citep{Kennedy1999Topology,KennedyMendes2002,ErdosRenyi1959,WattsStrogatz1998,BarabasiAlbert1999,LiuScaleFreePSO2014}.
-
-\paragraph{Esecutori sincroni e invarianza della traiettoria}
-
-In una generazione sincrona, tutti i leader sociali vengono selezionati dallo stesso snapshot pre-generazione $P^k=(\boldsymbol p_1^{b,k},\ldots,\boldsymbol p_{N_p}^{b,k})$. Ogni propagazione e valutazione della funzione obiettivo è assegnata a uno slot identificato dalla particella; gli aggiornamenti dei migliori personali e del global-best vengono poi applicati in ordine deterministico. Il backend master--slave parallelizza soltanto le valutazioni dell'obiettivo, mentre particle-parallel distribuisce anche l'inizializzazione e la propagazione locale delle particelle. I coefficienti di propagazione $q_i^k$ e $\alpha_{i,k}$ sono comuni alle coordinate di una stessa particella.
-
-\paragraph{Esecutore asincrono event-driven}
-
-Dopo l'inizializzazione viene inserito in coda un evento $(i,0)$ per ogni particella. Un evento $(i,k)$ acquisisce sotto mutex lo snapshot del migliore personale locale e dell'attrattore sociale; rilascia il lock prima della propagazione $\Phi_{\Delta t}$ e della valutazione $J(x)$; acquisisce nuovamente il lock per il commit del miglioramento e dell'incumbent globale. Il successivo evento della stessa particella viene inserito soltanto dopo il completamento del precedente, quindi non esistono due eventi simultanei in volo per il medesimo indice. Lo stream casuale resta assegnato alla particella, ma non rende deterministico lo scheduling. Ogni particella esegue esattamente $K$ eventi dopo la valutazione iniziale, per cui il budget rimane $N_{\mathrm{FE}}=N_p(K+1)$.
-
-\paragraph{Modello a isole e migrazione}
-
-La popolazione totale $N_p$ viene suddivisa in $M$ isole di uguale dimensione $n=N_p/M$, con $n\geq2$. Ogni isola esegue localmente una generazione sincrona e usa una topologia intra-isola ammessa dal codice. Quando è previsto un evento di migrazione, il migliore personale di ciascuna isola viene copiato in uno snapshot immutabile; le sostituzioni sono applicate solo dopo aver costruito lo snapshot. Nella migrazione ad anello l'isola $m$ invia il proprio incumbent all'isola $(m+1)\bmod M$; nella variante fully-connected ogni destinatario considera il migliore incumbent tra le altre isole. Il destinatario è la particella con il peggiore valore di personal best e la sostituzione avviene soltanto se l'immigrato è strettamente migliore.
-
-La sostituzione aggiorna congiuntamente la posizione corrente e il personal best del destinatario, assegna alla posizione corrente il valore dell'immigrato, azzera la velocità e conserva lo stream pseudocasuale del destinatario. La migrazione non richiede nuove FE perché il valore dell'immigrato è già disponibile. Il codice non migra dopo l'ultima generazione, richiede che $N_p$ sia divisibile per $M$, che ogni isola abbia almeno due particelle e che il numero di worker non superi il numero di isole. L'intervallo, la topologia di migrazione e la politica di sostituzione sono parametri di configurazione e vengono riportati nell'Appendice~\ref{app:campaigns}.
-
-Tutte le modalità considerate mantengono il budget
-\begin{equation}
- N_{\mathrm{FE}}=N_p(K+1),
- \label{eq:fe-budget}
-\end{equation}
-comprensivo della valutazione iniziale di ogni particella.
+\subsection{Vicinati sociali}
+Il confronto comprende global-best, ring, von Neumann, wheel, random connessa, Watts--Strogatz e Barabási--Albert. I grafi sono statici durante ciascuna esecuzione. Le reti sociali interne a una popolazione e le reti di migrazione tra isole svolgono ruoli distinti: le prime determinano il leader di ogni particella, le seconde regolano lo scambio tra sottopopolazioni. I parametri di costruzione sono riportati separatamente in Appendice~\ref{app:dynamics}.

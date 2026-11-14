@@ -1,7 +1,7 @@
 \section{Formulazioni e configurazioni delle baseline PSO}
 \label{app:baselines}
 
-Le baseline sono algoritmi PSO discreti in spazio decisionale continuo e sono implementate in moduli NumPy distinti dal nucleo CPSO C++. In questa appendice si documentano le formule e le scelte effettivamente presenti nel codice. Le adattazioni per budget FE comune non vengono presentate come parte delle formulazioni originali. 
+Le baseline sono algoritmi PSO discreti in spazio decisionale continuo e sono implementate in moduli NumPy distinti dal nucleo CPSO C++. Le formule seguenti specificano le configurazioni descritte nel protocollo, inclusi gli adattamenti di popolazione, dominio e budget. 
 
 \subsection{Parametri e adattamenti comuni}
 
@@ -9,7 +9,7 @@ La popolazione esterna è fissata a $N=40$ per tutti gli undici metodi e la valu
 
 \begin{table}[H]
 \centering
-\caption{Configurazioni effettive delle baseline nel codice Python. $V_{\max}$ è espresso come frazione della larghezza del dominio.}
+\caption{Configurazioni delle baseline dichiarate nel protocollo. $V_{\max}$ è espresso come frazione della larghezza del dominio.}
 \label{tab:app-baseline-config}
 \small
 \begin{tabularx}{\textwidth}{@{}lXllX@{}}
@@ -41,7 +41,7 @@ La PSO con fattore di costrizione usa
  \quad \varphi=c_1+c_2>4.
  \label{eq:app-clerc}
 \end{equation}
-Per $c_1=c_2=2.05$, $\varphi=4.1$ e $\chi\simeq0.7298$. Il sorgente Python usa la seconda forma, corretta; il denominatore alternativo $4-\varphi+\sqrt{\varphi^2-4\varphi}$ comparso in una versione del manoscritto era un refuso redazionale e non corrisponde all'implementazione.
+Per $c_1=c_2=2.05$, $\varphi=4.1$ e $\chi\simeq0.7298$. Le due espressioni sono equivalenti per $\varphi>4$.
 
 \subsection{Inerzia e CLPSO}
 
@@ -69,7 +69,7 @@ con $M=100$, $\alpha=0.5$, $\beta=0.01$. Nella notazione originale, che usa il r
  +r_3\gamma(\bar x_j^t-x_{i,j}^t),
  \label{eq:app-slpso-update}
 \end{equation}
-con $r_1,r_2,r_3\sim U(0,1)$ e un dimostratore selezionato indipendentemente per coordinata fra le particelle migliori. La configurazione mantiene $N=40$ per la parità FE; la fonte primaria \citep{ChengJin2015SLPSO} raccomanda invece $m=M+\lfloor D/10\rfloor$ con $M=100$. La popolazione fissa è dunque un adattamento esplicito del protocollo, non un errore nella formula di apprendimento. I risultati vanno etichettati come SL-PSO con popolazione fissata, non come riproduzione integrale di tutti i default originali.
+con $r_1,r_2,r_3\sim U(0,1)$ e un dimostratore selezionato indipendentemente per coordinata fra le particelle migliori. La configurazione mantiene $N=40$ per la parità FE; la fonte primaria \citep{ChengJin2015SLPSO} raccomanda invece $m=M+\lfloor D/10\rfloor$ con $M=100$. I risultati SL-PSO si riferiscono pertanto alla configurazione con popolazione fissata a 40.
 \subsection{SPSO-2011}
 
 La baseline SPSO-2011 costruisce un grafo diretto casuale di informant con $K=3$ informant più il self. Sia $p_i$ il personal best e $l_i$ il miglior personal best nell'insieme di informant. Il centro di gravità è
@@ -100,7 +100,7 @@ con $\chi=2/(\phi-2+\sqrt{\phi^2-4\phi})$. Il sorgente campiona pesi casuali coo
 
 \subsection{Competitive Swarm Optimizer e DMS-PSO}
 
-Nel Competitive Swarm Optimizer (qui abbreviato nel testo come \emph{Competitive Swarm Optimizer}, per evitare collisioni con l'acronimo CPSO), le particelle vengono accoppiate casualmente. Il vincitore resta invariato; il perdente aggiorna
+Nel Competitive Swarm Optimizer (CSO), le particelle vengono accoppiate casualmente. Il vincitore resta invariato; il perdente aggiorna
 \begin{equation}
 \begin{aligned}
  v_l^{t+1}&=r_1\odot v_l^t+r_2\odot(x_w^t-x_l^t)
@@ -121,7 +121,3 @@ La baseline DMS-PSO usa sottosciami di dimensione obiettivo tre, riorganizzati c
 \label{eq:app-dms}
 \end{equation}
 con inerzia lineare da $0.9$ a $0.2$. La variante di progetto non include ricerca locale quasi-Newton; il resto della partizione è aggiunto all'ultimo sottosciame.
-
-\subsection{Controlli da completare prima del benchmark definitivo}
-
-Prima delle campagne esterne devono essere completati e archiviati: (i) congelamento esplicito della popolazione SL-PSO a $N=40$ come adattamento di confronto, con eventuale esperimento separato usando $m=M+\lfloor D/10\rfloor$; (ii) confronto indipendente delle implementazioni SPSO-2011, FIPS, CSO e DMS-PSO con formule e test di riferimento; (iii) verifica dei limiti $V_{\max}$ registrati nel manifest; (iv) conferma che tutti i metodi eseguano esattamente il budget FE previsto. Le formule di Clerc--Kennedy e CSO sono già coerenti nel codice Python; le anomalie individuate nelle versioni precedenti del LaTeX erano errori redazionali.

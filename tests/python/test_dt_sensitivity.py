@@ -21,7 +21,7 @@ _SPEC.loader.exec_module(DRIVER)
 
 
 def test_predeclared_dt_screening_design_and_budget(tmp_path, capsys):
-    config_path = ROOT / "configs/campaigns/cpso_dt_sensitivity_screening.json"
+    config_path = ROOT / "tests/fixtures/configs/campaigns/cpso_dt_sensitivity_screening.json"
     config = DRIVER.load_config(config_path)
     jobs = DRIVER.planned_runs(config)
     fe_per_run = config["population_size"] * (config["iterations"] + 1)

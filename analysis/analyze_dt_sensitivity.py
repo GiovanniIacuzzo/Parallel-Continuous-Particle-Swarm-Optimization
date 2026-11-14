@@ -393,7 +393,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--input", type=Path,
-        default=ROOT / "results/raw/cpso_dt_sensitivity_screening_v1",
+        required=True,
         help="Campaign directory containing study_config.json and runs.jsonl",
     )
     parser.add_argument("--output-dir", type=Path, default=None)
@@ -402,8 +402,9 @@ def main() -> int:
     args = parser.parse_args()
     if args.bootstrap_replicates < 200:
         parser.error("--bootstrap-replicates must be at least 200")
-    output_dir = args.output_dir or args.input / "analysis"
-    figures_dir = args.figures_dir or args.input / "figures"
+    from cpso_serial.output_policy import results_output
+    output_dir = results_output(args.output_dir or ROOT / "results/analysis/dt" / args.input.name)
+    figures_dir = results_output(args.figures_dir or ROOT / "results/figures/dt" / args.input.name)
     result = analyze(args.input, output_dir, figures_dir, bootstrap_replicates=args.bootstrap_replicates)
     print(
         f"Validated {result['validation']['n_runs']} runs over "

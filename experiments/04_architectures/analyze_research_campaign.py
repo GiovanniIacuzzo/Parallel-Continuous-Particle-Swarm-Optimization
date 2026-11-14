@@ -877,7 +877,9 @@ def main() -> int:
     parser.add_argument("--no-plots", action="store_true")
     args = parser.parse_args()
     campaign = json.loads(args.campaign_config.read_text(encoding="utf-8"))
-    analyze_campaign_directory(campaign, args.campaign_output.expanduser().resolve(), no_plots=args.no_plots)
+    from cpso_serial.output_policy import results_output
+    output = results_output(args.campaign_output)
+    analyze_campaign_directory(campaign, output, no_plots=args.no_plots)
     return 0
 
 

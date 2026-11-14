@@ -188,7 +188,8 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     output = args.output or ROOT / "results" / "external_benchmarks" / args.config.stem
-    return execute(args.config, output, dry_run=args.dry_run)
+    from cpso_serial.output_policy import results_output
+    return execute(args.config, results_output(output), dry_run=args.dry_run)
 
 
 if __name__ == "__main__":

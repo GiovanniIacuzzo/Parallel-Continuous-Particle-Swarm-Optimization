@@ -325,10 +325,11 @@ def _plot_summary(rows: list[dict[str, Any]], output: Path) -> list[Path]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-root", type=Path, default=ROOT / "results/external_benchmarks")
-    parser.add_argument("--output", type=Path, default=ROOT / "paper/figures/external_pilots")
+    parser.add_argument("--output", type=Path, default=ROOT / "results/figures/external_benchmarks")
     args = parser.parse_args()
     results_root = args.results_root.expanduser().resolve()
-    output = args.output.expanduser().resolve()
+    from cpso_serial.output_policy import results_output
+    output = results_output(args.output)
     if not results_root.is_dir():
         print(f"No external benchmark results directory: {results_root}")
         return 0

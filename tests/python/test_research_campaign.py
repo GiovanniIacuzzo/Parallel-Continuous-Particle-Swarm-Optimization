@@ -134,7 +134,7 @@ def test_environment_metadata_is_non_identifying_and_contains_build_context():
     assert "home" not in str(metadata).lower()
 
 def test_definitive_campaign_configuration_and_run_count():
-    path = ROOT / "configs" / "campaigns" / "definitive_architecture_campaign.json"
+    path = ROOT / "tests" / "fixtures" / "configs" / "campaigns" / "definitive_architecture_campaign.json"
     campaign = json.loads(path.read_text(encoding="utf-8"))
     validate_campaign(campaign)
     total = sum(
@@ -441,7 +441,7 @@ def test_speedup_is_median_of_paired_end_to_end_ratios_and_checks_fe(tmp_path):
 
 
 def test_topology_scaling_uses_one_matched_serial_reference_per_topology():
-    path = ROOT / "configs/campaigns/cpso_topology_expansion_confirmatory.json"
+    path = ROOT / "tests/fixtures/configs/campaigns/cpso_topology_expansion_confirmatory.json"
     campaign = json.loads(path.read_text(encoding="utf-8"))
     validate_campaign(campaign)
     performance = next(stage for stage in campaign["stages"] if stage["kind"] == "performance")

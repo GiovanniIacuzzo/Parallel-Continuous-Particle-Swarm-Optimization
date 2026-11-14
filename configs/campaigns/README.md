@@ -1,17 +1,10 @@
-# Campaign configurations
+# Active experiment configurations
 
-- `definitive_architecture_campaign.json`: predeclared confirmatory multi-stage
-  campaign (9,360 optimization runs and 273,888,000 objective evaluations;
-  30 search seeds and 10 timing seeds).
-- `campaign_smoke.json`: integration-only campaign for checking orchestration,
-  checkpointing and analysis. Never use its outputs for scientific conclusions.
-- `cpso_*_pilot.json`: broader exploratory designs intended for development
-  machines; their outputs are not confirmatory.
-- `cpso_*_m2_pilot.json` and `cpso_dt_sensitivity_m2_screening.json`: local
-  Apple-Silicon profiles. They retain the per-run FE budgets of the broader
-  pilot designs and reduce replication count where needed. Runtime measurements
-  are specific to the Mac and cannot be compared directly with HPC wall times.
+**Current stage (dt, do not run both unless intended):**
 
-The root `README.md` contains the build, campaign execution and analysis
-workflow. Each JSON records the campaign's `evidence_class`; the runner carries
-that designation into `campaign_manifest.json` and the analysis report.
+- `cpso_dt_sweep_100_m2.json`: historical exploratory 100-point grid; preserve for provenance; no need to rerun.
+- `cpso_dt_statistical_selection_m2.json`: independent statistical selection study (30 paired seeds); active candidate for next campaign.
+- `campaign_smoke.json`: tiny integration-only sanity check.
+
+Do not treat older `definitive_architecture_campaign.json` (archived) as final: its dt value has not been locked.
+Historic configurations are provided in the separate recovery ZIP. Fixtures in `tests/fixtures/configs/` are retained only to keep regression checks self-contained.

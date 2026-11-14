@@ -1,0 +1,56 @@
+\section{Propagazione analitica e regole di aggiornamento}
+\label{app:dynamics}
+
+Questa appendice specifica il passo locale e le regole di esecuzione usate nel confronto. Indichiamo con $a=c_c r_1$, $b=c_s r_2$, $q=a+b$, $\alpha=(1-\mu_k)/2$ e $F_j=a p_{i,j}+b s_{i,j}$ i coefficienti congelati di una particella. I due numeri casuali sono estratti per particella e aggiornamento e condivisi tra coordinate. Per $K>1$ l'inerzia è
+\begin{equation}
+\mu_k=\mu_{\max}-\frac{k}{K-1}(\mu_{\max}-\mu_{\min}),\qquad k=0,\ldots,K-1.
+\label{eq:code-inertia-schedule}
+\end{equation}
+Per un solo aggiornamento si usa $\mu_{\max}$.
+
+\subsection{Soluzione del problema a coefficienti congelati}
+Per $q>0$, ponendo $y_j=x_j-F_j/q$, il sistema omogeneo è $\ddot y_j+2\alpha\dot y_j+q y_j=0$. Sia $h=\Delta t$. Nel regime sottosmorzato, con $\omega=\sqrt{q-\alpha^2}$, la propagazione è
+\begin{align}
+y_j(h)&=e^{-\alpha h}\left[y_j(0)\cos(\omega h)+\frac{v_j(0)+\alpha y_j(0)}{\omega}\sin(\omega h)\right],\\
+v_j(h)&=e^{-\alpha h}\left[v_j(0)\cos(\omega h)-\frac{q y_j(0)+\alpha v_j(0)}{\omega}\sin(\omega h)\right].
+\end{align}
+Nel regime sovrasmorzato si sostituiscono $\omega$ con $\nu=\sqrt{\alpha^2-q}$ e le funzioni trigonometriche con $\cosh(\nu h)$ e $\sinh(\nu h)$. Nel caso critico,
+\begin{align}
+y_j(h)&=e^{-\alpha h}\{y_j(0)+[v_j(0)+\alpha y_j(0)]h\},\\
+v_j(h)&=e^{-\alpha h}\{v_j(0)-[q y_j(0)+\alpha v_j(0)]h\}.
+\end{align}
+Infine $x_j(h)=y_j(h)+F_j/q$. Per $q=0$, essendo $a,b\geq0$, anche $F_j=0$: se $\alpha\ne0$, $v_j(h)=e^{-2\alpha h}v_j(0)$ e $x_j(h)=x_j(0)+(1-e^{-2\alpha h})v_j(0)/(2\alpha)$; se $\alpha=0$ si ottiene il moto uniforme. Queste espressioni descrivono il propagatore analitico del modello congelato; la selezione dei migliori avviene dopo la valutazione della nuova posizione.
+
+\subsection{Dominio e generazione dei vicinati}
+Il confinamento nel box è applicato coordinata per coordinata mediante clipping della posizione e restituzione della componente di velocità uscente, con coefficiente $e$. I parametri delle reti sono raccolti nella Tabella~\ref{tab:app-graphs}. La denominazione \emph{wheel} è mantenuta come etichetta del dato: la descrizione implementativa del manoscritto sorgente indica un hub senza archi periferici, cioè una stella. L'interpretazione strutturale di questa configurazione richiede pertanto la lista degli archi del grafo effettivamente usato.
+
+\begin{table}[H]
+\centering\small
+\caption{Specifiche dei sette vicinati presenti nei risultati. I parametri sono quelli dichiarati; i descrittori dei grafi realizzati non sono inclusi nei dati aggregati.}
+\label{tab:app-graphs}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Vicinato & Specifica \\
+\midrule
+Global-best & Migliore personale dell'intera popolazione.\\
+Ring & Anello periodico di raggio uno.\\
+Von Neumann & Griglia toroidale $8\times8$, con quattro vicini ortogonali.\\
+Wheel (etichetta del dato) & Configurazione con hub; distinzione wheel/stella da verificare sugli archi.\\
+Random connessa & Parametro di grado 4; collegamento delle componenti tramite ponti.\\
+Watts--Strogatz & Grado iniziale 4 e probabilità di rewiring 0.15.\\
+Barabási--Albert & Attaccamento preferenziale $m=2$, con clique iniziale di $m+1$ nodi, secondo la descrizione implementativa.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Esecuzione sincrona e asincrona}
+Nel passo sincrono i migliori personali vengono copiati in uno stato comune. Ogni particella dispone di uno stream pseudocasuale e di uno slot di output propri. La selezione sociale legge lo stato comune; propagazione e valutazione producono risultati locali; gli aggiornamenti dei migliori sono applicati in ordine deterministico. Con stato iniziale, stream, funzione obiettivo deterministica e regole di parità identici, le operazioni assegnate a una particella non dipendono dal numero di worker. Per induzione sui passi, gli esecutori sincroni producono gli stessi stati del riferimento seriale, a parità di aritmetica utilizzata.
+
+Nell'esecutore event-driven, un evento acquisisce lo stato personale e sociale sotto mutua esclusione, esegue propagazione e valutazione fuori dalla sezione critica e pubblica il risultato. L'evento successivo della stessa particella è inserito soltanto al completamento del precedente. Ogni particella esegue $K$ aggiornamenti; l'ordine di completamento determina l'informazione sociale osservata.
+
+\subsection{Scambio tra isole}
+Le $M$ isole hanno dimensione $n=N/M\geq2$. Prima dello scambio si copiano gli incumbent di tutte le isole. Nella migrazione ad anello l'isola $m$ invia il proprio incumbent a $(m+1)\bmod M$; nella migrazione completa ogni destinatario considera il migliore incumbent delle altre isole. Un immigrato strettamente migliore sostituisce la particella con il peggiore personal best: posizione corrente, personal best e valore vengono aggiornati, la velocità è azzerata e lo stream casuale del destinatario è conservato. Lo scambio riutilizza una valutazione nota e non consuma FE aggiuntive. Per intervallo $\tau$ e $K$ aggiornamenti, senza migrazione finale, i tentativi sono
+\begin{equation}
+ A_{\rm mig}=M\left\lfloor\frac{K-1}{\tau}\right\rfloor.
+\end{equation}
+Per $M=4$, $K=200$ e $\tau=20$ risultano nove epoche e 36 tentativi per run.

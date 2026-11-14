@@ -1,105 +1,41 @@
 \documentclass[10pt,a4paper,twocolumn]{article}
-
-% --- Geometria della Pagina e Layout ---
-\usepackage[top=1.7cm,bottom=1.75cm,left=1.6cm,right=1.6cm,columnsep=0.6cm]{geometry}
-
-% --- Codifica e Lingua ---
+\usepackage[top=1.8cm,bottom=1.9cm,left=1.7cm,right=1.7cm,columnsep=0.65cm]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[italian]{babel}
-
-% --- Pacchetti Matematici ---
-\usepackage{amsmath,amsthm}
-\usepackage{mathtools}
-\usepackage{empheq}
-
-% --- Font Testo e Matematica ---
-\usepackage{amssymb,amsfonts}
-\usepackage{newtxtext,newtxmath}
-\usepackage{bm}
+\usepackage[provide=*,italian]{babel}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bm}
+\usepackage{mathptmx}
 \usepackage{microtype}
-
-% --- Colori, Tabelle, Figure e Float ---
-\usepackage{xcolor}
-\usepackage{booktabs,array}
-\usepackage{tabularx}
-\usepackage{multirow}
-\usepackage{graphicx}
-\usepackage{subcaption}
-\usepackage{float}
-\usepackage{placeins}
-\usepackage{stfloats}
-
-% --- Algoritmi e Bibliografia ---
-\usepackage{algorithm}
-\usepackage{algorithmic}
+\usepackage{booktabs,array,tabularx,graphicx,xcolor}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf,justification=justified,singlelinecheck=false}
+\captionsetup[table]{skip=5pt}
+\usepackage{placeins,stfloats,float}
 \usepackage[numbers,sort&compress]{natbib}
-
-% --- Collegamenti Ipertestuali e Riferimenti ---
-\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage[colorlinks=true,linkcolor=blue!40!black,citecolor=blue!40!black,urlcolor=blue!40!black]{hyperref}
 \usepackage[nameinlink,noabbrev]{cleveref}
-
-% Nomi localizzati dei riferimenti incrociati per la versione italiana.
-\crefname{section}{sezione}{sezioni}
-\Crefname{section}{Sezione}{Sezioni}
-\crefname{subsection}{sottosezione}{sottosezioni}
-\Crefname{subsection}{Sottosezione}{Sottosezioni}
-\crefname{figure}{figura}{figure}
-\Crefname{figure}{Figura}{Figure}
-\crefname{table}{tabella}{tabelle}
-\Crefname{table}{Tabella}{Tabelle}
-\crefname{equation}{equazione}{equazioni}
-\Crefname{equation}{Equazione}{Equazioni}
-\crefname{theorem}{teorema}{teoremi}
-\Crefname{theorem}{Teorema}{Teoremi}
-\crefname{lemma}{lemma}{lemmi}
-\Crefname{lemma}{Lemma}{Lemmi}
-\usepackage{enumitem}
-\usepackage{siunitx}
-
-\allowdisplaybreaks[2]
-\emergencystretch=1.5em
-\sisetup{detect-all,per-mode=symbol}
-
-\renewcommand{\topfraction}{0.75}
-\renewcommand{\bottomfraction}{0.70}
-\renewcommand{\dbltopfraction}{0.75}
-\renewcommand{\textfraction}{0.15}
-\renewcommand{\floatpagefraction}{0.70}
-\renewcommand{\dblfloatpagefraction}{0.70}
-\setcounter{topnumber}{2}
-\setcounter{bottomnumber}{1}
-\setcounter{totalnumber}{3}
-\setcounter{dbltopnumber}{2}
-
-% --- Ambienti Matematici Teorema / Definizione ---
-\newtheorem{theorem}{Teorema}[section]
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{corollary}[theorem]{Corollario}
-\newtheorem{proposition}[theorem]{Proposizione}
-\newtheorem{definition}[theorem]{Definizione}
-\newtheorem{remark}{Osservazione}
-
-\graphicspath{{figurs/results/}}
-
-% --- Macro Personalizzate ---
-\newcommand{\Om}{\Omega}
-\newcommand{\eps}{\boldsymbol{\varepsilon}}
-\newcommand{\sig}{\boldsymbol{\sigma}}
+\newtheorem{proposition}{Proposizione}[section]
+\newtheorem{theorem}[proposition]{Teorema}
+\newtheorem{lemma}[proposition]{Lemma}
 \newcommand{\R}{\mathbb{R}}
-\newcommand{\V}{V}
-\newcommand{\Q}{Q}
-\newcommand{\Ltwo}{L^2}
-\newcommand{\dd}{\,\mathrm{d}}
-\newcommand{\ip}[2]{\left(#1,#2\right)_{\Omega}}
 \newcommand{\norm}[1]{\left\lVert #1\right\rVert}
-\newcommand{\CD}[1]{{}^{C}D_t^{#1}}
-\newcommand{\I}{\mathbb{I}}
-\newcommand{\tht}{\boldsymbol{\theta}}
-\newcommand{\Gmap}{\mathcal{G}}
-\newcommand{\Jfun}{\mathcal{J}}
-
-% --- Titolo e Autori ---
+\graphicspath{{figures/results/}}
+\emergencystretch=1.5em
+\allowdisplaybreaks[1]
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\renewcommand{\topfraction}{0.90}
+\renewcommand{\bottomfraction}{0.80}
+\renewcommand{\dbltopfraction}{0.90}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.75}
+\renewcommand{\dblfloatpagefraction}{0.75}
+\setcounter{topnumber}{3}\setcounter{bottomnumber}{2}\setcounter{totalnumber}{5}\setcounter{dbltopnumber}{3}
+\setlength{\textfloatsep}{11pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{11pt plus 2pt minus 2pt}
+\setlength{\floatsep}{9pt plus 2pt minus 2pt}
+\setlength{\dblfloatsep}{9pt plus 2pt minus 2pt}
+\raggedbottom
 \title{Semantiche di esecuzione e architetture parallele per una formulazione continua della Particle Swarm Optimization}
 
 \author{
@@ -110,23 +46,15 @@
 
 \date{}
 
-% -------------------------------------------------------------
-% INIZIO DOCUMENTO
-% -------------------------------------------------------------
+
 \begin{document}
-
 \maketitle
-
-% --- Abstract ---
 \begin{abstract}
-La parallelizzazione della Particle Swarm Optimization (PSO) non è una scelta puramente implementativa: a seconda del punto in cui si introducono sincronizzazione, pubblicazione degli aggiornamenti e migrazione, essa può preservare la traiettoria del metodo seriale oppure definire una dinamica di ricerca differente.In questo studio sono formulate cinque modalità di esecuzione del \emph{Continuous Particle Swarm Optimization}, implementate in un motore CPU a memoria condivisa: seriale sincrona, master--slave sincrona, particle-parallel sincrona, asincrona event-driven e a isole. Per le due modalità sincrone parallele il contratto di aggiornamento è progettato per preservare la traiettoria seriale; per le modalità asincrona e a isole la variazione della dinamica è oggetto esplicito dell'analisi. Il software implementa sette topologie di comunicazione tra particelle. Il protocollo interno comprende sei funzioni analitiche in dimensione 30 e 100 e un test separato di strong scaling con carico sintetico. Un livello esterno confronta la CPSO con dieci baseline PSO discrete in spazio continuo su COCO BBOB, BBOB-LargeScale e CEC 2013 LSGO, a budget FE abbinato. Il manoscritto rende espliciti il propagatore analitico, i parametri, le semantiche degli esecutori, gli adattamenti delle baseline e le limitazioni statistiche e computazionali.
+La parallelizzazione della Particle Swarm Optimization coinvolge sia la distribuzione del lavoro sia la disponibilità dell'informazione sociale. Questo studio analizza cinque modalità di esecuzione della formulazione continua di Orlando--Ricciardello: seriale sincrona, master--slave, particle-parallel, asincrona e a isole. La valutazione distingue equivalenza dei record di traiettoria, strong scaling e qualità a budget di valutazione controllato. Le campagne pilota su CPU M2 comprendono sei funzioni interne in dimensione 30 e 100, sette vicinati sociali e un confronto con dieci metodi PSO su sottoinsiemi di COCO BBOB e CEC 2013 LSGO. I 480 confronti sincroni registrati mostrano uguaglianza dei campi verificati; a quattro worker gli speedup mediani variano da 1.068 a 2.968 in funzione del carico e dell'esecutore. I profili anytime, i tassi di migrazione, le frazioni di target raggiunti e i ranghi ai checkpoint descrivono comportamenti eterogenei tra configurazioni e problemi. L'analisi fornisce un quadro comune per valutare congiuntamente costo computazionale e dinamica della ricerca nella CPSO parallela.
 \end{abstract}
+\noindent\textbf{Parole chiave:} Continuous Particle Swarm Optimization; calcolo parallelo; sincronizzazione; modelli a isole; topologie sociali; benchmarking.
 
-\noindent\textbf{Parole chiave:} Continuous Particle Swarm Optimization; parallelizzazione; algoritmi sincroni e asincroni; modelli a isole; equivalenza algoritmica; analisi sperimentale.
-\newpage
-
-\section{Introduzione}
-\label{sec:introduction}
+\section{Introduzione}\label{sec:introduction}
 \input{sections/section_1_introduction.tex}
 \FloatBarrier
 \input{sections/section_2_related_work.tex}
@@ -138,41 +66,31 @@ La parallelizzazione della Particle Swarm Optimization (PSO) non è una scelta p
 \input{sections/section_4_results.tex}
 \FloatBarrier
 \input{sections/section_5_discussion.tex}
-\FloatBarrier
 \input{sections/section_6_conclusions.tex}
 \FloatBarrier
+\paragraph{Disponibilità dei dati.} I materiali associati comprendono figure vettoriali e riepiloghi CSV usati per le tabelle. Copertura e metadati sono descritti in Appendice~\ref{app:campaigns}.
 
-\section*{Disponibilità di dati e codice}
-Il codice sorgente e le configurazioni sperimentali sono inclusi nella repository di sviluppo associata al manoscritto. Le configurazioni confirmatory sono definite nella repository; alla data di questa versione non sono ancora state eseguite integralmente. I pilot locali saranno etichettati come esplorativi e non sostituiranno i risultati confirmatory. I dati grezzi, i manifest e le figure verranno associati alla revisione del manoscritto che li discuterà.
-
-
-% =============================================================
-% RINGRAZIAMENTI
-% =============================================================
-% Ringraziamenti da aggiungere, se necessari.
-
-% =============================================================
-% APPENDICI TECNICHE E RISULTATI ESTESI
-% =============================================================
-\clearpage
-\onecolumn
-\appendix
-\renewcommand{\thefigure}{\thesection.\arabic{figure}}
-\renewcommand{\thetable}{\thesection.\arabic{table}}
-\renewcommand{\theequation}{\thesection.\arabic{equation}}
-\renewcommand{\theHfigure}{app.\thesection.\arabic{figure}}
-\renewcommand{\theHtable}{app.\thesection.\arabic{table}}
-\renewcommand{\theHequation}{app.\thesection.\arabic{equation}}
-\input{appendices/appendix_B_baselines.tex}
-\input{appendices/appendix_C_scalar_randomness.tex}
-\input{appendices/appendix_D_campaigns.tex}
-\input{appendices/appendix_E_extended_results.tex}
-
-% =============================================================
-% BIBLIOGRAFIA
-% =============================================================
+% Complete all main-text floats before the bibliography.
 \clearpage
 \bibliographystyle{unsrtnat}
 \bibliography{references}
 
+% Appendices follow the complete bibliography.
+\clearpage\onecolumn\appendix
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+\numberwithin{equation}{section}
+\setlength{\parskip}{0pt}
+\input{appendices/appendix_A_dynamics.tex}
+\FloatBarrier
+\input{appendices/appendix_B_baselines.tex}
+\FloatBarrier
+\input{appendices/appendix_C_scalar_randomness.tex}
+\FloatBarrier
+\input{appendices/appendix_D_campaigns.tex}
+\FloatBarrier
+\input{appendices/appendix_E_extended_results.tex}
+\FloatBarrier
+\input{appendices/appendix_F_cec_values.tex}
+\clearpage
 \end{document}

@@ -327,8 +327,10 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=None, help="campaign output directory")
     parser.add_argument("--stages", type=str, default=None, help="comma-separated stage IDs to execute")
     parser.add_argument("--dry-run", action="store_true", help="validate and count runs without executing")
-    parser.add_argument("--no-plots", action="store_true", help="skip campaign-level figures")
+    parser.add_argument("--no-plots", action="store_true", default=True, help="skip campaign-level figures")
     parser.add_argument("--analyze-only", action="store_true", help="reanalyze existing completed study runs")
+    parser.add_argument("--with-inline-plots", dest="no_plots", action="store_false",
+                        help="Opt in to inline plots under the selected results/ output")
     args = parser.parse_args()
 
     campaign = _load_campaign(args.config)
@@ -336,9 +338,11 @@ def main() -> int:
     unknown = selected - {stage["id"] for stage in campaign["stages"]} if selected else set()
     if unknown:
         raise ValueError(f"Unknown stage IDs: {sorted(unknown)}")
+    from cpso_serial.output_policy import results_output
     output = args.output.expanduser().resolve() if args.output else (
-        ROOT / "results" / "raw" / campaign["campaign_id"]
+        ROOT / "results" / "raw" / "parallel" / campaign["campaign_id"]
     )
+    output = results_output(output)
     execute_campaign(
         campaign, output,
         selected_stage_ids=selected,

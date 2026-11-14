@@ -105,7 +105,7 @@ def test_cec_adapter_supports_legacy_get_info_and_get_function(monkeypatch):
     class Benchmark:
         def get_info(self, function_id):
             assert function_id == 1
-            return {"dimension": 2, "lower": -100.0, "upper": 100.0, "best": 0.0}
+            return {"dimension": 1000, "lower": -100.0, "upper": 100.0, "best": 0.0}
 
         def get_function(self, function_id):
             assert function_id == 1
@@ -117,8 +117,8 @@ def test_cec_adapter_supports_legacy_get_info_and_get_function(monkeypatch):
     monkeypatch.setitem(sys.modules, "cec2013lsgo", package)
     monkeypatch.setitem(sys.modules, "cec2013lsgo.cec2013", module)
     problem = CEC2013LSGOAdapter().get_problem(1)
-    assert problem.dimension == 2
-    assert problem.objective((2.0, 3.0)) == 13.0
+    assert problem.dimension == 1000
+    assert problem.objective((2.0, 3.0) + (0.0,) * 998) == 13.0
 
 
 def test_bbob_and_cec_smoke_dry_runs_are_side_effect_free(tmp_path):
@@ -133,10 +133,10 @@ def test_bbob_and_cec_smoke_dry_runs_are_side_effect_free(tmp_path):
 
 
 def test_bbob_config_has_exact_standard_budget_and_cec_matches_official_budget():
-    bbob = json.loads((ROOT / "configs/benchmarks/bbob_confirmatory.json").read_text())
+    bbob = json.loads((ROOT / "tests/fixtures/configs/benchmarks/bbob_confirmatory.json").read_text())
     assert bbob["budget_multiplier"] == 10_000
     assert bbob["population_size"] == 40
-    cec = json.loads((ROOT / "configs/benchmarks/cec2013_confirmatory.json").read_text())
+    cec = json.loads((ROOT / "tests/fixtures/configs/benchmarks/cec2013_confirmatory.json").read_text())
     assert len(cec["function_ids"]) == 15
     assert len(cec["seeds"]) == 25
     assert cec["max_evaluations"] == 3_000_000
@@ -151,7 +151,7 @@ def test_cec_adapter_supports_function_bound_wrapper_api(monkeypatch):
             assert function_id == 3
 
         def get_info(self):
-            return {"dimension": 2, "lower": -5.0, "upper": 5.0, "best": 0.0}
+            return {"dimension": 1000, "lower": -5.0, "upper": 5.0, "best": 0.0}
 
         def eval(self, point):
             return sum(float(value) ** 2 for value in point)
@@ -163,11 +163,11 @@ def test_cec_adapter_supports_function_bound_wrapper_api(monkeypatch):
     monkeypatch.setitem(sys.modules, "cec2013lsgo.cec2013", module)
 
     problem = CEC2013LSGOAdapter().get_problem(3)
-    assert problem.dimension == 2
-    assert problem.objective((3.0, 4.0)) == 25.0
+    assert problem.dimension == 1000
+    assert problem.objective((3.0, 4.0) + (0.0,) * 998) == 25.0
 
 
-def test_bbob_driver_runs_and_resumes_against_controlled_coco_contract(tmp_path, monkeypatch):
+def test_bbob_driver_rejects_unsafe_resume_against_controlled_coco_contract(tmp_path, monkeypatch):
     import run_bbob
 
     class FakeProblem:
@@ -232,8 +232,9 @@ def test_bbob_driver_runs_and_resumes_against_controlled_coco_contract(tmp_path,
         assert rows[0]["function_evaluations"] == rows[0]["coco_evaluations"] == 16
         first_records[method] = len(rows)
 
-    # A completed run is skipped on resume; it is not appended a second time.
-    assert run_bbob.execute(config, output, dry_run=False) == 0
+    # Reusing an output directory must be rejected to protect COCO traces.
+    with pytest.raises(RuntimeError, match='NEW empty'):
+        run_bbob.execute(config, output, dry_run=False)
     for method, count in first_records.items():
         path = output / "records" / f"{method}.jsonl"
         assert len(path.read_text().splitlines()) == count
@@ -285,7 +286,7 @@ def test_cec_driver_runs_against_controlled_1000d_adapter_and_resumes(tmp_path, 
 
 def test_bbob_largescale_confirmatory_config_matches_official_dimensions_and_suite():
     config = json.loads(
-        (ROOT / "configs/benchmarks/bbob_largescale_confirmatory.json").read_text()
+        (ROOT / "tests/fixtures/configs/benchmarks/bbob_largescale_confirmatory.json").read_text()
     )
     assert config["suite"] == "bbob-largescale"
     assert config["suite_options"] == (
@@ -297,13 +298,13 @@ def test_bbob_largescale_confirmatory_config_matches_official_dimensions_and_sui
 
 def test_preconfirmatory_configs_are_bounded_stages_before_full_campaign():
     bbob = json.loads(
-        (ROOT / "configs/benchmarks/bbob_preconfirmatory.json").read_text()
+        (ROOT / "tests/fixtures/configs/benchmarks/bbob_preconfirmatory.json").read_text()
     )
     bbob_ls = json.loads(
-        (ROOT / "configs/benchmarks/bbob_largescale_preconfirmatory.json").read_text()
+        (ROOT / "tests/fixtures/configs/benchmarks/bbob_largescale_preconfirmatory.json").read_text()
     )
     cec = json.loads(
-        (ROOT / "configs/benchmarks/cec2013_preconfirmatory.json").read_text()
+        (ROOT / "tests/fixtures/configs/benchmarks/cec2013_preconfirmatory.json").read_text()
     )
     assert bbob["budget_multiplier"] < 10_000
     assert bbob["instances"] == "instances: 1-5"
@@ -359,11 +360,11 @@ def test_bbob_preflight_counts_runs_and_rejects_incompatible_fe_budgets():
 
 def test_stage_c_configs_include_all_eleven_methods_with_expected_run_counts():
     expected_methods = set(METHODS)
-    bbob_smoke = json.loads((ROOT / "configs/benchmarks/bbob_stageC_smoke.json").read_text())
-    bbob_pilot = json.loads((ROOT / "configs/benchmarks/bbob_stageC_pilot.json").read_text())
-    bbob_ls_smoke = json.loads((ROOT / "configs/benchmarks/bbob_largescale_stageC_smoke.json").read_text())
-    cec_smoke = json.loads((ROOT / "configs/benchmarks/cec2013_stageC_smoke.json").read_text())
-    cec_pilot = json.loads((ROOT / "configs/benchmarks/cec2013_stageC_pilot.json").read_text())
+    bbob_smoke = json.loads((ROOT / "tests/fixtures/configs/benchmarks/bbob_stageC_smoke.json").read_text())
+    bbob_pilot = json.loads((ROOT / "tests/fixtures/configs/benchmarks/bbob_stageC_pilot.json").read_text())
+    bbob_ls_smoke = json.loads((ROOT / "tests/fixtures/configs/benchmarks/bbob_largescale_stageC_smoke.json").read_text())
+    cec_smoke = json.loads((ROOT / "tests/fixtures/configs/benchmarks/cec2013_stageC_smoke.json").read_text())
+    cec_pilot = json.loads((ROOT / "tests/fixtures/configs/benchmarks/cec2013_stageC_pilot.json").read_text())
 
     for config in (bbob_smoke, bbob_pilot, bbob_ls_smoke, cec_smoke, cec_pilot):
         assert set(config["methods"]) == expected_methods

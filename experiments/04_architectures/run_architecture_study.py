@@ -948,16 +948,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run and analyze a paired CPSO architecture study")
     parser.add_argument("config", type=Path, help="JSON study configuration")
     parser.add_argument("--output", type=Path, default=None, help="output directory; defaults under results/raw")
-    parser.add_argument("--no-plots", action="store_true", help="write tables/statistics without Matplotlib figures")
+    parser.add_argument("--no-plots", action="store_true", default=True, help="write tables/statistics without Matplotlib figures")
     parser.add_argument("--dry-run", action="store_true", help="validate config and report run count without executing")
+    parser.add_argument("--with-inline-plots", dest="no_plots", action="store_false",
+                        help="Opt in to inline plots under the selected results/ output")
     args = parser.parse_args()
 
     study = json.loads(args.config.read_text(encoding="utf-8"))
     if args.output is None:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output = ROOT / "results" / "raw" / f"architecture_study_{stamp}"
+        output = ROOT / "results" / "raw" / "parallel" / f"architecture_study_{stamp}"
     else:
         output = args.output.expanduser().resolve()
+    from cpso_serial.output_policy import results_output
+    output = results_output(output)
     result_dir = execute_study(study, output, no_plots=args.no_plots, dry_run=args.dry_run)
     if not args.dry_run:
         print(f"Study outputs written to: {result_dir}")

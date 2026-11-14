@@ -299,6 +299,38 @@ def execute(
 
     from cpso_serial import native_build_info, native_version, run_serial
 
+    # A config fingerprint does not detect a recompiled/changed native binary.
+    # Preserve binary identity in the manifest and reject incompatible resumes.
+    def native_binary_sha256() -> str | None:
+        import hashlib
+        try:
+            from cpso_serial.native import _library_candidates
+        except ImportError:
+            # Mocked Python test modules have no native loader; real native
+            # campaigns still require a loadable shared library to run.
+            return None
+        candidates = _library_candidates()
+        library_path = next((candidate for candidate in candidates if candidate.is_file()), None)
+        if library_path is None:
+            return None
+        digest = hashlib.sha256()
+        with library_path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1 << 20), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    current_native_hash = native_binary_sha256()
+    if resume:
+        stored_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        old_hash = stored_manifest.get("native_library_sha256")
+        if old_hash is not None and old_hash != current_native_hash:
+            raise RuntimeError(
+                "Cannot resume with a different native CPSO binary. "
+                "Use the original build or start a NEW experimental campaign."
+            )
+        if stored_manifest.get("native_version") != native_version() or stored_manifest.get("native_build_info") != native_build_info():
+            raise RuntimeError("Cannot resume CPSO dt campaign after native version/build metadata changed")
+
     if not resume:
         manifest = {
             "schema_version": 2,
@@ -308,6 +340,7 @@ def execute(
             "config_source": str(config_path.resolve()),
             "native_version": native_version(),
             "native_build_info": native_build_info(),
+            "native_library_sha256": current_native_hash,
             "created_utc": datetime.now(timezone.utc).isoformat(),
             "environment": collect_environment_metadata(
                 native_version=native_version(),
@@ -389,15 +422,17 @@ def execute(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--config", type=Path,
-        default=ROOT / "configs/campaigns/cpso_dt_sensitivity_screening.json",
+        "--config", type=Path, required=True,
+        help="Explicit campaign configuration; no implicit legacy study",
     )
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--resume", action="store_true",
                         help="resume a campaign only when its manifest matches the supplied config")
     args = parser.parse_args()
-    output = args.output or ROOT / "results/raw" / "cpso_dt_sensitivity_screening_v1"
+    from cpso_serial.output_policy import results_output
+    output = args.output or ROOT / "results/raw/dt" / args.config.stem
+    output = results_output(output)
     return execute(args.config, output, dry_run=args.dry_run, resume=args.resume)
 
 

@@ -1,159 +1,161 @@
-\section{Tabelle e figure estese dei risultati}
+\section{Diagnostiche e risultati per funzione}
 \label{app:extended-results}
 
-Questa appendice raccoglie i dettagli che appesantirebbero il corpo principale. I risultati interni di asincronia/isole/topologie usano $N=64$, $K=200$ e 12\,864 FE/run; lo screening di $\Delta t$ usa $K=500$ e 32\,064 FE/run. Le celle TBD sono intenzionalmente vuote. I grafi e le curve ricavati dai pilot M2 hanno valore esplorativo, non confirmatory.
+\subsection{Audit sincrono e variabilità interna}
+La Figura~\ref{fig:result-sync-equivalence} rappresenta le 18 righe del riepilogo di equivalenza. Le tre righe per combinazione backend--worker corrispondono ai gruppi da 60, 10 e 10 confronti; la Tabella~\ref{tab:result-equivalence} ne riporta la somma. La Figura~\ref{fig:app-internal-forest} conserva il dettaglio degli effetti di qualità per funzione e dimensione rispetto ai riferimenti seriali appropriati. Le differenze aggregate del corpo principale vanno lette insieme a questa dispersione.
 
-\subsection{Risultati interni per funzione e dimensione}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.68\textwidth]{figures/results/fig_sync_equivalence.pdf}
+\caption{Uguaglianza esatta dei campi registrati nei 18 gruppi dell\textquotesingle audit. Tutti i gruppi raggiungono il 100\%; le righe con etichetta ripetuta sono gruppi distinti nel riepilogo disponibile.}
+\label{fig:result-sync-equivalence}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/results/fig_internal_function_forest.pdf}
+\caption{Effetti appaiati per funzione e dimensione. Gli intervalli bootstrap al 95\% ricampionano i semi entro cella e sono condizionati alle funzioni analizzate.}
+\label{fig:app-internal-forest}
+\end{figure}
+
+\clearpage
+\subsection{Sensibilità al passo temporale}
+\label{app:dt-sensitivity-results}
+Lo screening comprende 900 run: sei funzioni, due dimensioni, quindici valori di $\Delta t$ e cinque semi, con $N=64$, $K=500$ e 32\,064 FE/run. Le differenze sono appaiate rispetto a $\Delta t=30$. La Tabella~\ref{tab:app-dt-sensitivity} aggrega le sei mediane per funzione a ogni dimensione; la Figura~\ref{fig:app-dt-sensitivity} conserva il dettaglio delle singole funzioni. Il riferimento produce differenze nulle per costruzione.
+
+Le risposte al passo sono eterogenee tra funzioni e dimensioni. Diversi valori mostrano mediane aggregate negative rispetto al riferimento, con entità variabile; lo screening descrive questa sensibilità senza identificare un unico passo valido per tutti i problemi. I quartili in tabella descrivono la variabilità tra le sei mediane per funzione.
 
 \begin{table}[H]
 \centering
-\caption{Template esteso per risultati interni. Riportare mediana [IQR] del log-errore sui seed, successi e run valide separatamente per ogni funzione-dimensione.}
-\label{tab:app-internal-function-results}
+\caption{Mediana [Q1, Q3] tra le sei mediane per funzione delle differenze appaiate di log-errore rispetto a $\Delta t=30$. Le 60 run per passo comprendono entrambe le dimensioni.}
+\label{tab:app-dt-sensitivity}
 \small
-\begin{tabular}{@{}llrrrrrr@{}}
+\begin{tabular}{@{}rllr@{}}
 \toprule
-Funzione & $D$ & Metodo & Run valide & Mediana $\log_{10}(f-f^*)$ & IQR & Successi & FE/run \\
+$\Delta t$ & $D=30$ & $D=100$ & Run \\
 \midrule
-Sphere & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Sphere & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Rastrigin & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Rastrigin & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Rosenbrock & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Rosenbrock & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Ackley & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Ackley & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Griewank & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Griewank & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Salomon & 30 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
-Salomon & 100 & TBD & TBD & TBD & TBD & TBD & 12\,864 \\
+0.1 & -0.971 [-1.487, -0.492] & -0.456 [-0.688, -0.270] & 60 \\
+0.2 & -1.122 [-1.712, -0.582] & -0.510 [-0.817, -0.303] & 60 \\
+0.35 & -1.053 [-1.667, -0.457] & -0.484 [-0.761, -0.264] & 60 \\
+0.5 & -1.074 [-1.793, -0.497] & -0.493 [-0.751, -0.249] & 60 \\
+0.7 & -0.895 [-1.450, -0.462] & -0.482 [-0.729, -0.232] & 60 \\
+1 & -0.777 [-1.167, -0.402] & -0.434 [-0.724, -0.228] & 60 \\
+1.5 & -0.423 [-0.608, -0.272] & -0.293 [-0.493, -0.159] & 60 \\
+2.2 & -0.491 [-0.733, -0.257] & -0.288 [-0.487, -0.123] & 60 \\
+3.6 & -0.411 [-0.571, -0.221] & -0.304 [-0.438, -0.124] & 60 \\
+5.5 & -0.251 [-0.396, -0.095] & -0.154 [-0.291, -0.065] & 60 \\
+8 & -0.180 [-0.224, -0.074] & -0.119 [-0.187, -0.072] & 60 \\
+12 & -0.128 [-0.159, -0.079] & -0.053 [-0.103, -0.026] & 60 \\
+20 & -0.059 [-0.087, -0.036] & -0.031 [-0.057, -0.020] & 60 \\
+30 & 0.000 [0.000, 0.000] & 0.000 [0.000, 0.000] & 60 \\
+50 & 0.023 [0.020, 0.026] & 0.006 [-0.001, 0.021] & 60 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Sensibilità al passo temporale}
-\label{app:dt-sensitivity-results}
-
-Il pilot locale di screening comprende 900 run: sei funzioni, due dimensioni ($D=30,100$), 15 valori di $\Delta t$ e cinque seed appaiati; $N=64$, $K=500$ e 32\,064 FE/run. La tabella riporta le differenze appaiate rispetto al riferimento grafico $\Delta t=30$. Tale riferimento non è un optimum dimostrato. Le campagne architetturali, asincrone e topologiche attualmente disponibili usano invece $\Delta t=0.35$; i due protocolli non devono essere confusi.
-
-\begin{table}[H]
-\centering
-\caption{Template per lo screening di $\Delta t$. Riportare mediana [IQR] sui seed entro ciascuna funzione e poi una sintesi tra le sei funzioni, separatamente per dimensione.}
-\label{tab:app-dt-sensitivity}
-\small
-\begin{tabularx}{\textwidth}{@{}lXXrrX@{}}
-\toprule
-$\Delta t$ & $D=30$: mediana [IQR] & $D=100$: mediana [IQR] & FE/run & Run valide & Note \\
-\midrule
-0.10 & TBD & TBD & 32\,064 & TBD & TBD\\
-0.20 & TBD & TBD & 32\,064 & TBD & TBD\\
-0.35 & TBD & TBD & 32\,064 & TBD & TBD\\
-0.50 & TBD & TBD & 32\,064 & TBD & TBD\\
-0.70 & TBD & TBD & 32\,064 & TBD & TBD\\
-1.00 & TBD & TBD & 32\,064 & TBD & TBD\\
-1.50 & TBD & TBD & 32\,064 & TBD & TBD\\
-2.20 & TBD & TBD & 32\,064 & TBD & TBD\\
-3.60 & TBD & TBD & 32\,064 & TBD & TBD\\
-5.50 & TBD & TBD & 32\,064 & TBD & TBD\\
-8.00 & TBD & TBD & 32\,064 & TBD & TBD\\
-12.00 & TBD & TBD & 32\,064 & TBD & TBD\\
-20.00 & TBD & TBD & 32\,064 & TBD & TBD\\
-30.00 & TBD & TBD & 32\,064 & TBD & TBD\\
-50.00 & TBD & TBD & 32\,064 & TBD & TBD\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
 \begin{figure}[H]
 \centering
-\IfFileExists{figures/results/fig_dt_sensitivity_summary.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_dt_sensitivity_summary.pdf}}{\fbox{\parbox[c][4.2cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_dt\_sensitivity\_summary.pdf}\par Heatmap della differenza appaiata mediana $\Delta\log_{10}(f_{\mathrm{best}})$ rispetto al riferimento $\Delta t=30$, per funzione e dimensione.}}}
-\caption{Sensibilità della qualità della CPSO al passo temporale $\Delta t$. Differenze appaiate rispetto al riferimento grafico $\Delta t=30$, non assunto come optimum. Pilot M2 esplorativo.}
+\includegraphics[width=\linewidth]{figures/results/fig_dt_sensitivity_summary.pdf}
+\caption{Sensibilità del log-errore finale al passo, per funzione e dimensione. Valori negativi indicano errori inferiori al riferimento $\Delta t=30$.}
 \label{fig:app-dt-sensitivity}
 \end{figure}
 
-\subsection{Breakdown dello scaling}
+\FloatBarrier
+\subsection{Migrazioni per funzione}
+La Tabella~\ref{tab:app-migration-functions} riporta i conteggi per funzione. Ogni cella usa cinque run da 36 tentativi, per un totale di 180 tentativi; le percentuali aggregate del corpo principale sommano questi conteggi su tutte le funzioni. La Figura~\ref{fig:app-migration-diagnostics} mostra la distribuzione dei tassi di accettazione nelle configurazioni con migrazione.
 
 \begin{table}[H]
 \centering
-\caption{Template per il breakdown temporale nel pilot \texttt{sphere\_work}. Sono mostrate le configurazioni seriale e a quattro worker per ciascuna combinazione di dimensione e carico; la figura include anche i casi a uno e due worker. I valori sono medie aritmetiche tra cinque run, così le componenti e il residuo sommano alla media del tempo totale.}
-\label{tab:app-timing-breakdown}
-\scriptsize
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}rrrlrrrrrrrr@{}}
-\toprule
-$D$ & $N$ & Lavoro & Backend & Worker & Init. & Setup topol. & Propag. & Selez. soc. & Eval. & Residuo & Totale \\
-\midrule
-30 & 64 & 512  & Serial & 1 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-30 & 64 & 512  & Master--slave & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-30 & 64 & 512  & Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-30 & 64 & 4096 & Serial & 1 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-30 & 64 & 4096 & Master--slave & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-30 & 64 & 4096 & Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-100 & 64 & 512  & Serial & 1 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-100 & 64 & 512  & Master--slave & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-100 & 64 & 512  & Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-100 & 64 & 4096 & Serial & 1 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-100 & 64 & 4096 & Master--slave & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-100 & 64 & 4096 & Particle-parallel & 4 & TBD & TBD & TBD & TBD & TBD & TBD & TBD \\
-\bottomrule
-\end{tabular}%
-}
-\end{table}
-
-\begin{figure}[H]
-\centering
-\IfFileExists{figures/results/fig_runtime_decomposition.pdf}{\includegraphics[width=0.78\textwidth]{figures/results/fig_runtime_decomposition.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.90\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_runtime\_decomposition.pdf}\par Decomposizione media in inizializzazione, setup topologico, propagazione, selezione sociale, valutazione obiettivo e residuo non strumentato.}}}
-\caption{Decomposizione del wall time medio per il carico sintetico \texttt{sphere\_work} ($N=64$, $D=30,100$, lavoro 512/4096), separata per backend e numero di worker. Il residuo chiude il bilancio rispetto al tempo totale e non è una misura diretta della sola sincronizzazione. Pilot M2 esplorativo.}
-\label{fig:app-runtime-decomposition}
-\end{figure}
-
-\subsection{Risultati per topologia e metriche di rete}
-
-\begin{table}[H]
-\centering
-\caption{Parametri di costruzione delle topologie dichiarati nel pilot M2. I descrittori del grafo effettivamente realizzato (grado medio e deviazione standard, diametro, cammino medio, clustering e componenti) non sono esportati nei record attuali e non vengono inferiti dalle etichette.}
-\label{tab:app-topology-function}
+\caption{Migrazioni accettate/tentate, per funzione. G--R: vicinato global e migrazione ring; G--C: global e migrazione completa; R--R: ring locale e migrazione ring.}
+\label{tab:app-migration-functions}
 \small
-\begin{tabularx}{\textwidth}{@{}lX@{}}
+\begin{tabular}{@{}lrrrrrr@{}}
 \toprule
-Topologia & Parametri dichiarati nella configurazione \\
+& \multicolumn{2}{c}{G--R} & \multicolumn{2}{c}{G--C} & \multicolumn{2}{c}{R--R} \\ Funzione & $D=30$ & $D=100$ & $D=30$ & $D=100$ & $D=30$ & $D=100$ \\
 \midrule
-Global-best & Migliore personale globale come informazione sociale \\
-Ring & Anello periodico \\
-Von Neumann & Griglia toroidale $8\times8$ \\
-Wheel & Grafo wheel su $N=64$ vertici \\
-Random & Parametro di grado configurato pari a 4 \\
-Watts--Strogatz & Parametro di grado 4; probabilità di rewiring 0.15 \\
-Barabási--Albert & Parametro di grado configurato pari a 4 \\
+Sphere & 99/180 & 107/180 & 158/180 & 153/180 & 158/180 & 160/180 \\
+Rastrigin & 157/180 & 161/180 & 168/180 & 169/180 & 178/180 & 177/180 \\
+Rosenbrock & 100/180 & 103/180 & 155/180 & 156/180 & 149/180 & 168/180 \\
+Ackley & 136/180 & 135/180 & 177/180 & 164/180 & 179/180 & 169/180 \\
+Griewank & 99/180 & 107/180 & 158/180 & 153/180 & 158/180 & 160/180 \\
+Salomon & 172/180 & 164/180 & 179/180 & 179/180 & 179/180 & 178/180 \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
-\subsection{Figure supplementari}
-
 \begin{figure}[H]
 \centering
-\IfFileExists{figures/results/fig_internal_function_forest.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_internal_function_forest.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_internal\_function\_forest.pdf}\par Effetti appaiati per funzione e dimensione rispetto al riferimento seriale appropriato, con intervalli bootstrap al 95\%.}}}
-\caption{Breakdown degli effetti appaiati per funzione e dimensione nelle campagne interne. Gli intervalli bootstrap sono condizionati alle sei funzioni e ricampionano i seed appaiati all'interno di ciascuna cella funzione--dimensione. Pilot M2 esplorativo.}
-\label{fig:app-internal-forest}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\IfFileExists{figures/results/fig_migration_diagnostics.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_migration_diagnostics.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_migration\_diagnostics.pdf}\par Tentativi ricostruiti dalle epoche di migrazione e dal numero di isole; sostituzioni accettate dal contatore registrato nel C++.}}}
-\caption{Diagnostica delle migrazioni nelle configurazioni a isole. I tentativi sono ricostruiti dal calendario deterministico delle epoche; le sostituzioni accettate sono registrate dal motore C++. Pilot M2 esplorativo.}
+\includegraphics[width=\linewidth]{figures/results/fig_migration_diagnostics.pdf}
+\caption{Diagnostica della migrazione. I tentativi sono determinati da epoche e numero di isole; le sostituzioni accettate provengono dai conteggi registrati.}
 \label{fig:app-migration-diagnostics}
 \end{figure}
 
-\begin{figure}[H]
+\FloatBarrier
+\subsection{BBOB: ranghi mediani per funzione}
+I ranghi sono calcolati entro la stessa istanza e poi aggregati sulle cinque istanze. Le Tabelle~\ref{tab:app-bbob-d5} e~\ref{tab:app-bbob-d20} riportano le mediane disponibili; la Figura~\ref{fig:app-external-heatmaps} ne offre una lettura congiunta. Si tratta di ranghi finali, distinti dalle frazioni di target raggiunti della Tabella~\ref{tab:result-bbob}.
+
+\begin{table}[H]
 \centering
-\IfFileExists{figures/results/fig_external_function_heatmaps.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_external_function_heatmaps.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_external\_function\_heatmaps.pdf}\par Heatmap dei ranghi mediani finali entro la stessa istanza COCO BBOB (rango 1 = migliore), per funzione e dimensione; non è una ECDF.}}}
-\caption{Ranghi mediani finali per funzione e dimensione nel pilot COCO BBOB. I ranghi sono calcolati entro la stessa istanza, così l'offset obiettivo comune dell'istanza non altera il confronto. Non rappresentano log-error, ERT o ECDF.}
-\label{fig:app-external-heatmaps}
-\end{figure}
+\caption{BBOB, $D=5$: mediana dei ranghi entro istanza su cinque istanze per funzione.}
+\label{tab:app-bbob-d5}
+\small
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+Metodo & F1 & F5 & F8 & F13 & F17 & F21 & F24 \\
+\midrule
+Classic gbest & 11.0 & 4.5 & 11.0 & 10.0 & 10.0 & 8.0 & 10.0 \\
+CLPSO & 10.0 & 11.0 & 10.0 & 11.0 & 11.0 & 4.0 & 10.0 \\
+Constriction gbest & 4.0 & 4.5 & 2.0 & 6.0 & 3.0 & 10.0 & 3.0 \\
+CPSO & 6.0 & 4.5 & 8.0 & 7.0 & 7.0 & 10.0 & 4.0 \\
+CSO & 1.5 & 9.0 & 6.0 & 2.0 & 1.0 & 6.0 & 3.0 \\
+DMS-PSO & 6.0 & 4.5 & 5.0 & 4.0 & 5.0 & 3.0 & 5.0 \\
+FIPS & 9.0 & 4.5 & 9.0 & 8.0 & 9.0 & 5.0 & 9.0 \\
+Inertia gbest & 5.0 & 4.5 & 3.0 & 7.0 & 4.0 & 8.0 & 7.0 \\
+Inertia ring & 8.0 & 4.5 & 4.0 & 5.0 & 7.0 & 3.0 & 3.0 \\
+SL-PSO & 1.5 & 4.5 & 5.0 & 5.0 & 6.0 & 8.0 & 5.0 \\
+SPSO-2011 & 3.0 & 10.0 & 2.0 & 1.0 & 3.0 & 2.0 & 6.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{BBOB, $D=20$: mediana dei ranghi entro istanza su cinque istanze per funzione.}
+\label{tab:app-bbob-d20}
+\small
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+Metodo & F1 & F5 & F8 & F13 & F17 & F21 & F24 \\
+\midrule
+Classic gbest & 11.0 & 8.0 & 11.0 & 11.0 & 9.0 & 11.0 & 10.0 \\
+CLPSO & 9.0 & 9.0 & 10.0 & 10.0 & 10.0 & 9.0 & 11.0 \\
+Constriction gbest & 2.5 & 2.5 & 2.0 & 4.0 & 8.0 & 5.0 & 4.0 \\
+CPSO & 10.0 & 11.0 & 9.0 & 9.0 & 11.0 & 8.0 & 8.0 \\
+CSO & 2.5 & 6.0 & 3.0 & 2.0 & 1.0 & 4.0 & 1.0 \\
+DMS-PSO & 6.0 & 2.5 & 4.0 & 5.0 & 3.0 & 3.0 & 5.0 \\
+FIPS & 8.0 & 7.0 & 7.0 & 8.0 & 6.0 & 6.0 & 9.0 \\
+Inertia gbest & 5.0 & 2.5 & 3.0 & 4.0 & 5.0 & 6.0 & 6.0 \\
+Inertia ring & 7.0 & 5.0 & 5.0 & 7.0 & 6.0 & 1.0 & 6.0 \\
+SL-PSO & 2.5 & 2.5 & 6.0 & 3.0 & 7.0 & 7.5 & 2.0 \\
+SPSO-2011 & 2.5 & 10.0 & 3.0 & 2.0 & 2.0 & 7.0 & 4.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[H]
 \centering
-\IfFileExists{figures/results/fig_cec_function_breakdown.pdf}{\includegraphics[width=0.96\textwidth]{figures/results/fig_cec_function_breakdown.pdf}}{\fbox{\parbox[c][4.0cm][c]{0.94\textwidth}{\centering\textbf{Figura da generare}\par\texttt{figures/results/fig\_cec\_function\_breakdown.pdf}\par Risultati per funzione CEC ai tre checkpoint FE.}}}
-\caption{Breakdown per funzione CEC 2013 LSGO ai checkpoint FE; figura da produrre dopo la campagna CEC e la correzione del driver per F13/F14 a 905 dimensioni.}
+\includegraphics[width=\linewidth]{figures/results/fig_external_function_heatmaps.pdf}
+\caption{Ranghi mediani BBOB per funzione e dimensione. Il rango 1 corrisponde al valore obiettivo più basso; metodi in ordine alfabetico, senza evidenziazioni selettive.}
+\label{fig:app-external-heatmaps}
+\end{figure}
+
+\FloatBarrier
+\subsection{CEC: confronto per funzione}
+La Figura~\ref{fig:app-cec-breakdown} riporta il rango medio sui tre semi a 120 mila FE per ciascuna funzione. Il dettaglio evidenzia come l'ordinamento cambi tra funzioni, anche all'interno dello stesso gruppo dimensionale. L'Appendice~\ref{app:cec-values} riporta i valori obiettivo corrispondenti ai tre checkpoint, mantenendo le scale delle funzioni separate.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.90\textwidth]{figures/results/fig_cec_function_breakdown.pdf}
+\caption{CEC: rango medio entro funzione--seme a 120 mila FE. Ordine alfabetico dei metodi; F13 e F14 hanno 905 variabili, le altre quattro funzioni 1000.}
 \label{fig:app-cec-breakdown}
 \end{figure}
