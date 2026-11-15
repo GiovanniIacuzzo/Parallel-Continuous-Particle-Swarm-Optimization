@@ -102,6 +102,11 @@ void validate_config(const Config& config);
     const Objective& objective,
     std::size_t worker_count);
 
+// Separate social graph randomness from all swarm random streams.
+[[nodiscard]] Result minimize_particle_parallel(
+    const Config& config, const Objective& objective,
+    std::size_t worker_count, std::uint64_t graph_seed);
+
 // Event-driven asynchronous global/ring/grid CPSO. Each particle advances its
 // own iteration counter and publishes its personal best immediately after an
 // objective evaluation. Completion order is schedule-dependent when workers>1.

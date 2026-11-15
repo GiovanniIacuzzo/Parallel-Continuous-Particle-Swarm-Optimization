@@ -56,7 +56,7 @@ template <typename BatchEvaluator>
     const Objective& objective,
     BatchEvaluator&& evaluate_batch,
     const std::size_t worker_count,
-    ThreadPool* particle_pool) {
+    ThreadPool* particle_pool, std::uint64_t graph_seed) {
     validate_config(config);
     if (!objective) {
         throw std::invalid_argument("Objective function must be callable");
@@ -81,7 +81,7 @@ template <typename BatchEvaluator>
     const auto topology_setup_start = Clock::now();
     const ParticleTopology topology(
         config.topology, population_size, config.grid_rows, config.grid_columns,
-        config.seed, config.topology_degree, config.topology_rewiring_probability);
+        graph_seed, config.topology_degree, config.topology_rewiring_probability);
     result.topology_setup_seconds =
         std::chrono::duration<double>(Clock::now() - topology_setup_start).count();
     std::vector<double> pending_values(population_size, std::numeric_limits<double>::infinity());
@@ -294,7 +294,7 @@ Result minimize_serial(const Config& config, const Objective& objective) {
         EvaluationTimings& timings) {
         evaluate_serial_batch(objective, positions, values, timings);
     };
-    return minimize_synchronous_impl(config, objective, serial_evaluator, 1U, nullptr);
+    return minimize_synchronous_impl(config, objective, serial_evaluator, 1U, nullptr, config.seed);
 }
 
 Result minimize_master_slave(
@@ -318,7 +318,7 @@ Result minimize_master_slave(
             EvaluationTimings& timings) {
             evaluate_parallel_batch(pool, objective, positions, values, timings);
         };
-        result = minimize_synchronous_impl(config, objective, parallel_evaluator, worker_count, nullptr);
+        result = minimize_synchronous_impl(config, objective, parallel_evaluator, worker_count, nullptr, config.seed);
     }
     result.elapsed_seconds = std::chrono::duration<double>(Clock::now() - total_start).count();
     return result;
@@ -328,6 +328,12 @@ Result minimize_particle_parallel(
     const Config& config,
     const Objective& objective,
     const std::size_t worker_count) {
+    return minimize_particle_parallel(config, objective, worker_count, config.seed);
+}
+
+Result minimize_particle_parallel(
+    const Config& config, const Objective& objective,
+    const std::size_t worker_count, const std::uint64_t graph_seed) {
     validate_config(config);
     if (worker_count == 0U || worker_count > 4096U) {
         throw std::invalid_argument("worker_count must lie in [1,4096]");
@@ -345,7 +351,7 @@ Result minimize_particle_parallel(
             EvaluationTimings& timings) {
             evaluate_parallel_batch(pool, objective, positions, values, timings);
         };
-        result = minimize_synchronous_impl(config, objective, parallel_evaluator, worker_count, &pool);
+        result = minimize_synchronous_impl(config, objective, parallel_evaluator, worker_count, &pool, graph_seed);
     }
     result.elapsed_seconds = std::chrono::duration<double>(Clock::now() - total_start).count();
     return result;
