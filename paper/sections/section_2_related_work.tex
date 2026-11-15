@@ -1,55 +1,22 @@
-\section{Stato dell'arte}
+\section{Stato dell'arte e posizionamento}
 \label{sec:related-work}
 
-\subsection{Dinamica continua e apprendimento dello sciame}
-La lettura della PSO come sistema dinamico collega l'evoluzione dello sciame a smorzamento, oscillazione e stabilità. Le formulazioni continue di Emara e Abdel Fattah e di Fernández-Martínez e García-Gonzalo analizzano questi aspetti e il ruolo del passo temporale \citep{Emara2004,FernandezMartinezGarciaGonzalo2008,FernandezMartinezGarciaGonzalo2009,FernandezMartinezGarciaGonzalo2011}. Orlando e Ricciardello propongono una formulazione continua con soluzione analitica locale, che costituisce il nucleo del presente studio \citep{Orlando2021}. Un filone complementare interpreta la dinamica collettiva mediante modelli stocastici e di campo medio \citep{GrassiPareschi2021}.
+\subsection{Dal sistema dinamico discreto alla propagazione continua}
+L'evoluzione della PSO \`e stata studiata mediante modelli dinamici, analisi di stabilit\`a e regole di controllo dell'inerzia \citep{ShiEberhart1998,Clerc2002,FernandezMartinezGarciaGonzalo2009,FernandezMartinezGarciaGonzalo2011}. Modelli continui sono stati proposti anche da Emara e Abdel Fattah e da Fern\'andez-Mart\'inez e Garc\'ia-Gonzalo \citep{Emara2004,FernandezMartinezGarciaGonzalo2008}. Orlando e Ricciardello impiegano un problema di Cauchy lineare a coefficienti localmente costanti per definire la CPSO \citep{Orlando2021}. Il presente lavoro adotta questa famiglia di dinamiche, specificando le convenzioni numeriche necessarie a confrontare modalit\`a di esecuzione differenti. In assenza di una dimostrazione specifica non si estendono alla traiettoria complessiva le propriet\`a della sola soluzione locale.
 
-La rassegna di Bonyadi e Michalewicz collega proprietà dinamiche, casualità, topologie e gestione del dominio \citep{BonyadiMichalewicz2017}. Questi elementi spiegano perché il comportamento di una popolazione dipenda sia dalla regola di movimento sia dalla distribuzione dell'informazione. Nel confronto qui proposto la dinamica locale della CPSO rimane comune alle architetture, mentre sincronizzazione e comunicazione costituiscono i fattori sperimentali.
+La lettura stocastica e di campo medio della PSO offre un punto di vista complementare sulla dinamica collettiva \citep{GrassiPareschi2021}; le rassegne sui sistemi a sciame chiariscono il ruolo di parametri, vincoli e strutture sociali \citep{BonyadiMichalewicz2017}. Qui si tiene fisso il propagatore analitico per distinguere l'effetto dell'organizzazione del calcolo da quello di una diversa equazione di moto.
 
-\subsection{Parallelismo e organizzazione della popolazione}
-Le tassonomie del calcolo evolutivo distinguono la distribuzione delle valutazioni, il parallelismo interno alla popolazione e la decomposizione in isole \citep{Alba2002,CantuPaz2001}. Nella PSO, tali scelte sono state studiate su architetture master--slave, esecutori asincroni e GPU \citep{Schutte2004,Koh2006,Mussi2011,Lalwani2019}. Il costo delle valutazioni e la granularità dei compiti determinano il bilancio tra lavoro utile e coordinamento.
+\subsection{Parallelismo: lavoro utile e semantica del commit}
+Nel calcolo evolutivo parallelo si distinguono valutazioni distribuite, parallelismo all'interno della popolazione e modelli a isole \citep{Alba2002,CantuPaz2001}. Per la PSO sono stati studiati tanto schemi sincroni quanto varianti asincrone, incluse implementazioni multicore e GPU \citep{Schutte2004,Koh2006,Mussi2011,Lalwani2019}. La possibilit\`a di sovrapporre valutazioni non garantisce un'accelerazione: per problemi economici gli overhead di scheduling, sincronizzazione e selezione dei leader possono superare il lavoro utile. Nei modelli asincroni l'ordine degli eventi pu\`o invece produrre vantaggi o svantaggi di ricerca che non devono essere contabilizzati come puro speedup della medesima traiettoria.
 
-Gli sviluppi più recenti comprendono esecutori multicore con work stealing, comunicazione tra unità parallele e implementazioni eterogenee \citep{LiEtAl2023PAPSO,Charilogis2023ParallelPSO,YazdanpanahAlaei2024ALCPSO}. Nel 2026, Sato et al. studiano la condivisione del migliore globale virtuale e la partizione dello spazio degli obiettivi per MOPSO/D \citep{SatoEtAl2026MOPSOD}; altre applicazioni considerano l'offloading multicore e l'addestramento di reti neurali \citep{VermaEtAl2026MCLyPSO,BarkasEtAl2026ParallelPSO}. La Tabella~\ref{tab:literature-map} sintetizza la relazione tra questi filoni e le scelte del presente lavoro.
+La metodologia del benchmarking HPC invita a distinguere tempo totale, definizione del riferimento e variabilit\`a della piattaforma \citep{HoeflerBelli2015}. Per questo motivo si considerano separatamente accelerazione rispetto alla seriale e strong scaling interno a ciascun esecutore. Il primo confronta architetture; il secondo misura quanto un backend guadagna aumentando i worker, anche quando il suo costo a un worker differisce dal seriale.
 
-\begin{table*}[b]
-\centering\small
-\caption{Filoni di ricerca e collocazione dello studio.}
-\label{tab:literature-map}
-\begin{tabularx}{\textwidth}{@{}p{3.0cm}X X@{}}
-\toprule
-Filone e riferimenti & Aspetto centrale & Collegamento con questo studio \\
-\midrule
-Modelli continui \citep{FernandezMartinezGarciaGonzalo2008,Orlando2021} & Evoluzione dello stato, smorzamento e integrazione della dinamica. & Propagatore analitico comune a tutte le modalità CPSO.\\
-Parallelismo PSO \citep{Schutte2004,Koh2006,Lalwani2019} & Distribuzione del lavoro e frequenza degli aggiornamenti sociali. & Confronto tra equivalenza sincrona, asincronia e costo dell'esecutore.\\
-CPU multicore e sistemi eterogenei \citep{LiEtAl2023PAPSO,YazdanpanahAlaei2024ALCPSO,SatoEtAl2026MOPSOD} & Scheduling, condivisione dei risultati e uso delle risorse. & Misura dello scaling su CPU a memoria condivisa.\\
-Modelli a isole \citep{VanneschiCodecasaMauri2011,DaSilveiraEtAl2023PIM,DaSilveiraDeLimaAyala2024} & Evoluzione locale e scambio tra sottopopolazioni. & CPSO locale omogenea con politiche di migrazione controllate.\\
-Topologie sociali \citep{KennedyMendes2002,LiuScaleFreePSO2014,DengLiu2025NetworkPSO} & Vicinato, centralizzazione e diffusione dell'informazione. & Confronto di sette configurazioni sociali a popolazione fissata.\\
-Benchmarking \citep{Hansen2021,HansenEtAl2022Anytime,Li2013} & Qualità a budget assegnato, target e profili anytime. & Valutazione descrittiva su BBOB e CEC con copertura dichiarata.\\
-\bottomrule
-\end{tabularx}
-\end{table*}
+\subsection{Vicinati sociali, grafi casuali e isole}
+Le topologie global-best, ring e von Neumann sono riferimenti classici per lo studio della diffusione dell'informazione \citep{KennedyMendes2002,Kennedy1999Topology}. Reti Erd\H{o}s--R\'enyi, small-world e ad attaccamento preferenziale costituiscono modelli grafici con differenti distribuzioni del grado e distanze caratteristiche \citep{ErdosRenyi1959,WattsStrogatz1998,BarabasiAlbert1999}. Nel contesto PSO, tuttavia, il nome della famiglia non identifica da solo una realizzazione: parametri, algoritmi di generazione, connettivit\`a e assegnazione dei ruoli alle particelle influiscono sulle propriet\`a sperimentali.
 
-Nei modelli a isole, la frequenza e la direzione degli scambi regolano il rapporto tra esplorazione locale e condivisione dei risultati \citep{VanneschiCodecasaMauri2011,DaSilveiraEtAl2023PIM}. Le architetture eterogenee aggiungono la possibilità di utilizzare strategie differenti nelle sottopopolazioni \citep{DaSilveiraDeLimaAyala2024}. Qui tutte le isole impiegano lo stesso metodo locale, così da studiare l'organizzazione della popolazione e la migrazione.
+La decomposizione in isole modifica una variabile diversa dalla topologia sociale interna: seleziona sottopopolazioni e determina come i migliori conosciuti attraversano i confini di sottosciame \citep{VanneschiCodecasaMauri2011,DaSilveiraEtAl2023PIM}. La migrazione di una soluzione valutata pu\`o cambiare la traiettoria senza introdurre ulteriori FE; per questo le isole non sono una mera implementazione sincrona equivalente della popolazione monolitica. La soluzione proposta utilizza isole omogenee e migrazione best-to-worst, non coevoluzione per partizioni delle coordinate. Differential grouping e cooperative coevolution sono approcci distinti, qui non implementati e non rivendicati \citep{Potter1994,Omidvar2014,Li2012}.
 
-\subsection{Vicinati e metodi di confronto}
-Global-best, ring e von Neumann rappresentano modelli consolidati di diffusione globale e locale dell'informazione \citep{Kennedy1999Topology,KennedyMendes2002}. Le reti random, small-world e scale-free aggiungono eterogeneità e collegamenti a lunga distanza \citep{ErdosRenyi1959,WattsStrogatz1998,BarabasiAlbert1999,LiuScaleFreePSO2014}. La prospettiva di rete applicata alla PSO offre inoltre strumenti per descrivere le interazioni emergenti tra particelle \citep{DengLiu2025NetworkPSO}. Nel presente disegno si confrontano le famiglie di vicinato nelle configurazioni dichiarate in Appendice~\ref{app:dynamics}.
+\subsection{Confronti tra metaeuristiche e limiti dell'inferenza}
+Le baseline scelte campionano famiglie riconoscibili: gbest con inerzia o costrizione \citep{ShiEberhart1999,Clerc2002}; apprendimento pienamente informato o da esemplari \citep{MendesKennedyNeves2004,Liang2006CLPSO}; competizione e sottosciami dinamici \citep{Cheng2015,LiangSuganthan2005DMS}; e formulazioni con apprendimento sociale e standard SPSO-2011 \citep{ChengJin2015SLPSO,ZambranoBigiarini2013}. Non tutte le varianti condividono una generazione comparabile: ad esempio, il Competitive Swarm Optimizer rivaluta solo le particelle perdenti. Il budget FE, non il numero delle generazioni, \`e pertanto l'asse principale del confronto.
 
-Le dieci baseline coprono inerzia e costrizione, apprendimento da esemplari, informazione multipla, competizione e riorganizzazione dei sottosciami. La Tabella~\ref{tab:baseline-family} ne riassume il ruolo; le formule e i parametri sono riportati in Appendice~\ref{app:baselines}. Il confronto comprende implementazioni a popolazione controllata e budget di valutazione abbinato.
-
-\begin{table}[hbp]
-\centering\small
-\caption{Meccanismi rappresentati dalle baseline.}
-\label{tab:baseline-family}
-\begin{tabularx}{\columnwidth}{@{}p{2.6cm}X@{}}
-\toprule
-Metodi & Meccanismo \\
-\midrule
-Classic / inertia gbest & Attrazione globale e peso d'inerzia \citep{Kennedy1995,ShiEberhart1998,ShiEberhart1999}.\\
-Constriction gbest & Controllo della dinamica mediante costrizione \citep{Clerc2002}.\\
-Inertia ring / FIPS & Leader locale o contributi di più vicini \citep{KennedyMendes2002,MendesKennedyNeves2004}.\\
-CLPSO / SL-PSO & Apprendimento da esemplari o dimostratori \citep{Liang2006CLPSO,ChengJin2015SLPSO}.\\
-SPSO-2011 & Regola di movimento geometrica e informant \citep{ZambranoBigiarini2013}.\\
-CSO / DMS-PSO & Competizione a coppie o sottosciami dinamici \citep{Cheng2015,LiangSuganthan2005DMS}.\\
-\bottomrule
-\end{tabularx}
-\end{table}
+BBOB offre istanze e target per misure di prestazione su funzioni black-box, mentre CEC 2013 LSGO introduce funzioni e strutture di grande dimensione \citep{Hansen2021,Li2013}. Un confronto scientificamente interpretabile deve dichiarare la granularit\`a di funzioni, istanze e semi, il numero effettivo di problemi completati, il livello del budget e gli adattamenti alle baseline. L'uso di implementazioni C++ e Python distinte limita inoltre le conclusioni sui tempi relativi alle sole misure effettuate con lo stesso esecutore. La questione metodologica aperta a cui mira lo studio \`e dunque la valutazione \emph{congiunta ma non confusa} di equivalenza semantica, accelerazione e competitivit\`a a budget controllato.

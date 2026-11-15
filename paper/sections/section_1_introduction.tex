@@ -1,28 +1,28 @@
-La Particle Swarm Optimization (PSO) affronta problemi di ottimizzazione mediante una popolazione di particelle che combina memoria individuale e informazione sociale \citep{Kennedy1995}. La disponibilità di processori multicore rende naturale distribuire il lavoro tra particelle. L'effetto di questa scelta dipende sia dalla parte di calcolo eseguita in parallelo sia dal momento in cui le nuove informazioni diventano disponibili allo sciame. La sincronizzazione e la comunicazione costituiscono quindi elementi centrali per studiare insieme tempi di esecuzione e qualità della ricerca.
+La Particle Swarm Optimization (PSO) \`e un metodo di ottimizzazione stocastica a popolazione nel quale l'aggiornamento delle particelle combina una componente cognitiva e l'informazione prodotta dallo sciame \citep{Kennedy1995,BonyadiMichalewicz2017}. Nella versione globale sincrona, quest'ultima \`e condivisa ai confini delle generazioni. Distribuire le valutazioni dell'obiettivo su pi\`u core pu\`o ridurre il tempo di calcolo senza alterare tale regola; permettere invece aggiornamenti al completamento delle singole valutazioni modifica l'informazione disponibile e definisce un diverso processo stocastico. Una misura di accelerazione non \`e pertanto intercambiabile con una misura di qualit\`a della soluzione.
 
-Questo lavoro considera la formulazione continua di Orlando e Ricciardello, indicata nel seguito come CPSO \citep{Orlando2021}. Il metodo descrive il moto delle particelle mediante un sistema differenziale del secondo ordine e impiega la soluzione analitica locale per aggiornarne posizione e velocità. La valutazione dell'obiettivo e la propagazione dello stato rappresentano due componenti distinte del costo computazionale. Questa struttura consente di confrontare la distribuzione delle sole valutazioni con una distribuzione più ampia del lavoro per particella.
+La formulazione continua di Orlando e Ricciardello \citep{Orlando2021} interpreta il moto della particella come un problema differenziale del secondo ordine. Sotto l'ipotesi di coefficienti e attrattori congelati in ciascun intervallo, posizione e velocit\`a sono propagabili mediante la soluzione analitica del problema locale. Questa propriet\`a crea una separazione naturale tra propagazione, selezione sociale, valutazione e commit degli stati. L'analiticit\`a del propagatore \emph{locale}, tuttavia, non equivale n\'e all'integrazione esatta di una legge stocastica globale con attrattori variabili n\'e a una garanzia di convergenza globale dell'ottimizzatore.
 
-L'obiettivo dello studio è caratterizzare il rapporto tra modalità di esecuzione, diffusione dell'informazione e comportamento numerico della CPSO. Si considerano un riferimento seriale, due esecutori paralleli sincroni, un esecutore asincrono e un modello a isole. Nei due esecutori sincroni, uno stato sociale comune e un ordine deterministico degli aggiornamenti consentono di conservare la traiettoria seriale. Nell'esecuzione asincrona e a isole, la diversa disponibilità dell'informazione modifica invece la dinamica collettiva. Le topologie di vicinato costituiscono un ulteriore fattore del disegno sperimentale.
+Il problema scientifico affrontato \`e il seguente: \emph{come scegliere un'architettura parallela per la CPSO distinguendo l'accelerazione ottenuta senza cambiare traiettoria dalle variazioni di esplorazione introdotte dalla comunicazione e dalla topologia?} Un secondo interrogativo riguarda la competitivit\`a della dinamica continua rispetto a varianti PSO consolidate, in condizioni di budget comparabili. Le due questioni sono collegate operativamente, ma non costituiscono la stessa ipotesi. In particolare, uno studio a pari numero di valutazioni (FE) non dimostra da solo un vantaggio \emph{wall-clock} nei confronti di implementazioni differenti.
 
-Il contributo è articolato su tre livelli: una descrizione unificata delle modalità di esecuzione applicate allo stesso nucleo continuo; una valutazione congiunta di equivalenza, scaling e qualità a budget controllato; un confronto esterno con dieci metodi della famiglia PSO su problemi standardizzati. Le cinque domande di ricerca della Tabella~\ref{tab:research-questions} organizzano l'analisi.
+La strategia \`e organizzata in due livelli. Nel primo si identifica un passo temporale $\Delta t$ mediante selezione statistica e controllo indipendente, quindi si studiano seriale, master--slave, parallelismo per particella, aggiornamenti asincroni e isole. Le otto configurazioni sociali comprendono sette famiglie di grafo, poich\'e una rete random connessa viene valutata con due gradi obiettivo. Nel secondo livello si predispone una comparazione a parit\`a di FE con dieci baseline PSO, utilizzando le suite COCO BBOB, COCO BBOB-LargeScale e CEC 2013 LSGO \citep{Hansen2021,Li2013}. La valutazione separa esperimenti preliminari e protocolli pi\`u estesi; non trasferisce automaticamente conclusioni dall'uno all'altro.
 
-\begin{table}[hbp]
+L'apporto metodologico risiede nella combinazione di: (i) una specificazione comune del nucleo dinamico e delle semantiche di aggiornamento, con verifica di equivalenza dei campi osservabili per i backend sincroni; (ii) una procedura a due stadi per $\Delta t$, dove il candidato scelto non viene riottimizzato sul campione di validazione; (iii) criteri di scelta dell'esecutore basati su tempo assoluto, \emph{backend-anchored strong scaling}, efficienza e scomposizione dei tempi; (iv) un protocollo separato per topologie, replicazione dei grafi casuali ed effetti sulla qualit\`a; e (v) regole di comparazione esterna che esplicitano budget, implementazioni e unit\`a statistiche. Non si propone un nuovo propagatore n\'e si attribuisce novit\`a alla sola applicazione di topologie gi\`a note.
+
+\begin{table}[H]
 \centering\small
-\caption{Domande di ricerca e grandezze osservate.}
+\caption{Domande di ricerca e criteri osservabili. Le risposte quantitative richiedono campagne complete.}
 \label{tab:research-questions}
-\begin{tabularx}{\columnwidth}{@{}lX@{}}
+\begin{tabularx}{\columnwidth}{@{}p{0.65cm}X@{}}
 \toprule
-Domanda & Oggetto della valutazione \\
+RQ & Domanda e criterio di analisi \\
 \midrule
-RQ1 & Equivalenza dei record di traiettoria tra esecuzione seriale e parallela sincrona.\\
-RQ2 & Speedup ed efficienza al variare del numero di worker e del carico per valutazione.\\
-RQ3 & Evoluzione della qualità con aggiornamenti asincroni e decomposizione in isole.\\
-RQ4 & Effetti del vicinato sociale sulla qualità finale della CPSO.\\
-RQ5 & Comportamento degli undici metodi sui benchmark BBOB e CEC 2013 LSGO.\\
+1 & Quale intervallo $\Delta t$ \`e robusto tra funzioni e dimensioni? Selezione appaiata e validazione su nuovi semi.\\
+2 & Quali backend conservano la traiettoria seriale? Controllo di best, posizione, storia e FE.\\
+3 & Quando conviene aumentare i worker? Tempo assoluto, speedup, efficienza e overhead di fase.\\
+4 & Come incidono topologia e semantica sociale sulla qualit\`a? Ranghi e contrasti appaiati a FE uguali.\\
+5 & Quanto \`e competitivo il CPSO rispetto alle baseline? Profili e ranghi per funzione nelle tre suite esterne.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Gli esperimenti interni impiegano sei funzioni analitiche, due dimensioni e semi appaiati. Un test a costo controllato misura lo strong scaling su CPU, mentre COCO BBOB e CEC 2013 LSGO descrivono la qualità della ricerca su problemi traslati, strutturati e di dimensione maggiore. La presente analisi raccoglie le campagne pilota disponibili su MacBook Air M2 e ne presenta i risultati descrittivi con la copertura effettivamente osservata.
-
-La Sezione~\ref{sec:related-work} colloca lo studio nella letteratura; le Sezioni~\ref{sec:model} e~\ref{sec:exp} descrivono metodo e protocollo. La Sezione~\ref{sec:results} presenta i risultati, seguiti dalla discussione. Le appendici raccolgono il propagatore, i parametri, le configurazioni delle baseline e i risultati per funzione.
+La Sezione~\ref{sec:related-work} delimita il rapporto con la letteratura; la Sezione~\ref{sec:model} formalizza il CPSO e le modalit\`a di esecuzione; la Sezione~\ref{sec:exp} specifica i protocolli senza anticiparne i risultati. Le appendici documentano le formule numeriche, le baseline, una propriet\`a geometrica della casualit\`a scalare e la corrispondenza tra esperimenti e configurazioni della repository.

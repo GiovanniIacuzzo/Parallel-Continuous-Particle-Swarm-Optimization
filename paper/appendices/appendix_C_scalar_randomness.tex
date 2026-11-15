@@ -1,37 +1,24 @@
-\section{Casualità scalare e limitazione del sottospazio in assenza di correzioni ai vincoli}
+\section{Casualit\`a scalare e sottospazi invarianti del propagatore non vincolato}
 \label{app:scalar-randomness}
 
-Questa appendice precisa una conseguenza geometrica della convenzione implementativa adottata nel codice: due scalari casuali vengono estratti per particella e intervallo e condivisi fra tutte le coordinate. 
+Una scelta implementativa rilevante \`e l'uso di due numeri casuali scalari per particella e aggiornamento, riutilizzati in tutte le coordinate. Questa convenzione coincide con il codice in \texttt{optimizer\_internal.hpp} e nel backend asincrono. La sua conseguenza geometrica riguarda il tratto di dinamica privo di correzioni al dominio e va distinta da un'asserzione di convergenza.
 
-\begin{proposition}[Invarianza dello span senza correzione ai vincoli]
-Sia
-\[
- \mathcal S_0=\operatorname{span}\{x_1^0,\ldots,x_N^0,
- v_1^0,\ldots,v_N^0\}\subseteq\mathbb R^D.
-\]
-Se, a ogni passo, i coefficienti della dinamica congelata sono scalari comuni a tutte le coordinate di ciascuna particella, gli attrattori personali e sociali sono selezionati tra le posizioni precedentemente generate e la mappa di vincolo non modifica lo stato, allora
-\[
- x_i^k,v_i^k,p_i^k,s_i^k\in\mathcal S_0
- \quad\text{per ogni }i,k,
- \qquad \dim(\mathcal S_0)\leq\min(D,2N).
-\]
+\begin{proposition}[Invarianza dello span per la dinamica non corretta]
+Siano $\bm x_i^0,\bm v_i^0\in\R^D$, $i=1,\ldots,N$, e
+\begin{equation}
+\mathcal S_0=\operatorname{span}\{\bm x_1^0,\ldots,\bm x_N^0,
+\bm v_1^0,\ldots,\bm v_N^0\}.
+\end{equation}
+Supponiamo che i coefficienti del propagatore locale siano scalari comuni alle coordinate di una particella; che i leader sociali e i migliori personali siano posizioni gi\`a generate; e che nessuna correzione al dominio o operazione esterna introduca nuovi vettori. Allora, per ogni particella e ogni aggiornamento, posizioni, velocit\`a, migliori personali e leader appartengono a $\mathcal S_0$, con
+$\dim\mathcal S_0\le\min\{D,2N\}$.
 \end{proposition}
 
 \begin{proof}
-La proprietà è vera per $x_i^0,v_i^0$ per definizione di $\mathcal S_0$; anche $p_i^0=x_i^0$ appartiene allo spazio. Supponiamo che gli stati e i migliori personali al passo $k$ appartengano a $\mathcal S_0$. Il leader sociale $s_i^k$ è scelto fra i migliori personali, quindi appartiene allo stesso spazio. Per una particella, $q_i^k$ e $\alpha_k$ sono scalari comuni alle coordinate. Se $q_i^k>0$, l'equilibrio è
-\[
- x_i^{\mathrm{eq},k}=\frac{a_i^k}{q_i^k}p_i^k+
- \frac{b_i^k}{q_i^k}s_i^k\in\mathcal S_0.
-\]
-La soluzione del sistema lineare congelato è una combinazione lineare di $x_i^k$, $v_i^k$ e $x_i^{\mathrm{eq},k}$, con coefficienti scalari indipendenti da $j$; dunque la posizione e la velocità propagate appartengono a $\mathcal S_0$. Nel caso $q_i^k=0$, la soluzione è una combinazione di $x_i^k$ e $v_i^k$ e la conclusione resta valida. Se la mappa di vincolo non modifica lo stato, il passo successivo conserva l'appartenenza. Il personal best viene selezionato fra posizioni già appartenenti a $\mathcal S_0$, quindi resta nello spazio. Per induzione la proprietà vale per ogni $k$. La dimensione è al più il numero dei generatori, $2N$, e non può superare $D$.
+La tesi vale all'inizializzazione. Supponiamo valga al passo $k$. Il migliore personale e il leader sociale sono elementi di $\mathcal S_0$ per ipotesi induttiva. Se $q=a+b>0$, l'equilibrio $\bm x_{\rm eq}=(a\bm p+b\bm s)/q$ appartiene a $\mathcal S_0$. La soluzione di un sistema lineare scalare identico lungo ciascuna coordinata \`e una combinazione lineare di $\bm x^k$, $\bm v^k$ e $\bm x_{\rm eq}$, con gli stessi coefficienti scalari in tutte le coordinate; quindi $\bm x^{k+1},\bm v^{k+1}\in\mathcal S_0$. Per $q=0$ la soluzione \`e combinazione dei soli $\bm x^k$ e $\bm v^k$. La selezione di un nuovo best da posizioni generate preserva lo span. L'induzione conclude la prova e la stima dimensionale segue dal numero dei generatori.
 \end{proof}
 
-\subsection{Effetto dei vincoli e della migrazione}
+\paragraph{Limiti della proposizione.}
+Il clipping componente per componente non \`e in generale una trasformazione lineare comune a tutte le coordinate, e pu\`o rompere l'invarianza. Anche l'introduzione di un immigrato proveniente da un'altra isola pu\`o ampliare lo span locale. Pertanto non \`e corretto interpretare $\dim\mathcal S_0\le2N$ come una restrizione assoluta dell'implementazione con vincoli attivi.
 
-La mappa clamp--restitution opera coordinata per coordinata e non è una trasformazione lineare globale; quando è attiva può spostare la posizione fuori da $\mathcal S_0$. Pertanto il risultato precedente è una proprietà del tratto non corretto della dinamica, non un vincolo assoluto sulla traiettoria completa. Analogamente, in una singola isola di $n=N/M$ particelle la sottopopolazione locale, prima delle migrazioni e senza correzioni ai vincoli, ha un sottospazio generato da al più $2n$ vettori. Gli immigrati possono introdurre direzioni provenienti da altre isole e ampliare lo span locale.
-
-\subsection{Implicazioni per i benchmark presenti}
-
-Nella campagna interna principale $N=64$, quindi $2N=128$ e il limite dimensionale non forza uno span proprio in $D=30$ o $D=100$; in assenza di correzioni, i vettori iniziali possono generare tutto $\mathbb R^D$. Nel protocollo esterno, $N=40$ e $2N=80$: per $D=905,1000$ nei problemi CEC osservati e per le dimensioni maggiori del protocollo BBOB-LargeScale, il sottospazio non corretto può avere dimensione strettamente inferiore a $D$. Nelle configurazioni osservate con quattro isole, $N=64$ e $n=16$: il sottospazio locale iniziale ha dimensione al più 32 prima delle migrazioni e delle correzioni al dominio.
-
-La proprietà suggerisce di affiancare alla qualità finale il rango numerico degli stati, la frequenza di attivazione dei vincoli e il rango locale prima e dopo la migrazione. La scelta di coefficienti casuali indipendenti per coordinata definirebbe una variante stocastica distinta, da confrontare separatamente con la dinamica qui analizzata.
+\paragraph{Interpretazione rispetto ai problemi studiati.}
+Per $N=64$ il limite superiore $2N=128$ non impone uno span proprio nelle dimensioni interne $D=30,100$. Per il confronto esterno con $N=40$, il valore $2N=80$ \`e invece inferiore alle dimensioni di CEC 2013 LSGO e ad alcune dimensioni del protocollo esteso BBOB-LargeScale. Questa osservazione segnala un possibile meccanismo geometrico da misurare, non una prova di scarsa prestazione: il rango effettivo dipende anche da inizializzazione, box, traiettorie e correzioni. Nelle isole omogenee di dimensione locale $n$, il corrispondente limite \`e $2n$ prima di migrazione e correzioni. Un'eventuale versione con coefficienti casuali indipendenti per coordinata rappresenterebbe un algoritmo distinto e non viene confusa con la CPSO attualmente confrontata.

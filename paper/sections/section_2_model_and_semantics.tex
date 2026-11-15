@@ -1,50 +1,63 @@
-\section{CPSO e modalità di esecuzione}
+\section{Modello CPSO e semantiche di esecuzione}
 \label{sec:model}
 
-\subsection{Dinamica locale}
-Si considera la minimizzazione di $f:\Omega\subset\mathbb R^D\to\mathbb R$ in un dominio rettangolare. Lo sciame contiene $N$ particelle. Per la particella $i$, $\boldsymbol x_i$ e $\boldsymbol v_i$ indicano posizione e velocità, $\boldsymbol p_i$ la migliore posizione personale e $\boldsymbol s_i$ il leader sociale selezionato nel vicinato.
-
-La CPSO di Orlando--Ricciardello \citep{Orlando2021} aggiorna lo stato attraverso la dinamica
+\subsection{Problema e dinamica a coefficienti congelati}
+Si considera la minimizzazione di $f:\Omega\subset\R^D\to\R$ su un box $\Omega=\prod_{j=1}^D[\ell_j,u_j]$. Uno sciame di $N$ particelle mantiene per ogni $i$ una posizione $\bm x_i^k$, una velocit\`a $\bm v_i^k$ e un migliore personale $\bm p_i^k$. Il leader sociale $\bm s_i^k$ \`e un migliore personale selezionato nel vicinato della particella, oppure l'incumbent globale nella modalit\`a global-best. Per l'intervallo $k$ si estraggono due variabili uniformi scalari $r_{1,i}^k,r_{2,i}^k\in[0,1)$ e si definiscono
 \begin{equation}
-\begin{split}
-\ddot{\boldsymbol x}_i+(1-\mu_k)\dot{\boldsymbol x}_i
-+(a_i^k+b_i^k)\boldsymbol x_i
-= a_i^k\boldsymbol p_i^k+b_i^k\boldsymbol s_i^k,
-\end{split}
-\label{eq:cpso-model}
+ a_i^k=c_c r_{1,i}^k,\quad b_i^k=c_s r_{2,i}^k,\quad q_i^k=a_i^k+b_i^k.
+ \label{eq:cpso-weights}
 \end{equation}
-con $a_i^k=c_c r_{1,i}^k$ e $b_i^k=c_s r_{2,i}^k$. I coefficienti casuali sono scalari, estratti per particella e aggiornamento. Durante ciascun intervallo di ampiezza $\Delta t$, coefficienti e attrattori restano costanti. La soluzione analitica dell'equazione fornisce la nuova posizione e la nuova velocità; seguono il trattamento del dominio e la valutazione della funzione obiettivo. L'inerzia $\mu_k$ decresce linearmente lungo gli aggiornamenti programmati.
+La scelta implementata \`e una coppia di scalari per particella e intervallo, comune alle $D$ coordinate e non condivisa con altre particelle. I coefficienti e i leader sono mantenuti costanti durante la propagazione locale di durata $h=\Delta t>0$. La legge usata \`e
+\begin{equation}
+ \ddot{\bm x}_i+(1-\mu_k)\dot{\bm x}_i+q_i^k\bm x_i
+ =a_i^k\bm p_i^k+b_i^k\bm s_i^k.
+ \label{eq:cpso-model}
+\end{equation}
+Per $q_i^k>0$ l'equilibrio congelato \`e $\bm x_i^{\mathrm{eq}}=(a_i^k\bm p_i^k+b_i^k\bm s_i^k)/q_i^k$; la soluzione analitica produce simultaneamente $\bm x_i^{k+1}$ e $\bm v_i^{k+1}$. Sono trattati distintamente i regimi sotto-, sovra- e criticamente smorzato. Per $q_i^k=0$ si usa il limite privo di forza attrattiva. L'inerzia varia linearmente fra $\mu_{\max}$ e $\mu_{\min}$ in funzione del numero totale di aggiornamenti programmati (Appendice~\ref{app:dynamics}).
 
-Il passo $\Delta t$ controlla l'evoluzione tra due valutazioni successive. La soluzione locale è analitica, mentre i migliori personali e sociali vengono aggiornati alle osservazioni discrete. Il caso global-best utilizza il migliore personale dell'intera popolazione; gli altri vicinati selezionano il leader tra i nodi adiacenti. Il propagatore e le regole operative sono raccolti in Appendice~\ref{app:dynamics}.
+La propagazione \`e esatta, a meno dell'arrotondamento numerico, \emph{per il problema lineare locale con coefficienti congelati}; dopo ogni propagazione si applica una mappa di confinamento coordinata per coordinata, quindi si valuta $f$ e si aggiornano gli incumbent. Non si identifica quindi la CPSO implementata con una soluzione globale senza discontinuit\`a dei migliori sociali. Il passo $h$ \`e un iperparametro della dinamica di ricerca: modificarlo cambia l'evoluzione delle particelle fra due FE, non il numero di valutazioni assegnato.
 
-\subsection{Distribuzione del lavoro e informazione sociale}
-Le cinque modalità condividono la dinamica locale e differiscono per distribuzione del lavoro e disponibilità degli attrattori (Tabella~\ref{tab:execution-modes}). Nel passo sincrono tutte le particelle leggono lo stesso stato sociale all'inizio della generazione. I risultati vengono poi applicati secondo un ordine deterministico. Questa organizzazione consente di confrontare direttamente i tempi dei due esecutori paralleli con quelli del riferimento seriale, dopo il controllo di equivalenza.
+L'inizializzazione \`e uniforme nel box e la velocit\`a iniziale in ciascuna coordinata viene estratta simmetricamente in un intervallo proporzionale a $u_j-\ell_j$. Per un'uscita dal dominio, la posizione viene portata al bordo e la velocit\`a uscente invertita con coefficiente di restituzione $e\in[0,1]$. La nuova posizione \`e valutata dopo questa correzione. Il generatore pseudocasuale di ciascuna particella \`e derivato dal seed della run e dall'indice della particella: la ripartizione in worker non modifica quindi lo stream individuale dei backend sincroni.
 
-\begin{table*}[b]
+\subsection{Semantica sincrona ed equivalenza osservabile}
+La stessa dinamica \`e eseguita in cinque modi (Tabella~\ref{tab:execution-modes}). In seriale, master--slave e particle-parallel si forma all'inizio della generazione uno snapshot dei migliori personali e dei leader. Le $N$ proposte usano questo stato immutabile; le valutazioni vengono registrate in slot indicizzati e i migliori sono aggiornati nell'ordine deterministico delle particelle. Tale disegno esclude che il completamento anticipato di una valutazione alteri il leader usato dalle altre particelle della generazione.
+
+\begin{table*}[tbp]
 \centering\small
-\caption{Modalità di esecuzione della CPSO. L'invarianza sincrona richiede inizializzazione e stream casuali identici, obiettivo deterministico e medesime regole di aggiornamento.}
+\caption{Modelli effettivamente implementati. Il riferimento di equivalenza \`e la stessa run seriale sincrona con obiettivo deterministico.}
 \label{tab:execution-modes}
-\begin{tabularx}{\textwidth}{@{}p{2.7cm}X X p{3.0cm}@{}}
+\begin{tabularx}{\textwidth}{@{}p{2.7cm}X X p{3.25cm}@{}}
 \toprule
-Modalità & Lavoro distribuito & Informazione sociale & Relazione con il seriale \\
+Backend & Distribuzione del lavoro & Disponibilit\`a del leader & Relazione con la seriale \\
 \midrule
-Seriale sincrona & Un solo flusso di esecuzione. & Stato comune a inizio generazione. & Riferimento.\\
-Master--slave & Valutazioni dell'obiettivo. & Stato comune e aggiornamento ordinato. & Stessa traiettoria.\\
-Particle-parallel & Inizializzazione, propagazione locale e valutazioni. & Stato comune e aggiornamento ordinato. & Stessa traiettoria.\\
-Asincrona & Eventi di propagazione e valutazione. & Risultati disponibili al completamento. & Dinamica dipendente dall'ordine degli eventi.\\
-Isole & Evoluzione di sottopopolazioni. & Informazione locale e scambi periodici. & Dinamica con comunicazione intermittente.\\
+Seriale & Inizializzazione, propagazione e FE sullo stesso thread. & Snapshot a inizio generazione. & Riferimento numerico.\\
+Master--slave & FE distribuite fra thread; propagazione e commit seriali. & Snapshot a inizio generazione. & Equivalenza dei campi registrati attesa e verificabile.\\
+Particle-parallel & Inizializzazione, propagazione e batch FE distribuiti; commit ordinati. & Snapshot a inizio generazione. & Equivalenza dei campi registrati attesa e verificabile.\\
+Asincrono & Eventi di propagazione e FE completati individualmente. & Migliori pubblicati al commit di ciascun evento. & Processo dipendente dall'ordine di completamento.\\
+Isole & Sottosciami sincroni interni eseguiti in parallelo. & Leader interni e migrazione a epoche. & Ricerca con sottopopolazioni e scambi intermittenti.\\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
-Nella modalità asincrona ogni particella esegue una sequenza di eventi. Un risultato completato può aggiornare subito l'informazione sociale letta dagli eventi successivi. Nel modello a isole, la popolazione è divisa in sottopopolazioni che evolvono in modo sincrono al proprio interno. La migrazione trasferisce soluzioni già valutate secondo una rete di scambio tra isole.
+Per obiettivi puri e deterministici, identica inizializzazione, stessi stream casuali, stessa aritmetica e stessa topologia, lo snapshot e il commit ordinato rendono l'aggiornamento sincrono indipendente dal numero di worker. L'argomento \`e induttivo: coincidenti gli stati a $k$, coincidono le proposte per particella, i valori calcolati e gli stati a $k+1$. Il controllo automatico implementato confronta esattamente \texttt{best\_value}, \texttt{best\_position}, \texttt{best\_history} e \texttt{history\_evaluations}, oltre al budget FE; non afferma l'uguaglianza bit-a-bit di ogni stato interno non serializzato. La validit\`a della verifica richiede callback thread-safe, oltre che deterministiche.
 
-Per $K$ aggiornamenti di ciascuna particella il costo in valutazioni, inclusa l'inizializzazione, è
+\subsection{Aggiornamenti asincroni e decomposizione in isole}
+Nel backend asincrono ogni particella mantiene un contatore locale. Un evento legge sotto lock il migliore personale e il leader disponibile, propaga il proprio stato e valuta l'obiettivo fuori dalla sezione critica; poi pubblica l'eventuale miglioramento. L'evento successivo della stessa particella non pu\`o partire prima del commit del precedente. Quando il numero di worker supera uno, l'ordine dei commit dipende dallo scheduling, mentre il numero di aggiornamenti per particella rimane fissato. L'asse naturale della storia best-so-far \`e pertanto il conteggio FE, non un indice di generazione sincrona.
+
+Nel modello a isole la popolazione totale \`e divisa in $M$ gruppi equinumerosi, ciascuno con almeno due particelle. Ogni isola evolve serialmente al proprio interno e le isole vengono avanzate in parallelo, con una barriera fra generazioni. Una migrazione, se attivata, viene eseguita soltanto alle epoche prefissate e non dopo l'ultima generazione. Si congelano gli incumbent emigranti prima degli scambi; in rete ad anello ciascuna isola considera il migliore dell'isola precedente, nella rete completa il migliore fra le altre isole. La soluzione immigrata sostituisce il peggiore personal best locale solo in caso di miglioramento stretto, azzerando la velocit\`a del destinatario. Lo scambio non richiede una nuova FE, poich\'e il valore emigrante \`e gi\`a noto. La topologia a griglia non \`e supportata all'interno dell'esecutore a isole; quest'ultimo richiede inoltre $p\leq M$ worker.
+
+Tutte le modalit\`a hanno, per $K$ aggiornamenti completi per particella e una valutazione iniziale, il costo
 \begin{equation}
-N_{\mathrm{FE}}=N(K+1).
-\label{eq:fe-budget}
+ B_{\mathrm{FE}}=N(K+1).
+ \label{eq:fe-budget}
 \end{equation}
-Questa contabilità rende confrontabili le modalità CPSO a budget fissato. Nei benchmark con altri metodi il budget è invece contabilizzato direttamente in FE, poiché il numero di particelle rivalutate per generazione dipende dall'algoritmo.
+La stessa quantit\`a pu\`o essere spesa con sequenze di leader e storie di lunghezza differente. Nel confronto con baseline esterne si usa direttamente $B_{\mathrm{FE}}$ perch\'e alcune varianti rivalutano un sottoinsieme delle particelle a ogni iterazione.
 
-\subsection{Vicinati sociali}
-Il confronto comprende global-best, ring, von Neumann, wheel, random connessa, Watts--Strogatz e Barabási--Albert. I grafi sono statici durante ciascuna esecuzione. Le reti sociali interne a una popolazione e le reti di migrazione tra isole svolgono ruoli distinti: le prime determinano il leader di ogni particella, le seconde regolano lo scambio tra sottopopolazioni. I parametri di costruzione sono riportati separatamente in Appendice~\ref{app:dynamics}.
+\subsection{Topologie sociali e implementazione dei grafi}
+Si rappresenta il vicinato mediante un grafo non orientato statico per run. In ciascun insieme di vicini \`e inclusa la particella stessa; il leader \`e il migliore personal best dell'insieme, con regola deterministica sugli ex aequo. Si considerano otto \emph{configurazioni}: global-best, ring, griglia toroidale von Neumann, wheel (denominazione dell'API), random connesse a grado obiettivo $4$ e $8$, small-world e scale-free. Le ultime due specificano rispettivamente probabilit\`a di rewiring e numero di archi di attaccamento. Le reti random vengono campionate una volta per run; il seed del grafo \`e derivato o specificato separatamente in alcuni studi di replicazione.
+
+La \cref{fig:topology-schematics} fornisce una rappresentazione schematica, realizzata interamente in TikZ, delle otto strutture di comunicazione considerate. La figura ha una funzione esplicativa: chiarisce la nozione di vicinato usata nell'articolo, rende immediato il confronto fra topologie dense, locali e randomizzate, e documenta visivamente la convenzione implementativa adottata per la topologia \texttt{wheel}.
+
+\input{sections/figure_topologies_tikz.tex}
+
+Nel codice, \texttt{wheel} realizza operativamente un grafo \emph{hub-and-spoke} (stella): non comprende l'anello periferico della wheel nella terminologia standard della teoria dei grafi. Il ruolo del nodo hub \`e permutato casualmente tra gli indici di particella. Allo stesso modo, il generatore random connesso parte da un modello Bernoulli e aggiunge ponti fra componenti se necessario: non \`e un campione esatto dalla distribuzione Erd\H{o}s--R\'enyi condizionata alla connettivit\`a. Queste precisazioni impediscono attribuzioni improprie alle topologie nominali (Appendice~\ref{app:dynamics}).

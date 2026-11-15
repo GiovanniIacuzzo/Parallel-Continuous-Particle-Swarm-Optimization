@@ -1,44 +1,68 @@
-\section{Protocollo sperimentale}
+\section{Disegno sperimentale e criteri di analisi}
 \label{sec:exp}
 
-\subsection{Campagne analizzate}
-L'analisi riguarda gli esperimenti pilota su MacBook Air M2 raccolti nella Tabella~\ref{tab:campaign-design}. Le funzioni interne sono Sphere, Rastrigin, Rosenbrock, Ackley, Griewank e Salomon, con $D=30,100$. I confronti usano cinque semi appaiati per cella funzione--dimensione. Le campagne di qualità impiegano $N=64$ e $K=200$; il test di scaling impiega $K=80$ e un costo aritmetico controllato per valutazione. Le impostazioni documentate nel manoscritto sorgente per questi pilot fissano $\Delta t=0.35$; lo screening separato comprende anche $\Delta t=30$. La distinzione è mantenuta nelle tabelle dei parametri in Appendice~\ref{app:campaigns}.
+\subsection{Ordine dei fattori e classi di evidenza}
+Le analisi sono organizzate in due livelli e in stadi gerarchici. Nel livello A si seleziona $\Delta t$ mediante screening e validazione indipendente; il valore congelato viene passato dal driver alle campagne principali di scaling, dinamica ed external benchmarking. Nel livello B si misura la competitivit\`a del CPSO rispetto a dieci PSO con lo stesso budget FE. Le campagne \texttt{pilot} servono a verificare la pipeline e a dimensionare il carico; il profilo \texttt{paper} specifica un disegno pi\`u ampio ma, in particolare sui benchmark esterni, rimane deliberatamente meno oneroso dei protocolli confermativi contenuti in \texttt{configs/benchmarks/}. Lo stato di completamento dovr\`a essere accertato dai manifest e dal numero di run uniche, non dedotto dall'esistenza dei file di configurazione.
 
 \begin{table*}[tbp]
 \centering\small
-\caption{Copertura degli esperimenti inclusi nell'analisi. I conteggi delle campagne sono separati e possono condividere esecuzioni di riferimento. FE indica valutazioni della funzione obiettivo.}
+\caption{Disegno programmato dal driver \texttt{study.py --profile paper}. I conteggi sono \emph{attesi}, non risultati osservati; il numero di run della validazione di $\Delta t$ dipende dall'eventuale inclusione del riferimento fra i tre finalisti.}
 \label{tab:campaign-design}
-\begin{tabularx}{\textwidth}{@{}p{2.5cm}X p{3.4cm}p{3.0cm}@{}}
+\begin{tabularx}{\textwidth}{@{}p{2.35cm}X p{3.0cm}p{3.0cm}@{}}
 \toprule
-Campagna & Problemi e configurazioni & Repliche e copertura & Budget \\
+Stadio & Problemi e fattori & Campionamento programmato & FE per run \\
 \midrule
-Equivalenza & Due backend sincroni; 1, 2 e 4 worker. & 480 confronti registrati in 18 righe di audit. & Qualità e carichi di scaling.\\
-Scaling & $D=30,100$; $N=64$; lavoro 512/4096; 1, 2 e 4 worker. & Cinque coppie per configurazione. & 5\,184 FE/run.\\
-Asincronia & Global e ring; 2 e 4 worker. & 240 run asincrone; sei funzioni, due dimensioni. & 12\,864 FE/run.\\
-Isole & Quattro configurazioni; 2/4 isole; migrazione assente, ad anello o completa. & 240 run; sei funzioni, due dimensioni. & 12\,864 FE/run.\\
-Topologie & Sette vicinati; sei funzioni; $D=30,100$. & 60 celle appaiate, 420 run. & 12\,864 FE/run.\\
-Sensibilità a $\Delta t$ & Quindici passi; sei funzioni; $D=30,100$. & 900 run, cinque semi per cella. & 32\,064 FE/run.\\
-COCO BBOB & F1, F5, F8, F13, F17, F21, F24; $D=5,20$. & Cinque istanze; 70 problemi per metodo, 11 metodi. & Curva fino a $10^3$ FE/$D$.\\
-CEC 2013 LSGO & F1, F4, F9, F13, F14, F15; $D=905,1000$. & Tre semi; 18 run per metodo, 11 metodi. & Checkpoint a 40, 80 e 120 mila FE.\\
+Selezione $\Delta t$ & 6 obiettivi, $D\in\{30,100\}$, 16 candidati, gbest; $N=64$, $K=500$. & 30 semi comuni ai candidati; 5\,760 run. & $32\,064$\\
+Holdout $\Delta t$ & Tre candidati selezionati e riferimento $30$, candidato primario congelato. & 30 nuovi semi per cella; 3 o 4 valori di $\Delta t$. & $32\,064$\\
+Scaling multicore & Rastrigin e diffusione inversa; $D=30,100$, otto grafi, seriale e 2 backend $\times$ 4 livelli di worker. & 10 semi, 5 ripetizioni; 14\,400 esecuzioni native complessive. & $4\,160$\\
+Semantica dinamica & Sei funzioni, $D=30,100$; 20 combinazioni seriale/asincrono/isole. & 12 semi; 2\,880 run. & $32\,064$\\
+COCO BBOB & 24 funzioni, $D=5,20$, 5 istanze, 11 metodi. & 240 problemi per metodo; 2\,640 run. & $400D$\\
+COCO BBOB-LS & 24 funzioni, $D=20,80$, 5 istanze, 11 metodi. & 240 problemi per metodo; 2\,640 run. & $80D$\\
+CEC 2013 LSGO & F1--F15, $D=1000$ tranne F13--F14 ($D=905$), 11 metodi. & 5 semi per funzione; 825 run. & $4\,000$\\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
-BBOB comprende 35 problemi funzione--istanza per dimensione. CEC comprende quattro funzioni a 1000 variabili e F13--F14 a 905 variabili. Questi due gruppi CEC contengono funzioni diverse: il confronto tra pannelli descrive i gruppi osservati, senza isolare un effetto della sola dimensione. BBOB-LargeScale rimane un'estensione del protocollo e non entra nei risultati disponibili.
+\subsection{Selezione appaiata del passo temporale}
+La prima campagna usa Sphere, Rastrigin, Rosenbrock, Ackley, Griewank e Salomon a $D=30$ e $100$. Per ciascuna cella funzione--dimensione--seme, tutti i 16 valori candidati di $\Delta t$ riutilizzano lo stesso seed di sciame e identiche posizioni iniziali; soltanto il passo cambia. La griglia include valori nell'intervallo $0.01$--$30$ e punti di confronto $0.38125$, $3.6$ e $30$. Non si presume che $30$ sia il passo ottimo perch\'e utilizzato in studi precedenti. Il riferimento $\Delta t=30$ fornisce un contrasto predefinito, mentre la graduatoria primaria \`e costruita sui 16 candidati.
 
-\subsection{Metriche e aggregazione}
-Il controllo di equivalenza confronta i campi registrati relativi a soluzione migliore, valore obiettivo, storia best-so-far e conteggio FE. Per lo scaling si usa il rapporto appaiato tra tempo seriale e tempo parallelo,
+Sia $f_{b,d,s}^{(0)}$ il best iniziale e $f_{b,d,s}^{(B)}(h)$ il best finale al budget $B$ per candidato $h$; per le sei funzioni interne il minimo noto \`e $f^*=0$. La metrica usata dal codice \`e
 \begin{equation}
-S(p)=T_{\mathrm{serial}}/T_p,\qquad E(p)=S(p)/p.
-\label{eq:speedup-efficiency}
+\begin{aligned}
+ z_{b,d,s}(h)&=\log_{10}\!\left[\operatorname{clip}_{[10^{-16},1]}
+ \left(\frac{\max\{f_{b,d,s}^{(B)}(h),0\}}{f_{b,d,s}^{(0)}}\right)\right],\\
+ \overline z(h)&=\frac{1}{12}\sum_{(b,d)}\frac{1}{n_s}\sum_s z_{b,d,s}(h).
+\end{aligned}
+\label{eq:dt-criterion}
 \end{equation}
-Si riportano mediana dei rapporti e intervalli bootstrap al 95\% forniti dai riepiloghi sperimentali. I tempi si riferiscono all'esecuzione completa sulla piattaforma locale.
+Il denominatore iniziale viene controllato come positivo e identico fra candidati dello stesso blocco; i valori finali vengono rivalutati indipendentemente dalla procedura di analisi. La media attribuisce uguale peso alle dodici celle funzione--dimensione, mentre i seed interi sono ricampionati \emph{congiuntamente} sulle celle nel bootstrap appaiato. I ranghi per cella, la frequenza di selezione bootstrap e il profilo anytime normalizzato sono diagnostici di robustezza, non probabilit\`a di ottimalit\`a nel continuo.
 
-Per le funzioni interne si usa $\log_{10}(\max\{f_{\mathrm{best}}-f^*,10^{-16}\})$, con $f^*=0$. Nelle curve aggregate si calcola prima la mediana tra semi per funzione e poi la mediana tra le sei funzioni; le bande rappresentano l'intervallo interquartile tra queste mediane. Le differenze appaiate sono calcolate rispetto al riferimento della stessa funzione, dimensione e seme. Mediane aggregate e ranghi forniscono sintesi complementari; i risultati per funzione ne descrivono l'eterogeneità.
+La procedura congela il miglior candidato ottenuto nello screening e costruisce una configurazione di holdout contenente i primi tre candidati e il riferimento, senza duplicati. Su 30 nuovi semi il candidato congelato \`e confrontato con gli altri passi tramite differenze appaiate, intervalli bootstrap al 95\%, test di Wilcoxon bilaterali e correzione di Holm. Il candidato \emph{non} viene cambiato in funzione dei risultati holdout. La selezione \`e condizionata alla griglia di $h$, ai problemi e al budget: non dimostra un minimo globale di prestazione rispetto a tutti i passi possibili.
 
-Su BBOB si riporta la frazione di coppie problema--target raggiunte lungo il budget rappresentato: per metodo e dimensione il denominatore è $35\times11=385$. I target appartengono alla griglia utilizzata nell'esportazione disponibile. Su CEC si calcolano ranghi entro la stessa funzione, lo stesso seme e lo stesso checkpoint, quindi si mediano sui blocchi; i valori obiettivo restano separati per funzione. I ranghi più bassi corrispondono a valori obiettivo minori.
+\subsection{Misura della parallelizzazione}
+Il test principale di scaling misura due classi di costo: Rastrigin (valutazione economica) e un obiettivo di diffusione inversa con lavoro numerico RK4 controllato. Impiega $N=64$, $K=64$, due dimensioni, otto topologie e $p\in\{1,2,4,8\}$ per i backend master--slave e particle-parallel, insieme a una seriale per ogni blocco. Il lavoro aggiuntivo di diffusione \`e fissato a 2\,048 passi nel profilo \texttt{paper}; si considerano semi appaiati, ripetizioni temporali e ordinamento casuale delle modalit\`a di esecuzione. Prima di aggregare i tempi, il runner controlla il budget FE e l'equivalenza esatta dei campi registrati con la seriale.
 
-\subsection{Comparabilità e unità statistiche}
-Il confronto esterno include undici metodi con popolazione dichiarata $N=40$. Le varianti, il trattamento dei vincoli e gli adattamenti sono descritti in Appendice~\ref{app:baselines}. La qualità è confrontata mediante FE, mentre lo scaling è misurato con l'esecutore CPU nativo.
+Per una data funzione, dimensione, topologia, seed e ripetizione, siano $T_s$ il tempo della seriale, $T_{a,1}$ il tempo del backend $a$ a un worker e $T_{a,p}$ quello a $p$ worker. Si distinguono
+\begin{equation}
+ A_a(p)=\frac{T_s}{T_{a,p}},\qquad
+ S_a(p)=\frac{T_{a,1}}{T_{a,p}},\qquad
+ E_a(p)=\frac{S_a(p)}p.
+ \label{eq:speedup-efficiency}
+\end{equation}
+Il primo rapporto misura l'accelerazione rispetto alla seriale; il secondo lo strong scaling \emph{interno} al backend e assume $S_a(1)=1$; il terzo \`e l'efficienza parallela relativa al riferimento $a,1$. La misura $A_a(p)/p$, pur calcolabile, non \`e la stessa efficienza backend-anchored. La selezione dell'esecutore pi\`u veloce avviene sui $T_{a,p}$ assoluti, non automaticamente sull'algoritmo con speedup maggiore.
 
-I semi sono repliche entro problema e le istanze BBOB sono repliche entro funzione e dimensione. La presentazione è descrittiva: mostra effetti, dispersione e variazioni tra funzioni, senza assegnare significatività a differenze di rango. Le appendici precisano la gerarchia statistica, i parametri documentati e i metadati necessari alla successiva estensione del benchmark.
+Il runner salva tempi complessivi e componenti di inizializzazione, scelta sociale, propagazione, valutazione, configurazione del grafo e lavoro per thread. La somma dei tempi \emph{worker} pu\`o eccedere il tempo wall-clock in presenza di concorrenza; tali grandezze non devono essere sommate senza distinguere il tipo di timer. Le osservazioni ripetute di un seed sono prima sintetizzate entro seed; gli intervalli bootstrap ricampionano quindi i seed, evitando di interpretare le ripetizioni temporali come repliche indipendenti. Il risultato riguarda una CPU a memoria condivisa e non fornisce per estrapolazione previsioni di scaling multi-nodo.
+
+\subsection{Topologie e semantica della qualit\`a}
+Lo studio delle topologie \`e distinto dalla selezione di $\Delta t$. Il comando dedicato \texttt{study.py topologies} fissa \emph{esplicitamente} $\Delta t=1$, $K=96$, $N=64$, 24 semi, 3 ripetizioni, due obiettivi e due dimensioni; confronta otto configurazioni con esecuzione particle-parallel a 1, 2, 4 e 8 worker. Questa campagna \`e descritta come analisi specifica a $\Delta t=1$ e non viene presentata come una prova di ordinamento invariato al passo congelato della campagna principale. La qualit\`a finale \`e confrontata a FE uguali mediante ranghi appaiati per seme, insieme al tempo assoluto e all'efficienza. I contrasti per coppie di topologie sono trattati con test dei segni e correzione di Holm; i bootstrap sui ranghi mantengono il seed quale unit\`a di ricampionamento.
+
+Una campagna complementare \texttt{decision\_study.py} esamina il costo dei backend al crescere del lavoro sintetico per valutazione, con livelli $0,128,1024,8192$ e sessioni indipendenti; verifica il rapporto $T_4/T_8$ e prevede una scelta basata sulle prime due sessioni e un controllo sulla terza. Il suo studio separato sui grafi confronta griglia e random a grado obiettivo quattro/otto con pi\`u realizzazioni di \emph{graph seed} per lo stesso seed di sciame. Le sessioni, le singole realizzazioni di grafo e le ripetizioni del cronometro hanno ruoli diversi: non si combinano indiscriminatamente come osservazioni statistiche indipendenti. Anche questi esperimenti impiegano $\Delta t=1$, fissato nel driver nativo dedicato.
+
+Le configurazioni asincrone e a isole sono invece valutate nel profilo \texttt{dynamics.json} con sei funzioni, $D=30,100$, $N=64$, $K=500$ e 12 semi. Il set comprende global, ring, grid, wheel, random a grado quattro, small-world e scale-free; dove supportato, i risultati asincroni e a isole vengono appaiati al seriale avente lo stesso vicinato. Il modello a isole usa quattro isole, quattro worker e migrazione ogni dieci generazioni sulla rete ad anello; la griglia non \`e inclusa nel backend a isole. Le storie vengono confrontate lungo l'asse FE a fronte di semantiche di commit differenti.
+
+\subsection{Confronto esterno a budget FE controllato}
+Il confronto esterno impiega la CPSO nativa \emph{seriale} in modalit\`a global-best e dieci varianti PSO in Python/NumPy: classic gbest, inertia gbest, constriction gbest, inertia lbest ring, CLPSO, SL-PSO, SPSO-2011, FIPS ring, CSO e DMS-PSO. La popolazione \`e fissata a $N=40$; per ogni problema, metodo e seme il budget FE \`e uguale e multiplo della popolazione. La parit\`a delle FE non implica identica inizializzazione campionaria tra algoritmi con generatori e regole di movimento differenti, n\'e parit\`a di tempo fra implementazioni C++ e Python. Le formulazioni e i loro adattamenti sono specificati in Appendice~\ref{app:baselines}.
+
+Nel profilo \texttt{paper}, COCO BBOB considera 24 funzioni, dimensioni $5,20$ e cinque istanze con budget $400D$; BBOB-LargeScale considera 24 funzioni, dimensioni $20,80$ e cinque istanze con budget $80D$. L'esecuzione conserva i log dell'Observer COCO e produce report per problema; per CEC 2013 LSGO sono previste 15 funzioni, cinque seed e checkpoint a $400$, $2\,000$ e $4\,000$ FE. I file \texttt{*\_confirmatory.json} definiscono estensioni pi\`u ampie, tra cui il budget CEC $3\cdot10^6$ FE, ma la loro presenza non costituisce evidenza di esecuzione completata (Appendice~\ref{app:campaigns}).
+
+Le sintesi previste comprendono best-so-far al checkpoint, target raggiunti e, quando i dati di primo raggiungimento sono presenti, ERT con censura delle run senza successo \citep{HansenEtAl2022Anytime}. I ranghi sono assegnati \emph{entro} problema e budget, con rango medio in presenza di pareggi; funzioni differenti non sono trattate come repliche identiche. Per sostenere una superiorit\`a ``sulla maggioranza delle funzioni'' occorrer\`a contare, per suite e budget, le funzioni vinte, perse o pareggiate rispetto a ciascuna baseline, documentando la completezza dei dati. Una graduatoria aggregata, isolata, non dimostra tale affermazione. Nessun risultato quantitativo viene anticipato in questa versione.

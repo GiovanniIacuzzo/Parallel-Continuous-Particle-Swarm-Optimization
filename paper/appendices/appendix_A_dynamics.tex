@@ -1,56 +1,95 @@
-\section{Propagazione analitica e regole di aggiornamento}
+\section{Propagatore analitico, grafi e dettagli dei backend}
 \label{app:dynamics}
 
-Questa appendice specifica il passo locale e le regole di esecuzione usate nel confronto. Indichiamo con $a=c_c r_1$, $b=c_s r_2$, $q=a+b$, $\alpha=(1-\mu_k)/2$ e $F_j=a p_{i,j}+b s_{i,j}$ i coefficienti congelati di una particella. I due numeri casuali sono estratti per particella e aggiornamento e condivisi tra coordinate. Per $K>1$ l'inerzia è
+\subsection{Flusso esatto del problema locale}
+Si consideri una singola coordinata della dinamica~\eqref{eq:cpso-model}. Posto $a=c_c r_1$, $b=c_s r_2$, $q=a+b$, $\alpha=(1-\mu_k)/2$ e $F=ap+bs$, il problema locale \`e $x''+2\alpha x'+qx=F$. Per $q>0$ si definiscono $x_{\rm eq}=F/q$ e $y=x-x_{\rm eq}$; allora
 \begin{equation}
-\mu_k=\mu_{\max}-\frac{k}{K-1}(\mu_{\max}-\mu_{\min}),\qquad k=0,\ldots,K-1.
+ y''+2\alpha y'+qy=0,\quad y(0)=x^k-x_{\rm eq},\quad y'(0)=v^k.
+ \label{eq:app-frozen}
+\end{equation}
+Con $h=\Delta t$ e $\Delta=\alpha^2-q$, il propagatore C++ distingue i tre casi seguenti.
+
+\paragraph{Sottosmorzamento ($\Delta<0$).}
+Definiti $\omega=\sqrt{-\Delta}$, $C=(v^k+\alpha y_0)/\omega$, $G=y_0\cos(\omega h)+C\sin(\omega h)$, si ha
+\begin{equation}
+ y(h)=e^{-\alpha h}G,\quad
+ v(h)=e^{-\alpha h}\big[-\omega y_0\sin(\omega h)+\omega C\cos(\omega h)-\alpha G\big].
+\end{equation}
+
+\paragraph{Sovrasmorzamento ($\Delta>0$).}
+Siano $\lambda_{1,2}=-\alpha\pm\sqrt{\Delta}$ e
+\begin{equation}
+ C_1=\frac{v^k-\lambda_2y_0}{\lambda_1-\lambda_2},\qquad
+ C_2=\frac{\lambda_1y_0-v^k}{\lambda_1-\lambda_2}.
+\end{equation}
+Allora $y(h)=C_1e^{\lambda_1h}+C_2e^{\lambda_2h}$ e
+$v(h)=\lambda_1C_1e^{\lambda_1h}+\lambda_2C_2e^{\lambda_2h}$.
+
+\paragraph{Smorzamento critico ($\Delta=0$).}
+Posto $C_2=v^k+\alpha y_0$,
+\begin{equation}
+ y(h)=e^{-\alpha h}(y_0+C_2h),\qquad
+ v(h)=e^{-\alpha h}(v^k-\alpha C_2h).
+\end{equation}
+La posizione finale \`e $x^{k+1}=x_{\rm eq}+y(h)$; le formule restituiscono contemporaneamente la velocit\`a $v^{k+1}=v(h)$. L'implementazione definisce il caso numericamente critico mediante $|\Delta|\le 64\epsilon_{\rm mach}\max\{1,\alpha^2,q\}$. Il criterio \`e una tolleranza di floating point, non un quarto regime fisico.
+
+Se $q=0$, i coefficienti non negativi implicano $a=b=F=0$. La formula generale del propagatore, chiamato con equilibrio pari a zero, risolve il sistema omogeneo con una radice nulla e una radice $-2\alpha$; per $\alpha>0$ coincide con
+\begin{equation}
+ v(h)=v^k e^{-2\alpha h},\qquad
+ x(h)=x^k+\frac{1-e^{-2\alpha h}}{2\alpha}v^k,
+\end{equation}
+mentre per $\alpha=0$ si ha $x(h)=x^k+hv^k$, $v(h)=v^k$. La scelta $q=0$ ha probabilit\`a nulla sotto coefficienti casuali uniformi non degeneri, ma viene comunque gestita in modo consistente.
+
+L'inerzia \`e calcolata con il contatore $k$ dei $K$ aggiornamenti programmati:
+\begin{equation}
+\mu_k=\mu_{\max}-\frac{k}{K-1}(\mu_{\max}-\mu_{\min}),
+\quad k=0,\dots,K-1\quad (K>1),
 \label{eq:code-inertia-schedule}
 \end{equation}
-Per un solo aggiornamento si usa $\mu_{\max}$.
+e $\mu_0=\mu_{\max}$ se $K=1$. L'estrazione $r_1,r_2$ avviene una volta per particella e intervallo ed \`e condivisa fra coordinate. La mappa di confinamento applica
+\begin{equation}
+(x_j,v_j)\mapsto
+\begin{cases}
+(\ell_j,-ev_j),&x_j<\ell_j,\ v_j<0,\\
+(\ell_j,v_j),&x_j<\ell_j,\ v_j\ge0,\\
+(u_j,-ev_j),&x_j>u_j,\ v_j>0,\\
+(u_j,v_j),&x_j>u_j,\ v_j\le0,\\
+(x_j,v_j),&\text{altrimenti};
+\end{cases}
+\end{equation}
+la valutazione segue la correzione. La propagazione analitica locale e il clipping costituiscono due trasformazioni algoritmiche distinte.
 
-\subsection{Soluzione del problema a coefficienti congelati}
-Per $q>0$, ponendo $y_j=x_j-F_j/q$, il sistema omogeneo è $\ddot y_j+2\alpha\dot y_j+q y_j=0$. Sia $h=\Delta t$. Nel regime sottosmorzato, con $\omega=\sqrt{q-\alpha^2}$, la propagazione è
-\begin{align}
-y_j(h)&=e^{-\alpha h}\left[y_j(0)\cos(\omega h)+\frac{v_j(0)+\alpha y_j(0)}{\omega}\sin(\omega h)\right],\\
-v_j(h)&=e^{-\alpha h}\left[v_j(0)\cos(\omega h)-\frac{q y_j(0)+\alpha v_j(0)}{\omega}\sin(\omega h)\right].
-\end{align}
-Nel regime sovrasmorzato si sostituiscono $\omega$ con $\nu=\sqrt{\alpha^2-q}$ e le funzioni trigonometriche con $\cosh(\nu h)$ e $\sinh(\nu h)$. Nel caso critico,
-\begin{align}
-y_j(h)&=e^{-\alpha h}\{y_j(0)+[v_j(0)+\alpha y_j(0)]h\},\\
-v_j(h)&=e^{-\alpha h}\{v_j(0)-[q y_j(0)+\alpha v_j(0)]h\}.
-\end{align}
-Infine $x_j(h)=y_j(h)+F_j/q$. Per $q=0$, essendo $a,b\geq0$, anche $F_j=0$: se $\alpha\ne0$, $v_j(h)=e^{-2\alpha h}v_j(0)$ e $x_j(h)=x_j(0)+(1-e^{-2\alpha h})v_j(0)/(2\alpha)$; se $\alpha=0$ si ottiene il moto uniforme. Queste espressioni descrivono il propagatore analitico del modello congelato; la selezione dei migliori avviene dopo la valutazione della nuova posizione.
-
-\subsection{Dominio e generazione dei vicinati}
-Il confinamento nel box è applicato coordinata per coordinata mediante clipping della posizione e restituzione della componente di velocità uscente, con coefficiente $e$. I parametri delle reti sono raccolti nella Tabella~\ref{tab:app-graphs}. La denominazione \emph{wheel} è mantenuta come etichetta del dato: la descrizione implementativa del manoscritto sorgente indica un hub senza archi periferici, cioè una stella. L'interpretazione strutturale di questa configurazione richiede pertanto la lista degli archi del grafo effettivamente usato.
+\subsection{Costruzione esatta dei vicinati}
+Le reti non orientate sono statiche all'interno di una run; la lista dei vicini include sempre il nodo stesso, viene ordinata e non contiene duplicati. Per il caso global-best il leader \`e l'incumbent globale, con conservazione dell'indice in caso di parit\`a; per gli altri grafi gli ex aequo selezionano l'indice minimo. La Tabella~\ref{tab:app-graphs} identifica le otto configurazioni usate dai runner di scaling e topologia.
 
 \begin{table}[H]
 \centering\small
-\caption{Specifiche dei sette vicinati presenti nei risultati. I parametri sono quelli dichiarati; i descrittori dei grafi realizzati non sono inclusi nei dati aggregati.}
+\caption{Le otto configurazioni di vicinato corrispondenti a sette famiglie di grafo. I gradi delle reti random sono parametri di campionamento, non gradi realizzati imposti a ogni vertice.}
 \label{tab:app-graphs}
-\begin{tabularx}{\textwidth}{@{}lX@{}}
+\begin{tabularx}{\textwidth}{@{}p{3.0cm}X@{}}
 \toprule
-Vicinato & Specifica \\
+Configurazione & Costruzione nel codice \\
 \midrule
-Global-best & Migliore personale dell'intera popolazione.\\
-Ring & Anello periodico di raggio uno.\\
-Von Neumann & Griglia toroidale $8\times8$, con quattro vicini ortogonali.\\
-Wheel (etichetta del dato) & Configurazione con hub; distinzione wheel/stella da verificare sugli archi.\\
-Random connessa & Parametro di grado 4; collegamento delle componenti tramite ponti.\\
-Watts--Strogatz & Grado iniziale 4 e probabilità di rewiring 0.15.\\
-Barabási--Albert & Attaccamento preferenziale $m=2$, con clique iniziale di $m+1$ nodi, secondo la descrizione implementativa.\\
+Global-best & Leader scelto tra i personal best di tutte le particelle.\\
+Ring & Due vicini periodici ($i-1,i+1$), pi\`u self.\\
+Von Neumann & Griglia toroidale con quattro adiacenze ortogonali; per $N=64$ la forma \`e $8\times8$.\\
+Wheel / hub-and-spoke & Stella con un hub e archi hub--periferia; hub assegnato a un indice casuale. Nessun arco fra periferici.\\
+Random $k=4$ & Campionamento Bernoulli con $p=4/(N-1)$ e connessione delle componenti residue con ponti.\\
+Random $k=8$ & Stessa costruzione con $p=8/(N-1)$; \`e la seconda impostazione di una stessa famiglia.\\
+Small-world $k=4$ & Anello iniziale di grado quattro, rewiring per arco con probabilit\`a $0.15$.\\
+Scale-free $k=4$ & Crescita per attaccamento preferenziale con $m=k/2=2$ archi per nuovo nodo; clique iniziale di tre nodi e permutazione finale degli indici.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\subsection{Esecuzione sincrona e asincrona}
-Nel passo sincrono i migliori personali vengono copiati in uno stato comune. Ogni particella dispone di uno stream pseudocasuale e di uno slot di output propri. La selezione sociale legge lo stato comune; propagazione e valutazione producono risultati locali; gli aggiornamenti dei migliori sono applicati in ordine deterministico. Con stato iniziale, stream, funzione obiettivo deterministica e regole di parità identici, le operazioni assegnate a una particella non dipendono dal numero di worker. Per induzione sui passi, gli esecutori sincroni producono gli stessi stati del riferimento seriale, a parità di aritmetica utilizzata.
+L'algoritmo che collega le componenti del grafo Bernoulli mediante ponti \`e differente dalla generazione condizionata di $G(N,p)$ a connettivit\`a imposta. Le permutazioni di hub e nodi scale-free servono a non associare sistematicamente i ruoli strutturali agli indici che determinano gli stream casuali delle particelle.
 
-Nell'esecutore event-driven, un evento acquisisce lo stato personale e sociale sotto mutua esclusione, esegue propagazione e valutazione fuori dalla sezione critica e pubblica il risultato. L'evento successivo della stessa particella è inserito soltanto al completamento del precedente. Ogni particella esegue $K$ aggiornamenti; l'ordine di completamento determina l'informazione sociale osservata.
+\subsection{Contabilit\`a degli eventi e migrazioni}
+Nella CPSO sincrona la storia best-so-far contiene un campione iniziale e uno per generazione, agli ascissi FE $N,2N,\dots,(K+1)N$. Nell'asincrona ogni commit di una particella aggiunge un campione: la storia contiene $1+NK$ osservazioni e l'asse FE varia a incrementi unitari dopo l'inizializzazione. Entrambe le modalit\`a rispettano il budget~\eqref{eq:fe-budget}. Per lo scaling i quattro campi confrontati esattamente con il seriale sono best finale, posizione migliore, storia best-so-far e ascisse FE.
 
-\subsection{Scambio tra isole}
-Le $M$ isole hanno dimensione $n=N/M\geq2$. Prima dello scambio si copiano gli incumbent di tutte le isole. Nella migrazione ad anello l'isola $m$ invia il proprio incumbent a $(m+1)\bmod M$; nella migrazione completa ogni destinatario considera il migliore incumbent delle altre isole. Un immigrato strettamente migliore sostituisce la particella con il peggiore personal best: posizione corrente, personal best e valore vengono aggiornati, la velocità è azzerata e lo stream casuale del destinatario è conservato. Lo scambio riutilizza una valutazione nota e non consuma FE aggiuntive. Per intervallo $\tau$ e $K$ aggiornamenti, senza migrazione finale, i tentativi sono
+Per le isole, $N=M n$ con $n\ge2$; il numero di worker non supera $M$. Con intervallo di migrazione $\tau\ge1$ ed esclusione dello scambio dopo l'ultima generazione, le epoche programmate sono
 \begin{equation}
- A_{\rm mig}=M\left\lfloor\frac{K-1}{\tau}\right\rfloor.
+ N_{\rm epoche}=\left\lfloor\frac{K-1}{\tau}\right\rfloor,
+ \qquad N_{\rm tentativi}=M N_{\rm epoche}.
 \end{equation}
-Per $M=4$, $K=200$ e $\tau=20$ risultano nove epoche e 36 tentativi per run.
+Ogni destinatario considera un solo immigrato all'epoca, ma una migrazione \`e conteggiata come \emph{effettiva} solo quando il valore del candidato \`e strettamente inferiore al peggior personal best locale. Gli incumbent emigranti vengono congelati prima di qualsiasi sostituzione; gli stream pseudocasuali delle particelle destinatarie non sono re-inizializzati. Per il profilo attuale $M=4$, $\tau=10$, $K=500$ corrispondono a $49$ epoche e $196$ tentativi massimi per run, non a un numero preassegnato di migrazioni riuscite.

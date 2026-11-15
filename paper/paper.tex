@@ -4,9 +4,10 @@
 \usepackage[T1]{fontenc}
 \usepackage[provide=*,italian]{babel}
 \usepackage{amsmath,amssymb,amsthm,mathtools,bm}
-\usepackage{mathptmx}
-\usepackage{microtype}
+\usepackage{mathptmx,microtype}
 \usepackage{booktabs,array,tabularx,graphicx,xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc}
 \usepackage{caption}
 \captionsetup{font=small,labelfont=bf,justification=justified,singlelinecheck=false}
 \captionsetup[table]{skip=5pt}
@@ -19,7 +20,6 @@
 \newtheorem{lemma}[proposition]{Lemma}
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\norm}[1]{\left\lVert #1\right\rVert}
-\graphicspath{{figures/results/}}
 \emergencystretch=1.5em
 \allowdisplaybreaks[1]
 \setlength{\tabcolsep}{4pt}
@@ -36,23 +36,20 @@
 \setlength{\floatsep}{9pt plus 2pt minus 2pt}
 \setlength{\dblfloatsep}{9pt plus 2pt minus 2pt}
 \raggedbottom
-\title{Semantiche di esecuzione e architetture parallele per una formulazione continua della Particle Swarm Optimization}
 
+\title{Parallelizzazione della Continuous Particle Swarm Optimization: semantiche di esecuzione, topologie e protocolli di valutazione}
 \author{
   \textbf{Giovanni Giuseppe Iacuzzo}\textsuperscript{1,*} \\
-  \small \textsuperscript{1}Dipartimento di Ingegneria e Architettura, Università degli Studi di Enna ``Kore'', Enna, Italia \\
+  \small \textsuperscript{1}Dipartimento di Ingegneria e Architettura, Universit\`a degli Studi di Enna ``Kore'', Enna, Italia \\
   \small \textsuperscript{*}Autore corrispondente: \texttt{giovanni.iacuzzo@unikore.it}
 }
-
 \date{}
-
-
 \begin{document}
 \maketitle
 \begin{abstract}
-La parallelizzazione della Particle Swarm Optimization coinvolge sia la distribuzione del lavoro sia la disponibilità dell'informazione sociale. Questo studio analizza cinque modalità di esecuzione della formulazione continua di Orlando--Ricciardello: seriale sincrona, master--slave, particle-parallel, asincrona e a isole. La valutazione distingue equivalenza dei record di traiettoria, strong scaling e qualità a budget di valutazione controllato. Le campagne pilota su CPU M2 comprendono sei funzioni interne in dimensione 30 e 100, sette vicinati sociali e un confronto con dieci metodi PSO su sottoinsiemi di COCO BBOB e CEC 2013 LSGO. I 480 confronti sincroni registrati mostrano uguaglianza dei campi verificati; a quattro worker gli speedup mediani variano da 1.068 a 2.968 in funzione del carico e dell'esecutore. I profili anytime, i tassi di migrazione, le frazioni di target raggiunti e i ranghi ai checkpoint descrivono comportamenti eterogenei tra configurazioni e problemi. L'analisi fornisce un quadro comune per valutare congiuntamente costo computazionale e dinamica della ricerca nella CPSO parallela.
+La parallelizzazione della Particle Swarm Optimization modifica non soltanto il costo delle valutazioni, ma potenzialmente anche la semantica dell'aggiornamento sociale e, quindi, le traiettorie di ricerca. Questo lavoro sviluppa un protocollo di studio per la formulazione continua di Orlando--Ricciardello, basata sulla propagazione analitica locale di un sistema differenziale a coefficienti congelati. Si distinguono esecutori sincroni che preservano l'ordine dei commit, un esecutore asincrono a eventi e un modello a isole con migrazione controllata. Il disegno prevede una selezione del passo temporale su problemi e semi appaiati, seguita dalla validazione indipendente del candidato congelato; confronti di tempo assoluto, accelerazione rispetto al seriale, strong scaling ed efficienza; e analisi della qualità al variare delle otto configurazioni di vicinato. Una seconda linea sperimentale definisce un confronto a budget di valutazioni uniforme con dieci varianti PSO su COCO BBOB, BBOB-LargeScale e CEC 2013 LSGO. Vengono precisati l'unit\`a statistica, i confondenti della misura dei tempi e i limiti inferenziali di confronti a parit\`a di valutazioni anzich\'e di tempo. Il contributo attuale \`e la specificazione matematica e metodologica di un quadro di valutazione verificabile, senza anticipare esiti delle campagne ancora da consolidare.
 \end{abstract}
-\noindent\textbf{Parole chiave:} Continuous Particle Swarm Optimization; calcolo parallelo; sincronizzazione; modelli a isole; topologie sociali; benchmarking.
+\noindent\textbf{Parole chiave:} Continuous Particle Swarm Optimization; parallelismo multicore; propagatore analitico; topologie sociali; strong scaling; benchmarking.
 
 \section{Introduzione}\label{sec:introduction}
 \input{sections/section_1_introduction.tex}
@@ -63,19 +60,14 @@ La parallelizzazione della Particle Swarm Optimization coinvolge sia la distribu
 \FloatBarrier
 \input{sections/section_3_experimental_protocol.tex}
 \FloatBarrier
-\input{sections/section_4_results.tex}
-\FloatBarrier
-\input{sections/section_5_discussion.tex}
-\input{sections/section_6_conclusions.tex}
-\FloatBarrier
-\paragraph{Disponibilità dei dati.} I materiali associati comprendono figure vettoriali e riepiloghi CSV usati per le tabelle. Copertura e metadati sono descritti in Appendice~\ref{app:campaigns}.
 
-% Complete all main-text floats before the bibliography.
+
+\paragraph{Disponibilit\`a del codice e tracciabilit\`a.}
+L'implementazione e gli script delle campagne sono disponibili nel repository \href{https://github.com/GiovanniIacuzzo/Parallel-Continuous-Particle-Swarm-Optimization}{Parallel-Continuous-Particle-Swarm-Optimization} dell'Autore. Le configurazioni sorgente, i manifest e i dati prodotti dalle singole campagne costituiscono la base per la futura sezione sperimentale; l'esistenza di un protocollo nel codice non ne implica l'avvenuto completamento.
+
 \clearpage
 \bibliographystyle{unsrtnat}
 \bibliography{references}
-
-% Appendices follow the complete bibliography.
 \clearpage\onecolumn\appendix
 \numberwithin{figure}{section}
 \numberwithin{table}{section}
@@ -88,9 +80,5 @@ La parallelizzazione della Particle Swarm Optimization coinvolge sia la distribu
 \input{appendices/appendix_C_scalar_randomness.tex}
 \FloatBarrier
 \input{appendices/appendix_D_campaigns.tex}
-\FloatBarrier
-\input{appendices/appendix_E_extended_results.tex}
-\FloatBarrier
-\input{appendices/appendix_F_cec_values.tex}
 \clearpage
 \end{document}
