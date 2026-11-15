@@ -1,114 +1,265 @@
 \begin{figure*}[tbp]
 \centering
-\setlength{\tabcolsep}{3pt}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.0}
+
+% Stili TikZ condivisi per garantire uniformità tipografica
+\tikzset{
+  topo/.style={
+    scale=0.82,
+    every node/.style={transform shape}
+  },
+  pnode/.style={
+    circle, draw=black!75, fill=white,
+    line width=0.65pt, minimum size=4.0mm, inner sep=0pt
+  },
+  hl/.style={
+    circle, draw=blue!65!black, fill=blue!12,
+    line width=0.7pt, minimum size=4.0mm, inner sep=0pt
+  },
+  hub/.style={
+    circle, draw=blue!70!black, fill=blue!20,
+    line width=0.85pt, minimum size=5.0mm, inner sep=0pt
+  },
+  pedge/.style={draw=black!75, line width=0.65pt},
+  cedge/.style={draw=black!35, line width=0.42pt},
+  wrap/.style={draw=blue!70!black, line width=0.6pt, densely dashed},
+  shortcut/.style={draw=blue!75!black, line width=0.8pt, densely dashed}
+}
+
 \begin{tabular}{cccc}
-\begin{minipage}[t]{0.22\textwidth}\centering
-\begin{tikzpicture}[scale=0.78, every node/.style={circle,draw,fill=white,inner sep=1.3pt,minimum size=4.3mm,font=\scriptsize},
-edge/.style={line width=0.6pt}, hl/.style={fill=blue!12,draw=blue!60!black}]
-  \foreach \i/\ang in {1/90,2/45,3/0,4/315,5/270,6/225,7/180,8/135}{
-    \node[hl] (n\i) at (\ang:1.35) {};
+% ==================== (a) GLOBAL-BEST ====================
+\begin{minipage}[t]{0.23\textwidth}\centering
+\begin{tikzpicture}[topo]
+  \useasboundingbox (-1.75,-1.75) rectangle (1.75,1.75);
+  \foreach \i/\ang in {1/90,2/45,3/0,4/315,5/270,6/225,7/180,8/135}{%
+    \coordinate (n\i) at (\ang:1.35);
   }
-  \foreach \i/\j in {1/2,1/3,1/4,1/5,1/6,1/7,1/8,2/3,2/4,2/5,2/6,2/7,2/8,3/4,3/5,3/6,3/7,3/8,4/5,4/6,4/7,4/8,5/6,5/7,5/8,6/7,6/8,7/8}{
-    \draw[edge] (n\i)--(n\j);
+  % Corde interne più leggere per evitare l'effetto macchia nera
+  \foreach \i in {1,...,8}{%
+    \foreach \j in {\i,...,8}{%
+      \ifnum\i<\j
+        \draw[cedge] (n\i)--(n\j);
+      \fi
+    }
+  }
+  % Perimetro esterno più marcato
+  \foreach \i/\j in {1/2,2/3,3/4,4/5,5/6,6/7,7/8,8/1}{%
+    \draw[pedge, draw=blue!60!black!70] (n\i)--(n\j);
+  }
+  % Nodi disegnati sopra gli archi
+  \foreach \i in {1,...,8}{%
+    \node[hl] at (n\i) {};
   }
 \end{tikzpicture}
-\par\vspace{1mm}\scriptsize \textbf{(a) Global-best}
+\par\vspace{0.5mm}\scriptsize \textbf{(a) Global-best}
 \end{minipage}
 &
-\begin{minipage}[t]{0.22\textwidth}\centering
-\begin{tikzpicture}[scale=0.8, every node/.style={circle,draw,fill=white,inner sep=1.3pt,minimum size=4.3mm,font=\scriptsize}, edge/.style={line width=0.7pt}]
-  \foreach \i/\ang in {1/90,2/45,3/0,4/315,5/270,6/225,7/180,8/135}{
-    \node (n\i) at (\ang:1.35) {};
+% ==================== (b) RING ====================
+\begin{minipage}[t]{0.23\textwidth}\centering
+\begin{tikzpicture}[topo]
+  \useasboundingbox (-1.75,-1.75) rectangle (1.75,1.75);
+  \foreach \i/\ang in {1/90,2/45,3/0,4/315,5/270,6/225,7/180,8/135}{%
+    \coordinate (n\i) at (\ang:1.35);
   }
-  \foreach \i/\j in {1/2,2/3,3/4,4/5,5/6,6/7,7/8,8/1}{\draw[edge] (n\i)--(n\j);}  
+  \foreach \i/\j in {1/2,2/3,3/4,4/5,5/6,6/7,7/8,8/1}{%
+    \draw[pedge, line width=0.75pt] (n\i)--(n\j);
+  }
+  \foreach \i in {1,...,8}{%
+    \node[pnode] at (n\i) {};
+  }
 \end{tikzpicture}
-\par\vspace{1mm}\scriptsize \textbf{(b) Ring}
+\par\vspace{0.5mm}\scriptsize \textbf{(b) Ring}
 \end{minipage}
 &
-\begin{minipage}[t]{0.22\textwidth}\centering
-\begin{tikzpicture}[scale=0.66, every node/.style={circle,draw,fill=white,inner sep=1.0pt,minimum size=3.9mm,font=\scriptsize}, edge/.style={line width=0.6pt}, wrap/.style={line width=0.6pt,dashed,gray!80}]
-  \foreach \r in {1,2,3,4}{
-    \foreach \c in {1,2,3,4}{
+% ==================== (c) VON NEUMANN TOROIDALE ====================
+\begin{minipage}[t]{0.23\textwidth}\centering
+\begin{tikzpicture}[topo]
+  \useasboundingbox (-1.75,-1.75) rectangle (1.75,1.75);
+  % Griglia 4x4 centrata nell'origine
+  \foreach \r in {1,2,3,4}{%
+    \foreach \c in {1,2,3,4}{%
       \pgfmathtruncatemacro{\id}{4*(\r-1)+\c}
-      \node (n\id) at (0.68*\c, -0.68*\r) {};
+      \pgfmathsetmacro{\xx}{-1.02 + 0.68*(\c-1)}
+      \pgfmathsetmacro{\yy}{ 1.02 - 0.68*(\r-1)}
+      \node[pnode, minimum size=3.4mm] (n\id) at (\xx,\yy) {};
     }
   }
-  \foreach \r in {1,2,3,4}{
-    \foreach \c in {1,2,3,4}{
-      \pgfmathtruncatemacro{\cn}{mod(\c,4)+1}
+  % Archi interni orizzontali e verticali
+  \foreach \r in {1,2,3,4}{%
+    \foreach \c in {1,2,3}{%
       \pgfmathtruncatemacro{\a}{4*(\r-1)+\c}
-      \pgfmathtruncatemacro{\b}{4*(\r-1)+\cn}
-      \ifnum\c<4 \draw[edge] (n\a)--(n\b); \else \draw[wrap] (n\a)--(n\b); \fi
+      \pgfmathtruncatemacro{\b}{\a+1}
+      \draw[pedge] (n\a)--(n\b);
     }
   }
-  \foreach \c in {1,2,3,4}{
-    \foreach \r in {1,2,3,4}{
-      \pgfmathtruncatemacro{\rn}{mod(\r,4)+1}
+  \foreach \c in {1,2,3,4}{%
+    \foreach \r in {1,2,3}{%
       \pgfmathtruncatemacro{\a}{4*(\r-1)+\c}
-      \pgfmathtruncatemacro{\b}{4*(\rn-1)+\c}
-      \ifnum\r<4 \draw[edge] (n\a)--(n\b); \else \draw[wrap] (n\a)--(n\b); \fi
+      \pgfmathtruncatemacro{\b}{\a+4}
+      \draw[pedge] (n\a)--(n\b);
     }
   }
+  % Archi periodici (wrap-around) curvati senza attraversare i nodi
+  \draw[wrap] (n1)  to[bend left=28]  (n4);
+  \draw[wrap] (n5)  to[bend left=22]  (n8);
+  \draw[wrap] (n9)  to[bend right=22] (n12);
+  \draw[wrap] (n13) to[bend right=28] (n16);
+  \draw[wrap] (n1)  to[bend right=28] (n13);
+  \draw[wrap] (n2)  to[bend right=22] (n14);
+  \draw[wrap] (n3)  to[bend left=22]  (n15);
+  \draw[wrap] (n4)  to[bend left=28]  (n16);
 \end{tikzpicture}
-\par\vspace{1mm}\scriptsize \textbf{(c) Griglia von Neumann toroidale}
+\par\vspace{0.5mm}\scriptsize \textbf{(c) Griglia von Neumann toroidale}
 \end{minipage}
 &
-\begin{minipage}[t]{0.22\textwidth}\centering
-\begin{tikzpicture}[scale=0.8, every node/.style={circle,draw,fill=white,inner sep=1.3pt,minimum size=4.3mm,font=\scriptsize}, edge/.style={line width=0.7pt}, hub/.style={fill=blue!12,draw=blue!60!black}]
-  \node[hub] (c) at (0,0) {};
-  \foreach \i/\ang in {1/90,2/30,3/330,4/270,5/210,6/150}{
-    \node (n\i) at (\ang:1.45) {};
-    \draw[edge] (c)--(n\i);
+% ==================== (d) WHEEL (HUB-AND-SPOKE) ====================
+\begin{minipage}[t]{0.23\textwidth}\centering
+\begin{tikzpicture}[topo]
+  \useasboundingbox (-1.75,-1.75) rectangle (1.75,1.75);
+  \coordinate (c) at (0,0);
+  \foreach \i/\ang in {1/90,2/38.6,3/347.1,4/295.7,5/244.3,6/192.9,7/141.4}{%
+    \coordinate (n\i) at (\ang:1.35);
+    \draw[pedge, line width=0.7pt] (c)--(n\i);
+  }
+  \node[hub] at (c) {};
+  \foreach \i in {1,...,7}{%
+    \node[pnode] at (n\i) {};
   }
 \end{tikzpicture}
-\par\vspace{1mm}\scriptsize \textbf{(d) Wheel nell'API (hub-and-spoke)}
+\par\vspace{0.5mm}\scriptsize \textbf{(d) Wheel nell'API (hub-and-spoke)}
 \end{minipage}
-\\[1.8ex]
-\begin{minipage}[t]{0.22\textwidth}\centering
-\begin{tikzpicture}[scale=0.78, every node/.style={circle,draw,fill=white,inner sep=1.1pt,minimum size=4.1mm,font=\scriptsize}, edge/.style={line width=0.65pt}]
-  \foreach \i/\x/\y in {1/0/1.55,2/1.25/1.0,3/1.55/-0.15,4/0.85/-1.25,5/-0.55/-1.45,6/-1.5/-0.45,7/-1.2/0.95,8/0.2/0.45,9/0.2/-0.55}{
-    \node (n\i) at (\x,\y) {};
+\\[2.2ex]
+% ==================== (e) RANDOM CONNESSA k~4 ====================
+\begin{minipage}[t]{0.23\textwidth}\centering
+\begin{tikzpicture}[topo]
+  \useasboundingbox (-1.75,-1.75) rectangle (1.75,1.75);
+  \foreach \i/\x/\y in {%
+    1/0.00/1.42, 2/1.15/0.88, 3/1.42/-0.25, 4/0.75/-1.28,%
+    5/-0.65/-1.32, 6/-1.42/-0.35, 7/-1.12/0.92,%
+    8/-0.38/0.28, 9/0.42/-0.32%
+  }{%
+    \coordinate (n\i) at (\x,\y);
   }
-  \foreach \i/\j in {1/2,1/8,1/7,2/3,2/8,2/9,3/8,3/9,3/4,4/5,4/9,5/6,5/9,6/7,6/9,7/8}{\draw[edge] (n\i)--(n\j);}  
-\end{tikzpicture}
-\par\vspace{1mm}\scriptsize \textbf{(e) Random connessa, $k\approx4$}
-\end{minipage}
-&
-\begin{minipage}[t]{0.22\textwidth}\centering
-\begin{tikzpicture}[scale=0.78, every node/.style={circle,draw,fill=white,inner sep=1.1pt,minimum size=4.1mm,font=\scriptsize}, edge/.style={line width=0.62pt}]
-  \foreach \i/\x/\y in {1/0/1.55,2/1.25/1.0,3/1.55/-0.15,4/0.85/-1.25,5/-0.55/-1.45,6/-1.5/-0.45,7/-1.2/0.95,8/0.2/0.45,9/0.2/-0.55}{
-    \node (n\i) at (\x,\y) {};
+  % 18 archi su 9 nodi -> grado medio esatto k = 4.0
+  \foreach \i/\j in {%
+    1/2,1/7,1/8,1/9,%
+    2/3,2/8,2/9,%
+    3/4,3/9,%
+    4/5,4/9,%
+    5/6,5/8,5/9,%
+    6/7,6/8,%
+    7/8,8/9%
+  }{%
+    \draw[pedge] (n\i)--(n\j);
   }
-  \foreach \i/\j in {1/2,1/3,1/7,1/8,1/9,2/3,2/4,2/7,2/8,2/9,3/4,3/5,3/8,3/9,4/5,4/6,4/8,4/9,5/6,5/7,5/8,5/9,6/7,6/8,6/9,7/8,7/9,8/9}{\draw[edge] (n\i)--(n\j);}  
+  \foreach \i in {1,...,9}{%
+    \node[pnode] at (n\i) {};
+  }
 \end{tikzpicture}
-\par\vspace{1mm}\scriptsize \textbf{(f) Random connessa, $k\approx8$}
+\par\vspace{0.5mm}\scriptsize \textbf{(e) Random connessa, $k\approx4$}
 \end{minipage}
 &
-\begin{minipage}[t]{0.22\textwidth}\centering
-\begin{tikzpicture}[scale=0.78, every node/.style={circle,draw,fill=white,inner sep=1.1pt,minimum size=4.1mm,font=\scriptsize}, edge/.style={line width=0.6pt}, shortcut/.style={line width=0.75pt,blue!70!black,dashed}]
-  \foreach \i/\ang in {1/90,2/45,3/0,4/315,5/270,6/225,7/180,8/135}{\node (n\i) at (\ang:1.35) {};}
-  \foreach \i/\j in {1/2,2/3,3/4,4/5,5/6,6/7,7/8,8/1,1/8,1/3,2/4,3/5,4/6,5/7,6/8,7/1,8/2}{\draw[edge,gray!70] (n\i)--(n\j);} 
-  \foreach \i/\j in {1/4,2/6,3/7}{\draw[shortcut] (n\i)--(n\j);}  
+% ==================== (f) RANDOM CONNESSA k~8 ====================
+\begin{minipage}[t]{0.23\textwidth}\centering
+\begin{tikzpicture}[topo]
+  \useasboundingbox (-1.75,-1.75) rectangle (1.75,1.75);
+  \foreach \i/\x/\y in {%
+    1/0.00/1.42, 2/1.15/0.88, 3/1.42/-0.25, 4/0.75/-1.28,%
+    5/-0.65/-1.32, 6/-1.42/-0.35, 7/-1.12/0.92,%
+    8/-0.38/0.28, 9/0.42/-0.32%
+  }{%
+    \coordinate (n\i) at (\x,\y);
+  }
+  % Archi aggiuntivi per densificazione a k~8 (in grigio chiaro)
+  \foreach \i/\j in {%
+    1/3,1/4,1/5,1/6,%
+    2/4,2/5,2/6,2/7,%
+    3/5,3/6,3/7,3/8,%
+    4/6,4/7,4/8,%
+    5/7,6/9,7/9%
+  }{%
+    \draw[cedge] (n\i)--(n\j);
+  }
+  % Archi base del pannello (e) in evidenza
+  \foreach \i/\j in {%
+    1/2,1/7,1/8,1/9,%
+    2/3,2/8,2/9,%
+    3/4,3/9,%
+    4/5,4/9,%
+    5/6,5/8,5/9,%
+    6/7,6/8,%
+    7/8,8/9%
+  }{%
+    \draw[pedge] (n\i)--(n\j);
+  }
+  \foreach \i in {1,...,9}{%
+    \node[pnode] at (n\i) {};
+  }
 \end{tikzpicture}
-\par\vspace{1mm}\scriptsize \textbf{(g) Small-world, $k=4$}
+\par\vspace{0.5mm}\scriptsize \textbf{(f) Random connessa, $k\approx8$}
 \end{minipage}
 &
-\begin{minipage}[t]{0.22\textwidth}\centering
-\begin{tikzpicture}[scale=0.8, every node/.style={circle,draw,fill=white,inner sep=1.1pt,minimum size=4.2mm,font=\scriptsize}, edge/.style={line width=0.7pt}, hub/.style={fill=blue!12,draw=blue!60!black}]
-  \node[hub] (h1) at (0,1.2) {};
-  \node[hub] (h2) at (0.05,0.05) {};
-  \node (n3) at (-1.25,1.0) {};
-  \node (n4) at (1.2,1.0) {};
-  \node (n5) at (-1.4,-0.15) {};
-  \node (n6) at (1.35,-0.35) {};
-  \node (n7) at (-0.95,-1.2) {};
-  \node (n8) at (0.95,-1.2) {};
-  \node (n9) at (0,-1.55) {};
-  \foreach \i/\j in {h1/h2,h1/n3,h1/n4,h1/n5,h1/n6,h2/n3,h2/n4,h2/n5,h2/n6,h2/n7,h2/n8,h2/n9,n7/n9,n8/n9}{\draw[edge] (\i)--(\j);}  
+% ==================== (g) SMALL-WORLD k=4 ====================
+\begin{minipage}[t]{0.23\textwidth}\centering
+\begin{tikzpicture}[topo]
+  \useasboundingbox (-1.75,-1.75) rectangle (1.75,1.75);
+  \foreach \i/\ang in {1/90,2/45,3/0,4/315,5/270,6/225,7/180,8/135}{%
+    \node[pnode] (n\i) at (\ang:1.22) {};
+  }
+  % 1-vicini sull'anello
+  \foreach \i/\j in {1/2,2/3,3/4,4/5,5/6,6/7,7/8,8/1}{%
+    \draw[pedge] (n\i)--(n\j);
+  }
+  % 2-vicini curvati all'esterno per lasciare libero il centro
+  \foreach \i/\j in {1/3,2/4,3/5,4/6,5/7,6/8,7/1,8/2}{%
+    \draw[cedge, line width=0.5pt] (n\i) to[bend left=42] (n\j);
+  }
+  % Shortcut a lungo raggio ben visibili al centro
+  \foreach \i/\j in {1/5,2/7,4/8}{%
+    \draw[shortcut] (n\i)--(n\j);
+  }
 \end{tikzpicture}
-\par\vspace{1mm}\scriptsize \textbf{(h) Scale-free, $k=4$}
+\par\vspace{0.5mm}\scriptsize \textbf{(g) Small-world, $k=4$}
+\end{minipage}
+&
+% ==================== (h) SCALE-FREE k=4 ====================
+\begin{minipage}[t]{0.23\textwidth}\centering
+\begin{tikzpicture}[topo]
+  \useasboundingbox (-1.75,-1.75) rectangle (1.75,1.75);
+  \coordinate (h1) at (-0.38, 0.25);
+  \coordinate (h2) at ( 0.42,-0.22);
+  \coordinate (n3) at (-0.95, 1.22);
+  \coordinate (n4) at ( 0.15, 1.38);
+  \coordinate (n5) at ( 1.25, 0.92);
+  \coordinate (n6) at (-1.42, 0.15);
+  \coordinate (n7) at (-1.05,-1.05);
+  \coordinate (n8) at ( 1.38,-0.15);
+  \coordinate (n9) at ( 1.02,-1.22);
+  \coordinate (n10) at (-0.08,-1.38);
+
+  % Collegamenti tra nodi periferici (basso grado)
+  \foreach \i/\j in {n3/n4,n4/n5,n6/n7,n7/n10,n8/n9,n9/n10}{%
+    \draw[cedge, line width=0.5pt] (\i)--(\j);
+  }
+  % Collegamenti dominanti verso gli hub (preferential attachment)
+  \foreach \i/\j in {%
+    h1/h2,%
+    h1/n3,h1/n4,h1/n5,h1/n6,h1/n7,h1/n10,%
+    h2/n4,h2/n5,h2/n7,h2/n8,h2/n9,h2/n10%
+  }{%
+    \draw[pedge] (\i)--(\j);
+  }
+  % Nodi disegnati in primo piano (hub più grandi in blu)
+  \node[hub] at (h1) {};
+  \node[hub] at (h2) {};
+  \foreach \i in {3,...,10}{%
+    \node[pnode] at (n\i) {};
+  }
+\end{tikzpicture}
+\par\vspace{0.5mm}\scriptsize \textbf{(h) Scale-free, $k=4$}
 \end{minipage}
 \end{tabular}
-\caption{Schemi TikZ delle otto topologie di comunicazione discusse nel manoscritto. I pannelli sono rappresentazioni qualitative della struttura del vicinato e non corrispondono alla dimensione reale dello sciame usata negli esperimenti. Per le topologie random, small-world e scale-free si mostrano realizzazioni esemplificative; la topologia \texttt{wheel} implementata nel codice coincide con una struttura hub-and-spoke, cio\`e una stella, e non con la wheel grafica standard dotata di anello periferico. Nella griglia von Neumann le linee tratteggiate indicano i collegamenti periodici della topologia toroidale.}
+\caption{Schemi delle otto topologie di comunicazione analizzate nel manoscritto. I pannelli illustrano qualitativamente la struttura del vicinato e non corrispondono alla reale dimensione dello sciame impiegata negli esperimenti. Per le topologie random, small-world e scale-free si riportano realizzazioni rappresentative; la topologia \texttt{wheel} implementata nell'API corrisponde a una struttura \emph{hub-and-spoke} (grafo a stella) priva di anello periferico. Nella griglia di von Neumann (c) gli archi tratteggiati blu indicano le condizioni al contorno periodiche della topologia toroidale, mentre nel grafo small-world (g) evidenziano gli \emph{shortcut} a lungo raggio rispetto al reticolo locale.}
 \label{fig:topology-schematics}
 \end{figure*}
