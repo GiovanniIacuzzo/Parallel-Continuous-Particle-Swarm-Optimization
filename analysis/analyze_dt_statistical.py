@@ -144,10 +144,10 @@ def summarize(input_dir: Path, output_dir: Path, *, reps: int=5000, bootstrap_se
     ref_boot=(by_seed[ix]-by_seed[ix][:,:,[ref_i]]).mean(axis=1)
     cell_mean=z.mean(axis=1)  # n_cells x n_dt
     # Mean within-cell rank (smaller = better), used as a robustness diagnostic.
+    from scipy.stats import rankdata
     ranks=np.empty_like(cell_mean)
     for ci in range(len(cells)):
-        order=np.argsort(cell_mean[ci],kind="stable")
-        ranks[ci,order]=np.arange(1,len(dts)+1)
+        ranks[ci] = rankdata(cell_mean[ci], method="average")
     mean_ranks=ranks.mean(axis=0)
     frozen=config.get("frozen_dt")
     if frozen is not None:

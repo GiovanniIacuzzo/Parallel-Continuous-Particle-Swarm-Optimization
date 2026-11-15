@@ -54,6 +54,7 @@ def read_jsonl_checkpoint(
     path: Path,
     *,
     repair: bool = False,
+    key_field: str | None = "run_key",
 ) -> tuple[list[dict[str, Any]], dict[str, int | bool]]:
     """Read a JSONL checkpoint and optionally repair only an incomplete tail.
 
@@ -104,12 +105,13 @@ def read_jsonl_checkpoint(
 
         if not isinstance(record, dict):
             raise ValueError(f"JSONL checkpoint record at {path}, byte offset {offset} is not an object")
-        key = record.get("run_key")
-        if not isinstance(key, str) or not key:
+        key = record.get(key_field) if key_field else None
+        if key_field and (not isinstance(key, str) or not key):
             raise ValueError(f"JSONL checkpoint record at {path}, byte offset {offset} has no valid run_key")
-        if key in seen:
+        if key_field and key in seen:
             raise ValueError(f"Duplicate run_key in JSONL checkpoint {path}: {key}")
-        seen.add(key)
+        if key_field:
+            seen.add(key)
         records.append(record)
         offset += len(line)
 

@@ -1,4 +1,4 @@
-# Optional legacy CEC 2013 LSGO adapter.
-# Review the third-party wrapper's GPL-3.0 license and compatibility before use.
+setuptools>=65,<81
+Cython>=3,<4
 numpy>=1.23
 cec2013lsgo==2.2

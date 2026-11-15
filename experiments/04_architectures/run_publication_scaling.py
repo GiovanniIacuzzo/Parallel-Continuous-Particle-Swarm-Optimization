@@ -24,6 +24,8 @@ import statistics
 import sys
 import time
 
+from checkpoint_io import atomic_write_json, read_jsonl_checkpoint
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "python"))
 from cpso_serial import (  # noqa: E402
@@ -59,7 +61,7 @@ def hash_file(path):
     return h.hexdigest()
 
 
-def configuration(d, seed, topo, n, it, dt):
+def configuration(d, seed, topo, n, it, dt, benchmark="inverse_diffusion"):
     name = topo.split("_k")[0] if topo.endswith(("_k4", "_k8")) else topo
     kwargs = {}
     if name == "grid_von_neumann":
@@ -68,8 +70,9 @@ def configuration(d, seed, topo, n, it, dt):
             raise ValueError("Grid topology requires a composite population size")
         rows = max(div)
         kwargs = {"grid_rows": rows, "grid_columns": n // rows}
+    bound = 5.12 if benchmark == "rastrigin" else 2.0
     cfg = CpsoConfig(
-        lower_bounds=(-2.0,) * d, upper_bounds=(2.0,) * d,
+        lower_bounds=(-bound,) * d, upper_bounds=(bound,) * d,
         population_size=n, iterations=it, seed=seed, dt=dt,
         mu_max=0.9, mu_min=0.4, cognitive=2.05, social=2.05,
         initial_velocity_fraction=0.1, boundary_restitution=0.5,
@@ -80,14 +83,14 @@ def configuration(d, seed, topo, n, it, dt):
     return cfg
 
 
-def run_method(cfg, work, arch, workers):
+def run_method(cfg, work, arch, workers, benchmark):
     if arch == "serial":
-        return run_serial(cfg, "inverse_diffusion", work_iterations=work)
+        return run_serial(cfg, benchmark, work_iterations=work)
     if arch == "master_slave":
-        return run_master_slave(cfg, "inverse_diffusion", workers=workers,
+        return run_master_slave(cfg, benchmark, workers=workers,
                                 work_iterations=work)
     if arch == "particle_parallel":
-        return run_particle_parallel(cfg, "inverse_diffusion", workers=workers,
+        return run_particle_parallel(cfg, benchmark, workers=workers,
                                      work_iterations=work)
     raise ValueError("Unrecognized architecture: " + arch)
 
@@ -101,9 +104,9 @@ def record_key(row):
             row["architecture"], row["workers"])
 
 
-def record_from_result(d, topo, seed, rep, arch, workers, chunk, n, it, work, ordinal, value):
+def record_from_result(d, topo, seed, rep, arch, workers, chunk, n, it, work, ordinal, value, benchmark):
     return {
-        "benchmark": "inverse_diffusion", "dimension": d, "topology": topo,
+        "benchmark": benchmark, "dimension": d, "topology": topo,
         "seed": seed, "repetition": rep, "architecture": arch, "workers": workers,
         "chunk": chunk, "work_iterations": work, "population": n, "iterations": it,
         "ordinal": ordinal, "utc_finished": now(),
@@ -207,7 +210,7 @@ def summarize(raw, settings):
         ident = [d, topo, arch, w, metric]
         mid, lo, hi, ns, nr = seed_cluster_summary(seed_data, ident, settings["bootstrap_draws"])
         summary.append({
-            "benchmark": "inverse_diffusion", "dimension": d, "topology": topo,
+            "benchmark": settings["benchmark"], "dimension": d, "topology": topo,
             "work_iterations": settings["work_iterations"],
             "architecture": arch, "workers": w, "metric": metric,
             "median": mid, "ci95_low": lo, "ci95_high": hi,
@@ -227,80 +230,88 @@ def write_csv(path, rows):
     temp.replace(path)
 
 
-def make_figures(summary, output, settings):
+def scaling_figure(folders, target):
+    """Summarize each planned topology once, retaining objective and dimension."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    plt.rcParams.update({
-        "font.family": "serif", "font.size": 9, "axes.spines.top": False,
-        "axes.spines.right": False, "pdf.fonttype": 42, "savefig.bbox": "tight",
-    })
-    styles = {
-        "master_slave": ("#21618C", "o", "Master–Slave"),
-        "particle_parallel": ("#BA5B29", "s", "Particle-Parallel"),
-    }
-    for d in settings["dimensions"]:
-        for topo in settings["topologies"]:
-            data = [r for r in summary if r["dimension"] == d and r["topology"] == topo]
-            fig, axes = plt.subplots(2, 2, figsize=(10.2, 6.5), sharex="col")
-            panels = [
-                (0, 0, "strong_speedup", "Strong scaling — backend p=1", "Speedup"),
-                (1, 0, "strong_efficiency", "", "Efficiency"),
-                (0, 1, "serial_speedup", "Acceleration — serial baseline", "Speedup"),
-                (1, 1, "serial_efficiency", "", "Efficiency"),
-            ]
-            for r, c, metric, title, ylabel in panels:
-                ax = axes[r, c]
-                for arch in settings["architectures"]:
-                    color, mark, lab = styles[arch]
-                    series = sorted((x for x in data if x["architecture"] == arch and
-                                     x["metric"] == metric), key=lambda x: x["workers"])
-                    if not series:
+    from matplotlib.ticker import PercentFormatter
+
+    labels = {"rastrigin": "Rastrigin", "inverse_diffusion": "Inverse diffusion"}
+    arch_labels = {"master_slave": "Master–slave", "particle_parallel": "Particle-parallel"}
+    colors = {"master_slave": "#286789", "particle_parallel": "#ae4928"}
+    metrics = ["strong_speedup", "strong_efficiency"]
+    fig, axes = plt.subplots(2, len(folders), squeeze=False, sharey="row",
+                             figsize=(3.65 * len(folders) + 0.45, 4.35))
+    reference = None
+    try:
+        for col, folder in enumerate(folders):
+            manifest = json.loads((folder / "publication_scaling_manifest.json").read_text())
+            fingerprint = manifest["execution_fingerprint"]
+            cfg = fingerprint["settings"]
+            benchmark = cfg["benchmark"]
+            if len(folders) > 1 and folder.name != benchmark:
+                raise ValueError(f"Unexpected objective in {folder}")
+            design = {k: v for k, v in cfg.items() if k not in ("benchmark", "work_iterations")}
+            design["binary"] = fingerprint["native_binary_sha256"]
+            if col and design != reference:
+                raise ValueError("Incompatible scaling campaigns")
+            reference = design
+            values = {}
+            with (folder / "publication_scaling_summary.csv").open(newline="") as stream:
+                for row in csv.DictReader(stream):
+                    if row["metric"] not in metrics:
                         continue
-                    xx = [x["workers"] for x in series]
-                    yy = [x["median"] for x in series]
-                    lows = [x["ci95_low"] for x in series]
-                    highs = [x["ci95_high"] for x in series]
-                    ax.plot(xx, yy, marker=mark, color=color, linewidth=1.8, markersize=5,
-                            label=lab)
-                    ax.fill_between(xx, lows, highs, color=color, alpha=.13, linewidth=0)
-                xmax = max(settings["workers"])
-                if r == 0:
-                    ax.plot([1, xmax], [1, xmax], ls="--", lw=1., color="#6b7280",
-                            label="Ideal")
+                    key = (row["architecture"], int(row["dimension"]), int(row["workers"]),
+                           row["metric"], row["topology"])
+                    v = float(row["median"])
+                    if (key in values or row["benchmark"] != benchmark or not math.isfinite(v)
+                            or v <= 0 or int(row["n_seeds"]) != len(cfg["seeds"])
+                            or int(row["n_observations"]) != len(cfg["seeds"]) * cfg["repetitions"]):
+                        raise ValueError(f"Invalid scaling summary in {folder}: {key}")
+                    values[key] = v
+            dims = cfg["dimensions"]
+            workers = sorted(cfg["workers"])
+            for i, metric in enumerate(metrics):
+                ax = axes[i, col]
+                ax.axhline(1, color="#888888", lw=.8, ls=":", zorder=0)
+                for arch in cfg["architectures"]:
+                    for j, dim in enumerate(dims):
+                        points = [statistics.median(values[arch, dim, w, metric, t]
+                                                    for t in cfg["topologies"]) for w in workers]
+                        ax.plot(workers, points, color=colors[arch], marker=("o","s","^","D")[j % 4],
+                                linestyle=("-","--","-.",":")[j % 4], lw=1.6, ms=4,
+                                markerfacecolor="white" if j % 2 else colors[arch],
+                                label=f"{arch_labels[arch]}, D={dim}")
+                ax.set_xticks(workers)
+                ax.grid(axis="y", color="#dddddd", linewidth=.5)
+                ax.spines[["top","right"]].set_visible(False)
+                ax.tick_params(labelbottom=i == 1, labelsize=8)
+                if i == 0:
+                    ax.set_title(labels.get(benchmark, benchmark), fontsize=11)
                 else:
-                    ax.axhline(1, ls="--", lw=1., color="#6b7280")
-                if title:
-                    ax.set_title(title, fontsize=10)
-                if c == 0:
-                    ax.set_ylabel(ylabel)
-                if r == 1:
-                    ax.set_xlabel("Workers (p)")
-                ax.set_xticks(settings["workers"])
-                ax.set_xlim(.8, xmax + .3)
-                ax.grid(alpha=.16)
-            handles, names = axes[0, 0].get_legend_handles_labels()
-            fig.legend(handles, names, loc="upper center", ncol=3, frameon=False,
-                       bbox_to_anchor=(.5, .94))
-            fig.suptitle(f"CPSO · inverse diffusion · D={d} · {topo.replace('_', ' ')}",
-                         fontsize=13, y=.99)
-            fig.text(.5, .025,
-                     f"N={settings['population']}  |  {settings['iterations']} iterations  |  "
-                     f"RK4 steps={settings['work_iterations']}  |  "
-                     f"{len(settings['seeds'])} seeds × {settings['repetitions']} timing repeats  |  "
-                     f"chunk={settings['chunk_size']}\n"
-                     "Centres: medians of seed medians; 95% seed-cluster bootstrap intervals; "
-                     "identical objective and CPSO trajectory",
-                     ha="center", color="#555555", fontsize=8)
-            fig.tight_layout(rect=(0, .075, 1, .895))
-            name = f"fig_publication_scaling_inverse_diffusion_{topo}_d{d}.pdf"
-            fig.savefig(output / name)
-            plt.close(fig)
-            print("Figure:", output / name)
+                    ax.set_xlabel("Workers")
+                    ax.yaxis.set_major_formatter(PercentFormatter(1, decimals=0))
+                if col == 0:
+                    ax.set_ylabel("Speedup  $T_1/T_p$" if i == 0 else "Efficiency  $T_1/(p T_p)$")
+        for row in axes:
+            row[0].set_ylim(bottom=0)
+        handles, names = axes[0, 0].get_legend_handles_labels()
+        fig.legend(handles, names, loc="upper center", ncol=2, fontsize=8, frameon=False)
+        fig.tight_layout(rect=(0, 0, 1, .88))
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_suffix(".tmp")
+        with matplotlib.rc_context({"pdf.fonttype": 42}):
+            fig.savefig(temporary, format="pdf", bbox_inches="tight", pad_inches=.06)
+        temporary.replace(target)
+        print("Figure:", target)
+    finally:
+        plt.close(fig)
 
 
 def get_parser():
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--benchmark", choices=("inverse_diffusion", "rastrigin"), default="inverse_diffusion")
     ap.add_argument("--dimensions", default="30,100")
     ap.add_argument("--topologies", default="global,ring")
     ap.add_argument("--workers", default="1,2,4,8")
@@ -341,8 +352,10 @@ def settings_from_args(args):
         raise ValueError("Invalid seed/repetitions/population")
     if args.iterations < 1 or not (math.isfinite(args.dt) and args.dt > 0):
         raise ValueError("Invalid iterations/dt")
-    if not (16 <= args.work <= 100000 and args.work % 4 == 0):
+    if args.benchmark == "inverse_diffusion" and not (16 <= args.work <= 100000 and args.work % 4 == 0):
         raise ValueError("inverse_diffusion work must be a multiple of 4 in [16,100000]")
+    if args.benchmark == "rastrigin" and args.work != 0:
+        raise ValueError("Rastrigin requires --work 0")
     if args.chunk_size < 1 or args.chunk_size > 10000:
         raise ValueError("chunk-size must be positive and at most 10000")
     if args.bootstrap < 100 or args.max_blocks < 0:
@@ -352,7 +365,7 @@ def settings_from_args(args):
             raise ValueError("Grid requires composite population")
     count = len(d) * len(top) * len(seeds) * args.repetitions
     return {
-        "benchmark": "inverse_diffusion", "dimensions": d, "topologies": top,
+        "benchmark": args.benchmark, "dimensions": d, "topologies": top,
         "workers": w, "architectures": arch, "seeds": seeds,
         "repetitions": args.repetitions, "population": args.population,
         "iterations": args.iterations, "dt": args.dt, "work_iterations": args.work,
@@ -373,7 +386,7 @@ def main(argv=None):
     rng = random.Random(args.schedule_seed)
     rng.shuffle(blocks)
     out = args.output.expanduser().resolve()
-    if out == ROOT or ROOT not in out.parents or "results" not in out.relative_to(ROOT).parts:
+    if (ROOT / "results").resolve() not in out.parents:
         raise ValueError("--output must be inside this repository's results/ directory")
     print(f"Campaign: {len(blocks)} repeated paired blocks × {len(methods)} methods = "
           f"{len(blocks) * len(methods)} native executions")
@@ -409,24 +422,20 @@ def main(argv=None):
             "started_utc": now(),
             "notes": "Repeated independent timings; one paired serial reference per seed x repetition; randomized block and method order",
         }
-        manifest.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
+        atomic_write_json(manifest, metadata)
     raw_path = out / "publication_scaling_runs.jsonl"
     completed = {}
-    if raw_path.exists():
-        with raw_path.open(encoding="utf-8") as source:
-            for line in source:
-                if not line.strip():
-                    continue
-                item = json.loads(line)
-                key = record_key(item)
-                if key in completed:
-                    raise RuntimeError("Duplicate cached run " + repr(key))
-                completed[key] = item
+    records, _ = read_jsonl_checkpoint(raw_path, repair=True, key_field=None)
+    for item in records:
+        key = record_key(item)
+        if key in completed:
+            raise RuntimeError("Duplicate cached run " + repr(key))
+        completed[key] = item
     if not args.no_warmup:
         d, t, seed, rep = blocks[0]
-        cfg = configuration(d, seed, t, settings["population"], 2, settings["dt"])
+        cfg = configuration(d, seed, t, settings["population"], 2, settings["dt"], args.benchmark)
         for a, w in methods:
-            run_method(cfg, settings["work_iterations"], a, w)
+            run_method(cfg, settings["work_iterations"], a, w, args.benchmark)
         print("Warm-up completed (not recorded)")
     completed_blocks = 0
     ordinal = max((row.get("ordinal", 0) for row in completed.values()), default=0)
@@ -440,7 +449,7 @@ def main(argv=None):
         if len(group) == len(methods):
             check_block(group, methods, settings["population"], settings["iterations"])
             continue
-        cfg = configuration(d, seed, topo, settings["population"], settings["iterations"], settings["dt"])
+        cfg = configuration(d, seed, topo, settings["population"], settings["iterations"], settings["dt"], args.benchmark)
         # Deterministic per-block shuffling: interruption/resume cannot change run order.
         salt = int(hashlib.sha256(canonical(block).encode()).hexdigest()[:14], 16)
         order = methods[:]
@@ -448,11 +457,11 @@ def main(argv=None):
         for a, w in order:
             if (a, w) in group:
                 continue
-            value = run_method(cfg, settings["work_iterations"], a, w)
+            value = run_method(cfg, settings["work_iterations"], a, w, args.benchmark)
             ordinal += 1
             row = record_from_result(d, topo, seed, rep, a, w, settings["chunk_size"],
                                      settings["population"], settings["iterations"],
-                                     settings["work_iterations"], ordinal, value)
+                                     settings["work_iterations"], ordinal, value, args.benchmark)
             with raw_path.open("a", encoding="utf-8") as stream:
                 stream.write(canonical(row) + "\n")
                 stream.flush()
@@ -473,7 +482,7 @@ def main(argv=None):
     write_csv(out / "publication_scaling_paired.csv", paired)
     write_csv(out / "publication_scaling_summary.csv", summary)
     if not args.no_figures:
-        make_figures(summary, out, settings)
+        scaling_figure([out], out / "fig_strong_scaling.pdf")
     print(f"COMPLETE: {len(completed)} native executions, {len(paired)} paired comparison rows")
     return 0
 

@@ -1,0 +1,191 @@
+{
+  "mu_max": 0.9,
+  "mu_min": 0.4,
+  "cognitive": 2.05,
+  "social": 2.05,
+  "initial_velocity_fraction": 0.1,
+  "boundary_restitution": 0.5,
+  "population_size": 64,
+  "check_equivalence": true,
+  "benchmarks": [
+    "sphere",
+    "rastrigin",
+    "rosenbrock",
+    "ackley",
+    "griewank",
+    "salomon"
+  ],
+  "dimensions": [
+    30,
+    100
+  ],
+  "iterations": 500,
+  "seeds": [
+    74001,
+    74002,
+    74003,
+    74004,
+    74005,
+    74006,
+    74007,
+    74008,
+    74009,
+    74010,
+    74011,
+    74012
+  ],
+  "methods": [
+    {
+      "name": "serial_global",
+      "architecture": "serial",
+      "topology": "global",
+      "topology_degree": 4
+    },
+    {
+      "name": "async_global_w4",
+      "architecture": "asynchronous",
+      "topology": "global",
+      "topology_degree": 4,
+      "workers": 4
+    },
+    {
+      "name": "islands_global_i4_w4",
+      "architecture": "islands",
+      "topology": "global",
+      "topology_degree": 4,
+      "workers": 4,
+      "islands": 4,
+      "migration_interval": 10,
+      "migration_topology": "ring"
+    },
+    {
+      "name": "serial_ring",
+      "architecture": "serial",
+      "topology": "ring",
+      "topology_degree": 4
+    },
+    {
+      "name": "async_ring_w4",
+      "architecture": "asynchronous",
+      "topology": "ring",
+      "topology_degree": 4,
+      "workers": 4
+    },
+    {
+      "name": "islands_ring_i4_w4",
+      "architecture": "islands",
+      "topology": "ring",
+      "topology_degree": 4,
+      "workers": 4,
+      "islands": 4,
+      "migration_interval": 10,
+      "migration_topology": "ring"
+    },
+    {
+      "name": "serial_grid",
+      "architecture": "serial",
+      "topology": "grid_von_neumann",
+      "topology_degree": 4
+    },
+    {
+      "name": "async_grid_w4",
+      "architecture": "asynchronous",
+      "topology": "grid_von_neumann",
+      "topology_degree": 4,
+      "workers": 4
+    },
+    {
+      "name": "serial_wheel",
+      "architecture": "serial",
+      "topology": "wheel",
+      "topology_degree": 4
+    },
+    {
+      "name": "async_wheel_w4",
+      "architecture": "asynchronous",
+      "topology": "wheel",
+      "topology_degree": 4,
+      "workers": 4
+    },
+    {
+      "name": "islands_wheel_i4_w4",
+      "architecture": "islands",
+      "topology": "wheel",
+      "topology_degree": 4,
+      "workers": 4,
+      "islands": 4,
+      "migration_interval": 10,
+      "migration_topology": "ring"
+    },
+    {
+      "name": "serial_random_k4",
+      "architecture": "serial",
+      "topology": "random",
+      "topology_degree": 4
+    },
+    {
+      "name": "async_random_k4_w4",
+      "architecture": "asynchronous",
+      "topology": "random",
+      "topology_degree": 4,
+      "workers": 4
+    },
+    {
+      "name": "islands_random_k4_i4_w4",
+      "architecture": "islands",
+      "topology": "random",
+      "topology_degree": 4,
+      "workers": 4,
+      "islands": 4,
+      "migration_interval": 10,
+      "migration_topology": "ring"
+    },
+    {
+      "name": "serial_small_world_k4",
+      "architecture": "serial",
+      "topology": "small_world",
+      "topology_degree": 4
+    },
+    {
+      "name": "async_small_world_k4_w4",
+      "architecture": "asynchronous",
+      "topology": "small_world",
+      "topology_degree": 4,
+      "workers": 4
+    },
+    {
+      "name": "islands_small_world_k4_i4_w4",
+      "architecture": "islands",
+      "topology": "small_world",
+      "topology_degree": 4,
+      "workers": 4,
+      "islands": 4,
+      "migration_interval": 10,
+      "migration_topology": "ring"
+    },
+    {
+      "name": "serial_scale_free_k4",
+      "architecture": "serial",
+      "topology": "scale_free",
+      "topology_degree": 4
+    },
+    {
+      "name": "async_scale_free_k4_w4",
+      "architecture": "asynchronous",
+      "topology": "scale_free",
+      "topology_degree": 4,
+      "workers": 4
+    },
+    {
+      "name": "islands_scale_free_k4_i4_w4",
+      "architecture": "islands",
+      "topology": "scale_free",
+      "topology_degree": 4,
+      "workers": 4,
+      "islands": 4,
+      "migration_interval": 10,
+      "migration_topology": "ring"
+    }
+  ],
+  "success_target_default": 1e-08
+}

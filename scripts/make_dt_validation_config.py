@@ -11,6 +11,7 @@ def main():
     p.add_argument('--selection-config',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--candidate-count',type=int,default=3)
+    p.add_argument('--first-seed', type=int, default=920001)
     args=p.parse_args()
     from cpso_serial.output_policy import results_output
     args.output = results_output(args.output, name="frozen holdout config output")
@@ -27,7 +28,7 @@ def main():
     reference=float(cfg['reference_dt'])
     selected=sorted(set(chosen+[reference]))
     old=set(cfg['seeds'])
-    seeds=list(range(920001,920031))
+    seeds=list(range(args.first_seed, args.first_seed + 30))
     if old.intersection(seeds):
         raise ValueError('Holdout seed collision')
     cfg.update({

@@ -153,6 +153,7 @@ def _bootstrap_function_ci(
 def _rank_campaign(
     campaign_dir: Path,
     manifest: dict[str, Any],
+    detail_rows: list[dict] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     suite = str(manifest.get("suite", "unknown"))
     methods = [str(value) for value in manifest.get("methods", [])]
@@ -192,7 +193,7 @@ def _rank_campaign(
     if manifest_expected is None:
         manifest_expected = len(groups) * len(methods)
     completeness = {
-        "campaign": campaign_dir.name,
+        "campaign": manifest.get("campaign_id", campaign_dir.name),
         "suite": suite,
         "expected_method_runs": int(manifest_expected),
         "records_loaded": source_count,
@@ -236,7 +237,16 @@ def _rank_campaign(
             function_id = str(next((block[method].get("function_id") for method in methods if block[method].get("function_id") not in (None, "")), ""))
             if not function_id:
                 function_id = _problem_function_id({}, problem_id)
-            group_rank_rows.append((problem_id, function_id, _average_ranks(values, methods)))
+            ranks = _average_ranks(values, methods)
+            group_rank_rows.append((problem_id, function_id, ranks))
+            if detail_rows is not None:
+                for method in methods:
+                    detail_rows.append({
+                        "suite": suite, "campaign": manifest.get("campaign_id", campaign_dir.name),
+                        "metric": metric_name, "function_id": function_id,
+                        "dimension": block[method].get("dimension"), "problem_id": problem_id,
+                        "seed": seed, "method": method, "value": values[method], "rank": ranks[method],
+                    })
 
         completeness["complete_problem_seed_groups"] = max(
             int(completeness["complete_problem_seed_groups"]), len(group_rank_rows)
@@ -255,7 +265,7 @@ def _rank_campaign(
             pooled = [rank for _, _, ranks in group_rank_rows if method in ranks for rank in [ranks[method]]]
             function_means = [float(np.mean(by_function[fid][method])) for fid in by_function if by_function[fid].get(method)]
             summary_rows.append({
-                "campaign": campaign_dir.name,
+                "campaign": manifest.get("campaign_id", campaign_dir.name),
                 "suite": suite,
                 "metric": metric_name,
                 "method": method,
@@ -296,7 +306,7 @@ def _plot_summary(rows: list[dict[str, Any]], output: Path) -> list[Path]:
         errors = np.vstack([np.maximum(0.0, means - lows), np.maximum(0.0, highs - means)])
         fig, ax = plt.subplots(figsize=(7.2, max(3.3, 0.31 * len(labels) + 0.8)))
         y = np.arange(len(labels))
-        ax.barh(y, means, color=PALETTE["blue"], alpha=0.9, height=0.64)
+        ax.barh(y, means, color=[PALETTE["red"] if m == "cpso_continuous" else PALETTE["blue"] for m in labels], alpha=0.9, height=0.64)
         if np.all(np.isfinite(errors)):
             ax.errorbar(means, y, xerr=errors, fmt="none", ecolor=PALETTE["navy"], capsize=2, lw=0.9)
         ax.set_yticks(y, labels)
@@ -308,7 +318,7 @@ def _plot_summary(rows: list[dict[str, Any]], output: Path) -> list[Path]:
         fig.text(
             0.5, 0.01,
             "Means are balanced across function IDs; 95% percentile intervals resample function IDs as clusters. "
-            "Descriptive pilot analysis, not confirmatory inference.",
+            "Descriptive intervals for the evaluated functions.",
             ha="center", va="bottom", fontsize=7, color=PALETTE["grey"],
         )
         target = output / f"rank_{_slug(campaign)}_{_slug(metric)}.pdf"
@@ -340,9 +350,10 @@ def main() -> int:
         return 0
 
     all_summary: list[dict[str, Any]] = []
+    detail_rows: list[dict[str, Any]] = []
     completeness_rows: list[dict[str, Any]] = []
     for campaign_dir, manifest in campaigns:
-        summary, completeness = _rank_campaign(campaign_dir, manifest)
+        summary, completeness = _rank_campaign(campaign_dir, manifest, detail_rows)
         all_summary.extend(summary)
         completeness_rows.append(completeness)
         print(
@@ -353,6 +364,7 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     _write_csv(output / "external_rank_summary.csv", all_summary)
     _write_csv(output / "external_campaign_completeness.csv", completeness_rows)
+    _write_csv(output / "external_rank_by_problem.csv", detail_rows)
     plots = _plot_summary(all_summary, output)
     print(f"Wrote {len(all_summary)} summary rows, {len(plots)} PDF figures and completeness report to {output}")
     print("For COCO campaigns, use cocopp Observer post-processing as the primary runtime-to-target/ECDF analysis.")

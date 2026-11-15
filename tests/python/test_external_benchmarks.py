@@ -133,10 +133,10 @@ def test_bbob_and_cec_smoke_dry_runs_are_side_effect_free(tmp_path):
 
 
 def test_bbob_config_has_exact_standard_budget_and_cec_matches_official_budget():
-    bbob = json.loads((ROOT / "tests/fixtures/configs/benchmarks/bbob_confirmatory.json").read_text())
+    bbob = json.loads((ROOT / "configs/benchmarks/bbob_confirmatory.json").read_text())
     assert bbob["budget_multiplier"] == 10_000
     assert bbob["population_size"] == 40
-    cec = json.loads((ROOT / "tests/fixtures/configs/benchmarks/cec2013_confirmatory.json").read_text())
+    cec = json.loads((ROOT / "configs/benchmarks/cec2013_confirmatory.json").read_text())
     assert len(cec["function_ids"]) == 15
     assert len(cec["seeds"]) == 25
     assert cec["max_evaluations"] == 3_000_000
@@ -286,7 +286,7 @@ def test_cec_driver_runs_against_controlled_1000d_adapter_and_resumes(tmp_path, 
 
 def test_bbob_largescale_confirmatory_config_matches_official_dimensions_and_suite():
     config = json.loads(
-        (ROOT / "tests/fixtures/configs/benchmarks/bbob_largescale_confirmatory.json").read_text()
+        (ROOT / "configs/benchmarks/bbob_largescale_confirmatory.json").read_text()
     )
     assert config["suite"] == "bbob-largescale"
     assert config["suite_options"] == (

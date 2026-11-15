@@ -74,6 +74,7 @@ def run():
         script = root / "experiments/04_architectures/run_publication_scaling.py"
         script.parent.mkdir(parents=True)
         shutil.copy2(RUNNER, script)
+        shutil.copy2(RUNNER.with_name("checkpoint_io.py"), script.parent)
         pkg = root / "python/cpso_serial"
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text(FAKE_INIT)
@@ -92,6 +93,8 @@ def run():
         call("--max-blocks", "1")
         out = root / "results/raw/parallel/publication_mock"
         assert len((out / "publication_scaling_runs.jsonl").read_text().splitlines()) == 7
+        with (out / "publication_scaling_runs.jsonl").open("ab") as stream:
+            stream.write(b'{"dimension":')
         call()
         raw = [json.loads(s) for s in (out / "publication_scaling_runs.jsonl").read_text().splitlines()]
         assert len(raw) == 56, len(raw)
@@ -105,7 +108,7 @@ def run():
             if record["workers"] == "1":
                 assert float(record["strong_speedup"]) == 1
                 assert float(record["strong_efficiency"]) == 1
-        assert len(list(out.glob("*.pdf"))) == 2
+        assert list(out.glob("*.pdf")) == [out / "fig_strong_scaling.pdf"]
         print("PASS: dry-run, partial, exact-pairing, resume, CSV stats, p=1, PDF output")
 
 
