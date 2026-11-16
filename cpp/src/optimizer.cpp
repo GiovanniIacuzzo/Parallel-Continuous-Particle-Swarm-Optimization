@@ -81,7 +81,7 @@ template <typename BatchEvaluator>
     const auto topology_setup_start = Clock::now();
     const ParticleTopology topology(
         config.topology, population_size, config.grid_rows, config.grid_columns,
-        graph_seed, config.topology_degree, config.topology_rewiring_probability);
+        config.graph_seed.value_or(graph_seed), config.topology_degree, config.topology_rewiring_probability);
     result.topology_setup_seconds =
         std::chrono::duration<double>(Clock::now() - topology_setup_start).count();
     std::vector<double> pending_values(population_size, std::numeric_limits<double>::infinity());

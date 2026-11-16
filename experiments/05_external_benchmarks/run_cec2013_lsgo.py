@@ -15,6 +15,7 @@ if str(Path(__file__).resolve().parent) not in sys.path:
 from cpso_serial.benchmarks.cec2013_lsgo import CEC2013LSGOAdapter  # noqa: E402
 from common import (  # noqa: E402
     METHODS,
+    BBOB_METHODS,
     append_jsonl_durable,
     build_run_record,
     load_existing_run_keys,
@@ -41,8 +42,8 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
         raise ValueError("function_ids must be selected from [1,15]")
     if not seeds or any(v < 0 or v >= 2**64 for v in seeds):
         raise ValueError("seeds must be unsigned 64-bit integers")
-    if sorted(set(methods) - set(METHODS)):
-        raise ValueError(f"Unknown methods: {sorted(set(methods) - set(METHODS))}")
+    if sorted(set(methods) - set(BBOB_METHODS)):
+        raise ValueError(f"Unknown methods: {sorted(set(methods) - set(BBOB_METHODS))}")
     if population < 2 or max_evaluations < population or max_evaluations % population:
         raise ValueError("max_evaluations must be >= population_size and exactly divisible by it")
     if any(v <= 0 or v > max_evaluations or v % population for v in milestones):

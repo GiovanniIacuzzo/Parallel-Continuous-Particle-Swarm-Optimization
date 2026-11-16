@@ -169,6 +169,22 @@ CPSO_API int cpso_run_architecture(
     char* error_message,
     size_t error_capacity);
 
+// Deterministically reconstruct native initial x/v for subspace diagnostics.
+CPSO_API int cpso_experiment_initial_state(uint64_t, size_t, size_t,
+    const double*, const double*, double, double*, double*, char*, size_t);
+
+// Adjacency includes self; caller supplies n*n bytes (n <= 4096).
+CPSO_API int cpso_experiment_graph(int, size_t, size_t, size_t, uint64_t,
+                                  size_t, double, unsigned char*, char*, size_t);
+
+// Additive research entry point; existing ABI structures are unchanged.
+// flags: bit 0 discrete, bit 1 coordinate randomness, bit 2 separate graph seed,
+// bit 3 disable boundary map (unconstrained geometric diagnostics only).
+CPSO_API int cpso_run_experiment(
+    const CpsoCConfig*, const CpsoCExecutionConfig*, int flags, uint64_t graph_seed,
+    CpsoObjectiveCallback, void*, CpsoCResult*, double*, double*, uint64_t*,
+    size_t, char*, size_t);
+
 #ifdef __cplusplus
 }
 #endif

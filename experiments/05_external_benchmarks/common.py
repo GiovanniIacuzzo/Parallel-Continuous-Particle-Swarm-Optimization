@@ -12,7 +12,8 @@ import sys
 from typing import Any, Callable, Sequence
 
 from cpso_serial import CpsoConfig, native_build_info, native_version, run_serial_objective
-from cpso_serial.pso_baselines import PSOConfig, minimize_pso
+from cpso_serial.pso_baselines import PSOConfig, PSOResult, minimize_pso
+from cpso_serial.native import run_controlled
 
 METHODS = {
     "cpso_continuous": ("cpso", None),
@@ -29,7 +30,13 @@ METHODS = {
 }
 
 
-BBOB_METHODS = {**METHODS, "cpso_random_k8": ("cpso", "random")}
+CONTROLLED_METHODS = {
+    f"matched_{dynamics}_{scope}_{graph}": (dynamics,scope,graph)
+    for dynamics in ("analytic","discrete") for scope in ("scalar","coordinate")
+    for graph in ("global","random8")
+}
+BBOB_METHODS = {**METHODS, "cpso_random_k8": ("cpso", "random"),
+                **{name:("controlled",None) for name in CONTROLLED_METHODS}}
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -212,6 +219,21 @@ def run_method(
         raise ValueError(f"Unknown method {method!r}; supported methods: {sorted(BBOB_METHODS)}")
     if max_evaluations < population_size or max_evaluations % population_size != 0:
         raise ValueError("For strict cross-method FE parity, max_evaluations must be a multiple of population_size")
+    if method in CONTROLLED_METHODS:
+        dynamics,scope,graph=CONTROLLED_METHODS[method]
+        config=CpsoConfig(tuple(lower_bounds),tuple(upper_bounds),population_size=population_size,
+            iterations=max_evaluations//population_size-1,seed=seed,dt=cpso_dt,
+            topology="random" if graph=="random8" else "global",topology_degree=8)
+        result=run_controlled(config,objective,dynamics=dynamics,randomness=scope,graph_seed=seed)
+        return PSOResult(method=method,best_value=result.best_value,best_position=result.best_position,
+            best_history=result.best_history,history_evaluations=result.history_evaluations,
+            function_evaluations=result.function_evaluations,iterations_completed=result.iterations_completed,
+            elapsed_seconds=result.elapsed_seconds,parameters=dict(dynamics=dynamics,randomness=scope,
+                topology=graph,graph_seed=seed,dt=cpso_dt if dynamics=="analytic" else None,
+                population_size=population_size,max_evaluations=max_evaluations,
+                cognitive=2.05,social=2.05,inertia_max=.9,inertia_min=.4,
+                velocity_limit_fraction=None,boundary_restitution=.5,initial_velocity_fraction=.1,
+                update_semantics="frozen-generation-snapshot",backend="matched_native",seed=seed))
     kind, variant = BBOB_METHODS[method]
     if kind == "cpso":
         if not math.isfinite(float(cpso_dt)) or float(cpso_dt) <= 0.0:

@@ -181,6 +181,7 @@ def _run(
     migration_topology: str = "ring",
     work_iterations: int = 0,
     custom_objective: Optional[Callable[[Sequence[float]], float]] = None,
+    experiment: tuple[int, int] | None = None,
 ) -> CpsoResult:
     config.validate()
     if custom_objective is not None and architecture != "serial":
@@ -298,18 +299,28 @@ def _run(
                 return math.nan
 
         callback = _ObjectiveCallback(evaluate_custom)
-        status = library.cpso_run_custom_serial(
-            ctypes.byref(c_config), callback, None, ctypes.byref(c_result),
-            best_position, history, history_evaluations, history_capacity,
-            error, len(error),
-        )
     else:
         callback = None
+    if experiment is not None:
+        function = library.cpso_run_experiment
+        function.argtypes = [ctypes.POINTER(_CConfig), ctypes.POINTER(_CExecutionConfig),
+            ctypes.c_int, ctypes.c_uint64, _ObjectiveCallback, ctypes.c_void_p,
+            ctypes.POINTER(_CResult), ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_uint64),
+            ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t]
+        function.restype = ctypes.c_int
+        status = function(ctypes.byref(c_config), ctypes.byref(execution), *experiment,
+            callback if callback is not None else _ObjectiveCallback(), None,
+            ctypes.byref(c_result), best_position, history, history_evaluations,
+            history_capacity, error, len(error))
+    elif callback is not None:
+        status = library.cpso_run_custom_serial(
+            ctypes.byref(c_config), callback, None, ctypes.byref(c_result),
+            best_position, history, history_evaluations, history_capacity, error, len(error))
+    else:
         status = library.cpso_run_architecture(
             ctypes.byref(c_config), ctypes.byref(execution), ctypes.byref(c_result),
-            best_position, history, history_evaluations, history_capacity,
-            error, len(error),
-        )
+            best_position, history, history_evaluations, history_capacity, error, len(error))
     if status != 0:
         if callback_errors:
             raise callback_errors[0]
@@ -444,3 +455,77 @@ def native_build_info() -> str:
     library = _load_library()
     value: Optional[bytes] = library.cpso_build_info()
     return value.decode("utf-8") if value else "unknown"
+
+
+def run_controlled(config: CpsoConfig, objective=None, *, dynamics="analytic",
+                   randomness="scalar", graph_seed=None, benchmark="sphere",
+                   architecture="serial", workers=1, work_iterations=0, boundary_policy="clamp") -> CpsoResult:
+    """Matched native ablation, without the reference baseline's velocity clamp.
+
+    Both dynamics share initialization, graph, RNG, inertia schedule, boundary
+    map and FE budget. Discrete PSO uses a unit step; dt applies only to analytic.
+    Callback execution remains serial. Legacy entry points are unaffected.
+    """
+    if dynamics not in {"analytic", "discrete"} or randomness not in {"scalar", "coordinate"}:
+        raise ValueError("Invalid dynamics or randomness")
+    if architecture not in {"serial", "master_slave", "particle_parallel"}:
+        raise ValueError("Controlled experiments require synchronous execution")
+    if objective is not None and not callable(objective):
+        raise TypeError("objective must be callable")
+    if graph_seed is not None and (isinstance(graph_seed, bool) or not isinstance(graph_seed, int)
+                                   or not 0 <= graph_seed < 2**64):
+        raise ValueError("graph_seed must be an unsigned 64-bit integer")
+    if boundary_policy not in {"clamp", "none"}:
+        raise ValueError("Invalid boundary policy")
+    flags = (int(boundary_policy == "none") << 3) | int(dynamics == "discrete") | (int(randomness == "coordinate") << 1)
+    if graph_seed is not None:
+        flags |= 4
+    return _run(config, benchmark, architecture=architecture, workers=workers,
+                work_iterations=work_iterations, custom_objective=objective,
+                experiment=(flags, graph_seed or 0))
+
+
+def controlled_graph(config: CpsoConfig, graph_seed: int):
+    """Return the actual native adjacency (self included), not a reimplementation."""
+    config.validate()
+    if not isinstance(graph_seed, int) or isinstance(graph_seed, bool) or not 0 <= graph_seed < 2**64:
+        raise ValueError("Invalid graph seed")
+    if config.population_size > 4096:
+        raise ValueError("Graph inspection requires population <= 4096")
+    import numpy as np
+    n = config.population_size
+    buffer = (ctypes.c_ubyte * (n*n))()
+    error = ctypes.create_string_buffer(2048)
+    function = _load_library().cpso_experiment_graph
+    function.argtypes = [ctypes.c_int, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t,
+        ctypes.c_uint64, ctypes.c_size_t, ctypes.c_double, ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.c_char_p, ctypes.c_size_t]
+    function.restype = ctypes.c_int
+    status = function(_TOPOLOGY_IDS[config.topology], n, config.grid_rows or 0,
+        config.grid_columns or 0, graph_seed, config.topology_degree,
+        config.topology_rewiring_probability, buffer, error, len(error))
+    if status:
+        raise RuntimeError(error.value.decode())
+    return np.ctypeslib.as_array(buffer).reshape(n,n).astype(bool)
+
+
+def controlled_initial_state(config: CpsoConfig):
+    """Exact native initial positions/velocities for geometric diagnostics."""
+    config.validate()
+    import numpy as np
+    n,d=config.population_size,config.dimension
+    if n>4096 or d>100000:
+        raise ValueError('Initial-state inspection size exceeded')
+    lower=(ctypes.c_double*d)(*config.lower_bounds)
+    upper=(ctypes.c_double*d)(*config.upper_bounds)
+    x=(ctypes.c_double*(n*d))();v=(ctypes.c_double*(n*d))()
+    error=ctypes.create_string_buffer(2048)
+    function=_load_library().cpso_experiment_initial_state
+    ptr=ctypes.POINTER(ctypes.c_double)
+    function.argtypes=[ctypes.c_uint64,ctypes.c_size_t,ctypes.c_size_t,ptr,ptr,
+                       ctypes.c_double,ptr,ptr,ctypes.c_char_p,ctypes.c_size_t]
+    function.restype=ctypes.c_int
+    status=function(config.seed,n,d,lower,upper,config.initial_velocity_fraction,x,v,error,len(error))
+    if status: raise RuntimeError(error.value.decode())
+    return (np.ctypeslib.as_array(x).reshape(n,d).copy(),
+            np.ctypeslib.as_array(v).reshape(n,d).copy())
