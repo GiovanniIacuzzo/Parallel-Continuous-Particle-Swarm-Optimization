@@ -80,3 +80,10 @@ Per una misura riproducibile del Mac, eseguire le fasi in sequenza e annotare mo
 Base GitHub `3433f4de2cbd2de024444849027d6f2c0899d99f`. Il codice di ottimizzazione e l'ABI C sono quelli della revisione di partenza. CMake conserva le asserzioni nei due test che le usano anche in Release. Il wrapper ctypes carica il binario compilato localmente da `build/lib`. L'archivio contiene sorgenti portabili.
 
 La revisione di partenza aveva runner di scaling e post-processing sovrapposti, generatori di atlanti, script di pulizia e configurazioni storiche. La distribuzione conserva un solo percorso documentato per ogni domanda sperimentale e le fixture dei test ancora applicabili. Il numero di file Python, inclusi wrapper e test, scende da 53 a 31. In origine lo scaling usava 0.38125 come default, i confronti esterni usavano 0.35 e il runner di scaling misurava soltanto la diffusione inversa. Il flusso principale propaga ora il medesimo dt a tutte le fasi e mette a confronto un obiettivo economico e uno computazionalmente più oneroso. I parametri nei template storici vengono sostituiti prima dell'esecuzione. Il manoscritto in `paper/` è la copia integrale della revisione di partenza e può quindi descrivere campagne precedenti. I dati delle esecuzioni locali dell'autore erano esclusi da Git.
+
+## Controlled review experiments
+
+See [REVIEW_EXPERIMENTS.md](REVIEW_EXPERIMENTS.md) for the matched native
+analytic/discrete, scalar/coordinate and topology ablations, full target ECDFs,
+subspace diagnostics, replica-throughput comparison and held-out overhead model.
+The existing study commands remain available. `paper/` is unchanged by this revision.

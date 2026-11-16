@@ -80,25 +80,32 @@ inline void propagate_particle(
     // specify whether the pair is shared by the swarm or sampled per particle.
     // This implementation draws one pair per particle and frozen interval,
     // then shares each scalar across all coordinates of that particle.
+    const std::size_t dimension = config.lower_bounds.size();
+    const double mu = inertia_at(config, iteration);
+    // Scalar mode consumes one pair; coordinate mode consumes D pairs.
+    // Dynamics pairs with the same scope have identical random streams.
     const double r1 = uniform01(particle.random_engine);
     const double r2 = uniform01(particle.random_engine);
-    const double cognitive_weight = config.cognitive * r1;
-    const double social_weight = config.social * r2;
-    const double omega2 = cognitive_weight + social_weight;
-    // mu is the Orlando-Ricciardello inertia weight in the ODE coefficient (1 - mu).
-    const double mu = inertia_at(config, iteration);
-    const std::size_t dimension = config.lower_bounds.size();
-
     for (std::size_t j = 0; j < dimension; ++j) {
-        double equilibrium = 0.0;
-        if (omega2 > 0.0) {
-            equilibrium = (cognitive_weight * particle.personal_best[j]
-                           + social_weight * social_attractor[j]) / omega2;
+        const double a = config.cognitive * ((config.coordinate_randomness && j > 0)
+            ? uniform01(particle.random_engine) : r1);
+        const double b = config.social * ((config.coordinate_randomness && j > 0)
+            ? uniform01(particle.random_engine) : r2);
+        const double omega2 = a + b;
+        const double equilibrium = omega2 > 0.0
+            ? (a * particle.personal_best[j] + b * social_attractor[j]) / omega2 : 0.0;
+        OscillatorState next;
+        if (config.discrete_dynamics) {
+            // Unit discrete PSO step. No velocity clamp: isolate dynamics only.
+            next.velocity = mu * particle.velocity[j]
+                + a * (particle.personal_best[j] - particle.position[j])
+                + b * (social_attractor[j] - particle.position[j]);
+            next.position = particle.position[j] + next.velocity;
+        } else {
+            next = propagate_frozen_oscillator(particle.position[j], particle.velocity[j],
+                                               equilibrium, omega2, mu, config.dt);
         }
-        OscillatorState next = propagate_frozen_oscillator(
-            particle.position[j], particle.velocity[j], equilibrium,
-            omega2, mu, config.dt);
-        apply_clamped_restitution(
+        if (config.apply_boundaries) apply_clamped_restitution(
             next.position, next.velocity,
             config.lower_bounds[j], config.upper_bounds[j],
             config.boundary_restitution);

@@ -1,0 +1,35 @@
+{
+  "campaign_id": "review_cec_full_budget_subset_v1",
+  "function_ids": [
+    1,
+    4,
+    8,
+    12,
+    15
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "population_size": 64,
+  "max_evaluations": 3000000,
+  "milestones": [
+    120000,
+    600000,
+    3000000
+  ],
+  "methods": [
+    "matched_analytic_scalar_global",
+    "matched_analytic_scalar_random8",
+    "matched_analytic_coordinate_global",
+    "matched_analytic_coordinate_random8",
+    "matched_discrete_scalar_global",
+    "matched_discrete_scalar_random8",
+    "matched_discrete_coordinate_global",
+    "matched_discrete_coordinate_random8"
+  ],
+  "cpso_dt": 1.0
+}

@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <vector>
 
 #include "cpso/topology.hpp"
@@ -20,6 +21,11 @@ enum class MigrationTopology : int {
 };
 
 struct Config {
+    // Controlled ablations; legacy defaults preserve the original trajectory.
+    bool apply_boundaries{true};
+    bool discrete_dynamics{false};
+    bool coordinate_randomness{false};
+    std::optional<std::uint64_t> graph_seed{};
     std::vector<double> lower_bounds;
     std::vector<double> upper_bounds;
     std::size_t population_size{40};

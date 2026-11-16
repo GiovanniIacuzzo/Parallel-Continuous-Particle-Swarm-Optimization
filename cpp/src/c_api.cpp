@@ -4,6 +4,7 @@
 #include "cpso/objectives.hpp"
 #include "cpso/inverse_diffusion_benchmark.hpp"
 #include "cpso/optimizer.hpp"
+#include "optimizer_internal.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -113,7 +114,8 @@ int run_impl(
     char* error_message,
     const std::size_t error_capacity,
     const CpsoObjectiveCallback custom_objective = nullptr,
-    void* custom_objective_context = nullptr) {
+    void* custom_objective_context = nullptr,
+    const int experiment_flags = 0, const std::uint64_t graph_seed = 0) {
     try {
         if (config == nullptr || execution == nullptr || c_result == nullptr
             || best_position_out == nullptr || history_out == nullptr) {
@@ -161,7 +163,14 @@ int run_impl(
             throw std::invalid_argument("topology_rewiring_probability must lie in [0,1]");
         }
 
+        if (experiment_flags < 0 || experiment_flags > 15) {
+            throw std::invalid_argument("Invalid experiment flags");
+        }
         cpso::Config cpp_config;
+        cpp_config.apply_boundaries = (experiment_flags & 8) == 0;
+        cpp_config.discrete_dynamics = (experiment_flags & 1) != 0;
+        cpp_config.coordinate_randomness = (experiment_flags & 2) != 0;
+        if ((experiment_flags & 4) != 0) cpp_config.graph_seed = graph_seed;
         cpp_config.lower_bounds.assign(config->lower_bounds, config->lower_bounds + dimension);
         cpp_config.upper_bounds.assign(config->upper_bounds, config->upper_bounds + dimension);
         cpp_config.population_size = population_size;
@@ -376,4 +385,65 @@ extern "C" CPSO_API int cpso_run_architecture(
     return run_impl(config, execution, result, best_position_out, history_out,
                     history_evaluations_out, history_capacity,
                     error_message, error_capacity);
+}
+
+extern "C" CPSO_API int cpso_run_experiment(
+    const CpsoCConfig* config, const CpsoCExecutionConfig* execution,
+    int flags, std::uint64_t graph_seed, CpsoObjectiveCallback callback, void* context,
+    CpsoCResult* result, double* position, double* history, std::uint64_t* fe,
+    std::size_t capacity, char* error, std::size_t error_capacity) {
+    if (execution == nullptr || execution->algorithm_id < CPSO_ALGORITHM_SERIAL
+        || execution->algorithm_id > CPSO_ALGORITHM_PARTICLE_PARALLEL) {
+        write_error(error, error_capacity, "Experiments require synchronous execution");
+        return -1;
+    }
+    return run_impl(config, execution, result, position, history, fe, capacity,
+                    error, error_capacity, callback, context, flags, graph_seed);
+}
+
+extern "C" CPSO_API int cpso_experiment_graph(
+    int topology_id, std::size_t n, std::size_t rows, std::size_t columns,
+    std::uint64_t seed, std::size_t degree, double rewiring,
+    unsigned char* adjacency, char* error, std::size_t error_capacity) {
+    try {
+        if (adjacency == nullptr || n == 0 || n > 4096)
+            throw std::invalid_argument("Invalid adjacency buffer/population");
+        const cpso::ParticleTopology graph(to_topology(topology_id), n, rows, columns,
+                                           seed, degree, rewiring);
+        std::fill(adjacency, adjacency + n*n, 0);
+        for (std::size_t i = 0; i < n; ++i)
+            for (const auto j : graph.neighbors(i)) adjacency[i*n+j] = 1;
+        return 0;
+    } catch (const std::exception& e) {
+        write_error(error, error_capacity, e.what());
+        return -1;
+    }
+}
+
+extern "C" CPSO_API int cpso_experiment_initial_state(
+    std::uint64_t seed, std::size_t n, std::size_t d,
+    const double* lower, const double* upper, double velocity_fraction,
+    double* positions, double* velocities, char* error, std::size_t error_capacity) {
+    try {
+        if (n == 0 || d == 0 || n > 4096 || d > 100000 || lower == nullptr
+            || upper == nullptr || positions == nullptr || velocities == nullptr)
+            throw std::invalid_argument("Invalid initial-state buffers/size");
+        cpso::Config config;
+        config.lower_bounds.assign(lower, lower+d);
+        config.upper_bounds.assign(upper, upper+d);
+        config.population_size = n;
+        config.seed = seed;
+        config.initial_velocity_fraction = velocity_fraction;
+        cpso::validate_config(config);
+        for (std::size_t i=0; i<n; ++i) {
+            cpso::detail::Particle particle;
+            cpso::detail::initialize_particle(particle, config, d, i+1);
+            std::copy(particle.position.begin(),particle.position.end(),positions+i*d);
+            std::copy(particle.velocity.begin(),particle.velocity.end(),velocities+i*d);
+        }
+        return 0;
+    } catch (const std::exception& e) {
+        write_error(error, error_capacity, e.what());
+        return -1;
+    }
 }
