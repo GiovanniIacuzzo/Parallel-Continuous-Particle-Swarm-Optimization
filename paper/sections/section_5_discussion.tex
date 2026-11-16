@@ -1,0 +1,12 @@
+\section{Discussione}\label{sec:discussion}
+\paragraph{La scelta dell'esecutore dipende dal costo dell'obiettivo.}
+A parità di dimensione, popolazione e vicinato, raddoppiare i worker da quattro a otto produce esiti opposti su Rastrigin e diffusione inversa. La sessione temporale tenuta da parte mostra che una scelta empirica fra le implementazioni disponibili si trasferisce a una sessione successiva sulla stessa macchina. La soglia fra i due regimi resta compresa tra i livelli di carico provati; altri processori, compilatori o costi di sincronizzazione possono spostarla.
+
+\paragraph{Il ruolo della topologia e del passo.}
+R8 è emerso sulle quattro celle interne prima del confronto esterno. Il risultato a cinque dimensioni su due gruppi di istanze BBOB fornisce evidenza di trasferimento a funzioni diverse da quelle usate per la scelta del grafo. A venti dimensioni, ridurre il passo migliora il rango al budget finale e peggiora quello iniziale. Dai tre checkpoint si può localizzare l'inversione di ordine fra due budget, ma la sua causa dinamica resta aperta. La selezione aggiuntiva del passo riguarda il solo CPSO; il confronto rilevante per misurarne il beneficio è quello appaiato contro R8 con $\Delta t=1$.
+
+\paragraph{Budget e portata dell'inferenza.}
+Con 64 particelle, 512 FE corrispondono al costo di otto popolazioni complete, inclusa l'inizializzazione. Il primo posto iniziale sul CEC documenta la capacità di produrre buone soluzioni \emph{relative} con poche chiamate. Il peggioramento successivo è un cambiamento di graduatoria: il miglior valore visitato può continuare a scendere mentre altri metodi migliorano più rapidamente. I ranghi inoltre non misurano l'ampiezza delle differenze di fitness. Le cinque istanze BBOB per gruppo associano una realizzazione dell'ottimizzatore a ciascuna istanza. Sul CEC le due dimensioni corrispondono a funzioni diverse; la loro differenza non identifica un effetto dimensionale isolato. Il tetto di 4\,096 FE delimita l'interpretazione alla fase iniziale della ricerca su questa suite.
+
+\paragraph{Dalla qualità al tempo per raggiungere un target.}
+La campagna interna misura tempi per lavoro fissato; quella esterna misura qualità per FE. Per collegare direttamente le due misure occorre cronometrare il primo raggiungimento dello stesso target sullo stesso obiettivo, con semi appaiati e conteggio esplicito delle esecuzioni che esauriscono il budget. Questo esperimento rimane aperto.

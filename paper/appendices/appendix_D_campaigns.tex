@@ -1,10 +1,12 @@
 \section{Protocollo operativo, profili e unit\`a statistiche}
 \label{app:campaigns}
 
-\subsection{Tracciabilit\`a delle configurazioni}
-Il punto di ingresso dei sei stadi principali \`e \texttt{study.py}; \texttt{--profile pilot} e \texttt{--profile paper} selezionano disegni distinti e producono directory separate sotto \texttt{results/}. L'ordine metodologicamente vincolante \`e selezione/holdout del passo, poi scaling, analisi delle semantiche e suite esterne. Il driver legge il passo \texttt{frozen\_dt\_if\_holdout} dal riepilogo della validazione e lo propaga alle configurazioni degli stadi successivi. Se la validazione non \`e presente, l'esecuzione delle fasi successive viene rifiutata; se un protocollo gi\`a scritto differisce dai parametri richiesti, il runner non lo sovrascrive silenziosamente.
+I risultati interni provengono da \texttt{pilot/01\_dt}, \texttt{topology\_m2\_v1} e \texttt{decision\_m2\_v1}. Per il confronto iniziale si usano i riepiloghi di \texttt{bbob\_transfer\_v1/paper/analysis}; per calibrazione, validazione e CEC si usano i checkpoint, i ranghi medi e i contrasti di \texttt{transfer\_v2/study}. Gli ultimi due disegni sono implementati rispettivamente in \texttt{bbob\_study.py} e \texttt{transfer\_study.py}. I profili generali illustrati di seguito documentano anche configurazioni ulteriori.
 
-La Tabella~\ref{tab:app-parameters} specifica i parametri del nucleo. Gli stessi valori di default non costituiscono prova dell'identit\`a delle condizioni fra tutti i profili: il passo della campagna topologica separata, ad esempio, \`e fissato a $1$, e i profili esterni hanno popolazione $40$ anzich\'e $64$.
+\subsection{Tracciabilit\`a delle configurazioni}
+Il punto di ingresso del disegno generale originario \`e \texttt{study.py}; \texttt{--profile pilot} e \texttt{--profile paper} selezionano disegni distinti e producono directory separate sotto \texttt{results/}. L'ordine metodologicamente vincolante \`e selezione/holdout del passo, poi scaling, analisi delle semantiche e suite esterne. Il driver legge il passo \texttt{frozen\_dt\_if\_holdout} dal riepilogo della validazione e lo propaga alle configurazioni degli stadi successivi. Se la validazione non \`e presente, l'esecuzione delle fasi successive viene rifiutata; se un protocollo gi\`a scritto differisce dai parametri richiesti, il runner non lo sovrascrive silenziosamente.
+
+La Tabella~\ref{tab:app-parameters} specifica i parametri del nucleo. Gli stessi valori di default non costituiscono prova dell'identit\`a delle condizioni fra tutti i profili: il passo della campagna topologica separata, ad esempio, \`e fissato a $1$, e i confronti esterni dedicati impiegano $N=64$.
 
 \begin{table}[H]
 \centering\small
@@ -19,7 +21,7 @@ $\mu_{\max},\mu_{\min}$ & $0.9,0.4$ & Inerzia lineare rispetto agli aggiornament
 Scala velocit\`a iniziale & $0.1$ & Met\`a ampiezza, in frazioni della larghezza del box.\\
 Restituzione $e$ & $0.5$ & Clipping e inversione della componente uscente.\\
 Popolazione interna & $N=64$ & $\Delta t$, scaling, topologie e dinamica.\\
-Popolazione esterna & $N=40$ & CPSO e dieci baseline PSO.\\
+Popolazione esterna & $N=40$ / $64$ & Driver generale / confronti BBOB e CEC qui riportati.\\
 Passo $\Delta t$ & Valore selezionato e congelato & Scalatura, semantiche dinamiche e suite esterne via \texttt{study.py}.\\
 Passo topologie dedicato & $1$ & \texttt{study.py topologies} e \texttt{decision\_study.py}.\\
 Grado reti random & $4$ e $8$ & Due configurazioni della stessa famiglia.\\

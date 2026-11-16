@@ -21,6 +21,7 @@ from cpso_serial.benchmarks.coco_bbob import (  # noqa: E402
     wrap_coco_problem,
 )
 from common import (  # noqa: E402
+    BBOB_METHODS,
     METHODS,
     append_jsonl_durable,
     build_run_record,
@@ -56,7 +57,7 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
     if suite_name not in {"bbob", "bbob-largescale"}:
         raise ValueError("This driver supports COCO 'bbob' and 'bbob-largescale' suites")
     methods = config.get("methods", list(METHODS))
-    unknown = sorted(set(methods) - set(METHODS))
+    unknown = sorted(set(methods) - set(BBOB_METHODS))
     if unknown:
         raise ValueError(f"Unknown methods in campaign: {unknown}")
     population = int(config.get("population_size", 40))
@@ -77,6 +78,11 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
         population_size=population,
         method_count=len(methods),
     )
+    checkpoints = config.get("checkpoint_multipliers", [])
+    for dim in counts["dimensions"]:
+        if any(int(k) != k or k <= 0 or k > budget_multiplier or (k*dim) % population
+               for k in checkpoints):
+            raise ValueError("Invalid normalized checkpoint")
     plan = {
         "campaign_id": config.get("campaign_id", config_path.stem),
         "suite": suite_name,
@@ -86,6 +92,7 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
         "cpso_dt": cpso_dt,
         "budget_multiplier": budget_multiplier,
         "methods": methods,
+        "checkpoint_multipliers": checkpoints,
         "budget_rule": "max_evaluations = budget_multiplier * dimension; exact and divisible by population",
         "seed_rule": "same deterministic seed derived from COCO problem ID for every method",
         **counts,
@@ -171,8 +178,10 @@ def execute(config_path: Path, output: Path, *, dry_run: bool = False) -> int:
                     seed=seed,
                     max_evaluations=max_evaluations,
                     result=result,
+                    milestones=[k * problem.dimension for k in checkpoints],
                     cpso_dt=cpso_dt,
                 )
+                record["initial_best"] = float(result.best_history[0])
                 record["coco_evaluations"] = coco_evaluations
                 append_jsonl_durable(result_path, record_with_key(record))
                 completed.add(record_key)

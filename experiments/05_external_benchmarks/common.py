@@ -29,6 +29,9 @@ METHODS = {
 }
 
 
+BBOB_METHODS = {**METHODS, "cpso_random_k8": ("cpso", "random")}
+
+
 ROOT = Path(__file__).resolve().parents[2]
 _THREAD_ENVIRONMENT = (
     "OMP_NUM_THREADS", "OMP_DYNAMIC", "MKL_NUM_THREADS",
@@ -205,11 +208,11 @@ def run_method(
     seed: int,
     cpso_dt: float = 0.7,
 ):
-    if method not in METHODS:
-        raise ValueError(f"Unknown method {method!r}; supported methods: {sorted(METHODS)}")
+    if method not in BBOB_METHODS:
+        raise ValueError(f"Unknown method {method!r}; supported methods: {sorted(BBOB_METHODS)}")
     if max_evaluations < population_size or max_evaluations % population_size != 0:
         raise ValueError("For strict cross-method FE parity, max_evaluations must be a multiple of population_size")
-    kind, variant = METHODS[method]
+    kind, variant = BBOB_METHODS[method]
     if kind == "cpso":
         if not math.isfinite(float(cpso_dt)) or float(cpso_dt) <= 0.0:
             raise ValueError("cpso_dt must be finite and strictly positive")
@@ -226,7 +229,8 @@ def run_method(
             dt=float(cpso_dt),
             initial_velocity_fraction=0.1,
             boundary_restitution=0.5,
-            topology="global",
+            topology=variant or "global",
+            topology_degree=8 if variant == "random" else 4,
         )
         return run_serial_objective(config, objective)
 
@@ -311,7 +315,11 @@ def build_run_record(
             "cognitive": 2.05,
             "social": 2.05,
             "dt": float(cpso_dt),
-            "topology": "global-best",
+            "topology": "random" if method == "cpso_random_k8" else "global-best",
+            "target_degree": 8 if method == "cpso_random_k8" else None,
+            "graph_seed": int(seed) if method == "cpso_random_k8" else None,
+            "population_size": int(result.history_evaluations[0]),
+            "backend": "serial_native_callback",
             "boundary_restitution": 0.5,
             "initial_velocity_fraction": 0.1,
         }

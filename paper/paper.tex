@@ -5,6 +5,7 @@
 \usepackage[provide=*,italian]{babel}
 \usepackage{amsmath,amssymb,amsthm,mathtools,bm}
 \usepackage{mathptmx,microtype}
+\usepackage{courier}
 \usepackage{booktabs,array,tabularx,graphicx,xcolor}
 \usepackage{tikz}
 \usetikzlibrary{calc}
@@ -44,10 +45,13 @@
   \small \textsuperscript{*}Autore corrispondente: \texttt{giovanni.iacuzzo@unikore.it}
 }
 \date{}
+\graphicspath{{images/}}
+% Per una figura con testo a fianco si può usare wrapfigure (vedi sezione Risultati).
+\usepackage{wrapfig}
 \begin{document}
 \maketitle
 \begin{abstract}
-La parallelizzazione della Particle Swarm Optimization modifica non soltanto il costo delle valutazioni, ma potenzialmente anche la semantica dell'aggiornamento sociale e, quindi, le traiettorie di ricerca. Questo lavoro sviluppa un protocollo di studio per la formulazione continua di Orlando--Ricciardello, basata sulla propagazione analitica locale di un sistema differenziale a coefficienti congelati. Si distinguono esecutori sincroni che preservano l'ordine dei commit, un esecutore asincrono a eventi e un modello a isole con migrazione controllata. Il disegno prevede una selezione del passo temporale su problemi e semi appaiati, seguita dalla validazione indipendente del candidato congelato; confronti di tempo assoluto, accelerazione rispetto al seriale, strong scaling ed efficienza; e analisi della qualità al variare delle otto configurazioni di vicinato. Una seconda linea sperimentale definisce un confronto a budget di valutazioni uniforme con dieci varianti PSO su COCO BBOB, BBOB-LargeScale e CEC 2013 LSGO. Vengono precisati l'unit\`a statistica, i confondenti della misura dei tempi e i limiti inferenziali di confronti a parit\`a di valutazioni anzich\'e di tempo. Il contributo attuale \`e la specificazione matematica e metodologica di un quadro di valutazione verificabile, senza anticipare esiti delle campagne ancora da consolidare.
+Su una CPU a memoria condivisa, la scelta del numero di worker e quella del vicinato sociale rispondono a due criteri diversi: tempo per completare un budget fissato e qualità della soluzione a quel budget. Studiamo entrambi per la Continuous Particle Swarm Optimization di Orlando e Ricciardello su un MacBook Air M2. In una sessione temporale tenuta da parte, la regola scelta nelle prime due sessioni riproduce la configurazione più veloce in tutte le 24 condizioni esaminate: quattro worker per particella ai tre carichi inferiori e otto al carico maggiore. Su diffusione inversa a 100 dimensioni, con vicinato casuale di grado obiettivo otto, lo speedup a otto worker rispetto allo stesso backend a un worker è $4{,}62$ (efficienza $58\%$). A parità di valutazioni, il CPSO con tale vicinato ottiene il miglior rango medio finale su BBOB a cinque dimensioni in due gruppi distinti di istanze. A venti dimensioni la calibrazione del passo riduce il rango medio da $7{,}88$ a $7{,}48$ sul gruppo di validazione. Su CEC 2013 LSGO il CPSO è primo per rango medio a 512 valutazioni e ottavo a 4\,096. Questi risultati delimitano i regimi di costo e di budget in cui le scelte computazionali e dinamiche risultano vantaggiose.
 \end{abstract}
 \noindent\textbf{Parole chiave:} Continuous Particle Swarm Optimization; parallelismo multicore; propagatore analitico; topologie sociali; strong scaling; benchmarking.
 
@@ -62,10 +66,13 @@ La parallelizzazione della Particle Swarm Optimization modifica non soltanto il 
 \FloatBarrier
 
 
-\paragraph{Disponibilit\`a del codice e tracciabilit\`a.}
-L'implementazione e gli script delle campagne sono disponibili nel repository \href{https://github.com/GiovanniIacuzzo/Parallel-Continuous-Particle-Swarm-Optimization}{Parallel-Continuous-Particle-Swarm-Optimization} dell'Autore. Le configurazioni sorgente, i manifest e i dati prodotti dalle singole campagne costituiscono la base per la futura sezione sperimentale; l'esistenza di un protocollo nel codice non ne implica l'avvenuto completamento.
+\input{sections/section_4_results.tex}
+\FloatBarrier
+\input{sections/section_5_discussion.tex}
+\input{sections/section_6_conclusions.tex}
 
-\clearpage
+\paragraph{Disponibilità del codice.}
+Il motore e gli script di base sono disponibili nel \href{https://github.com/GiovanniIacuzzo/Parallel-Continuous-Particle-Swarm-Optimization}{repository del progetto}. L'Appendice~\ref{app:campaigns} identifica i disegni sperimentali e i riepiloghi utilizzati.
 \bibliographystyle{unsrtnat}
 \bibliography{references}
 \clearpage\onecolumn\appendix
@@ -80,5 +87,7 @@ L'implementazione e gli script delle campagne sono disponibili nel repository \h
 \input{appendices/appendix_C_scalar_randomness.tex}
 \FloatBarrier
 \input{appendices/appendix_D_campaigns.tex}
+\input{appendices/appendix_E_extended_results.tex}
+\input{appendices/appendix_F_cec_values.tex}
 \clearpage
 \end{document}

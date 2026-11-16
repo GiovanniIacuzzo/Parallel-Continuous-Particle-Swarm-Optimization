@@ -10,6 +10,11 @@ from dataclasses import dataclass
 from typing import Callable
 
 
+# Benchmarks::update writes its first anonymous CSV row at evaluation 120000.
+# The experiment runners keep the authoritative FE counts and per-run history.
+_FIRST_NATIVE_LOG_FE = 120_000
+
+
 @dataclass(frozen=True)
 class CEC2013LSGOProblem:
     function_id: int
@@ -84,7 +89,11 @@ class CEC2013LSGOAdapter:
         else:
             raise RuntimeError("Unsupported cec2013lsgo wrapper: missing get_function/eval")
 
+        reset_log = getattr(benchmark, "next_run", None)
+        native_evaluations = 0
+
         def objective(point: tuple[float, ...]) -> float:
+            nonlocal native_evaluations
             if len(point) != dimension:
                 raise ValueError(f"CEC F{function_id} expects dimension {dimension}, got {len(point)}")
             # The commonly used Cython wrapper documents NumPy vectors as its
@@ -108,7 +117,14 @@ class CEC2013LSGOAdapter:
                 native_vector = np.zeros(metadata_dimension, dtype=np.float64)
                 native_vector[:dimension] = vector
                 vector = native_vector
-            return float(fitness(vector))
+            # next_run resets only native logging counters. It does not change
+            # the active function, shift vector, groups, or rotation matrices.
+            if reset_log is not None and native_evaluations == _FIRST_NATIVE_LOG_FE - 1:
+                reset_log()
+                native_evaluations = 0
+            value = float(fitness(vector))
+            native_evaluations += 1
+            return value
 
         return CEC2013LSGOProblem(
             function_id=function_id,

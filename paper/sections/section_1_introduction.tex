@@ -4,13 +4,13 @@ La formulazione continua di Orlando e Ricciardello \citep{Orlando2021} interpret
 
 Il problema scientifico affrontato \`e il seguente: \emph{come scegliere un'architettura parallela per la CPSO distinguendo l'accelerazione ottenuta senza cambiare traiettoria dalle variazioni di esplorazione introdotte dalla comunicazione e dalla topologia?} Un secondo interrogativo riguarda la competitivit\`a della dinamica continua rispetto a varianti PSO consolidate, in condizioni di budget comparabili. Le due questioni sono collegate operativamente, ma non costituiscono la stessa ipotesi. In particolare, uno studio a pari numero di valutazioni (FE) non dimostra da solo un vantaggio \emph{wall-clock} nei confronti di implementazioni differenti.
 
-La strategia \`e organizzata in due livelli. Nel primo si identifica un passo temporale $\Delta t$ mediante selezione statistica e controllo indipendente, quindi si studiano seriale, master--slave, parallelismo per particella, aggiornamenti asincroni e isole. Le otto configurazioni sociali comprendono sette famiglie di grafo, poich\'e una rete random connessa viene valutata con due gradi obiettivo. Nel secondo livello si predispone una comparazione a parit\`a di FE con dieci baseline PSO, utilizzando le suite COCO BBOB, COCO BBOB-LargeScale e CEC 2013 LSGO \citep{Hansen2021,Li2013}. La valutazione separa esperimenti preliminari e protocolli pi\`u estesi; non trasferisce automaticamente conclusioni dall'uno all'altro.
+La strategia \`e organizzata in due livelli. Nel primo si identifica un passo temporale $\Delta t$ mediante selezione statistica e controllo indipendente, quindi si studiano seriale, master--slave, parallelismo per particella, aggiornamenti asincroni e isole. Le otto configurazioni sociali comprendono sette famiglie di grafo, poich\'e una rete random connessa viene valutata con due gradi obiettivo. Nel secondo livello confrontiamo il CPSO con dieci baseline PSO su COCO BBOB e CEC 2013 LSGO \citep{Hansen2021,Li2013}. La campagna BBOB separa le istanze usate per scegliere il passo da quelle usate per valutare la scelta. Su CEC trasferiamo la configurazione a passo unico selezionata su BBOB.
 
 L'apporto metodologico risiede nella combinazione di: (i) una specificazione comune del nucleo dinamico e delle semantiche di aggiornamento, con verifica di equivalenza dei campi osservabili per i backend sincroni; (ii) una procedura a due stadi per $\Delta t$, dove il candidato scelto non viene riottimizzato sul campione di validazione; (iii) criteri di scelta dell'esecutore basati su tempo assoluto, \emph{backend-anchored strong scaling}, efficienza e scomposizione dei tempi; (iv) un protocollo separato per topologie, replicazione dei grafi casuali ed effetti sulla qualit\`a; e (v) regole di comparazione esterna che esplicitano budget, implementazioni e unit\`a statistiche. Non si propone un nuovo propagatore n\'e si attribuisce novit\`a alla sola applicazione di topologie gi\`a note.
 
 \begin{table}[H]
 \centering\small
-\caption{Domande di ricerca e criteri osservabili. Le risposte quantitative richiedono campagne complete.}
+\caption{Domande di ricerca e criteri osservabili.}
 \label{tab:research-questions}
 \begin{tabularx}{\columnwidth}{@{}p{0.65cm}X@{}}
 \toprule
@@ -20,9 +20,9 @@ RQ & Domanda e criterio di analisi \\
 2 & Quali backend conservano la traiettoria seriale? Controllo di best, posizione, storia e FE.\\
 3 & Quando conviene aumentare i worker? Tempo assoluto, speedup, efficienza e overhead di fase.\\
 4 & Come incidono topologia e semantica sociale sulla qualit\`a? Ranghi e contrasti appaiati a FE uguali.\\
-5 & Quanto \`e competitivo il CPSO rispetto alle baseline? Profili e ranghi per funzione nelle tre suite esterne.\\
+5 & Quanto \`e competitivo il CPSO rispetto alle baseline? Profili e ranghi per funzione su BBOB e CEC.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-La Sezione~\ref{sec:related-work} delimita il rapporto con la letteratura; la Sezione~\ref{sec:model} formalizza il CPSO e le modalit\`a di esecuzione; la Sezione~\ref{sec:exp} specifica i protocolli senza anticiparne i risultati. Le appendici documentano le formule numeriche, le baseline, una propriet\`a geometrica della casualit\`a scalare e la corrispondenza tra esperimenti e configurazioni della repository.
+La Sezione~\ref{sec:model} formalizza il CPSO e le semantiche di esecuzione. La Sezione~\ref{sec:exp} definisce budget, contrasti e unità statistiche. Le Sezioni~\ref{sec:results} e~\ref{sec:discussion} riportano i risultati e ne discutono la validità. Le appendici documentano propagatore, baseline, protocolli e graduatorie complete.
