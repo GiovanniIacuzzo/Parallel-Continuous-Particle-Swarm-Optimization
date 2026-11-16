@@ -1,21 +1,18 @@
-\section{Ranghi finali per metodo}\label{app:external-ranks}
-\begin{table}[H]\centering\small
-\caption{Rango medio al budget finale. BBOB usa le istanze 11--15 e $384D$ FE. CEC usa 4\,096 FE e attribuisce uguale peso alle 15 funzioni. In grassetto il minimo di ciascuna colonna.}
-\begin{tabular}{@{}lrrr@{}}\toprule
-Metodo & BBOB $D=5$ & BBOB $D=20$ & CEC 2013 LSGO\\\midrule
-CPSO Global & 5,04 & 8,96 & 7,15\\
-CPSO R8 (passo 1) & \textbf{3,50} & 7,88 & 7,09\\
-CPSO R8 (passo per dimensione) & identico a R8 & 7,48 & ---\\
-Classic gbest & 8,47 & 9,74 & 8,13\\
-Inertia gbest & 5,37 & 5,51 & 4,59\\
-Constriction gbest & 5,67 & 5,07 & 6,95\\
-Inertia lbest ring & 6,60 & 6,42 & 6,93\\
-CLPSO & 10,97 & 12,42 & 10,41\\
-SL-PSO & 3,90 & 3,06 & 6,13\\
-SPSO-2011 & 7,34 & 4,77 & 4,68\\
-FIPS ring & 10,20 & 11,13 & 10,09\\
-CSO & 4,86 & \textbf{2,74} & \textbf{2,40}\\
-DMS-PSO & 6,08 & 5,83 & 3,44\\
-\bottomrule\end{tabular}
-\end{table}
-A $D=5$ la riga del passo per dimensione ripete il controllo R8 e viene contata una volta sola nel rango. Sul CEC è trasferito il passo unico $1$.
+\section{Confronto statistico con la famiglia PSO}\label{app:external-ranks}
+La graduatoria a undici metodi fissa una ricetta CPSO contro dieci baseline. Il confronto conserva le stesse istanze e i budget delle matrici storiche, ma esclude CPSO Global e il controllo R8 aggiuntivo. Il numero di metodi determina la scala dei ranghi; le tabelle originarie a dodici/tredici configurazioni sono quindi confronti distinti. La replica a nuovo seme mantiene le istanze 11--15 a $D=5$.
+\input{tables/family_ranks.tex}
+\input{tables/omnibus.tex}
+Il test omnibus rileva differenze fra metodi, mentre ogni singolo confronto richiede il proprio controllo della molteplicità. La quota di primo posto del bootstrap è la frequenza, con credito frazionario agli ex aequo, con cui una ricetta ha il rango medio minimo nei ricampionamenti delle funzioni.
+\input{tables/family_contrasts.tex}
+
+\subsection{Figure del confronto esterno originario}
+Le Figure~\ref{fig:restored-bbob-convergence} e~\ref{fig:restored-bbob-function} conservano le rappresentazioni del confronto su istanze BBOB 6--10. Esse integrano le ECDF della campagna controllata, la quale usa altre istanze, altri metodi e un diverso budget.
+\begin{figure}[!tp]\centering
+\includegraphics[width=\textwidth]{fig_bbob_convergence_observer.pdf}
+\caption{Convergenza storica su BBOB, istanze 6--10. Il gap dal minimo è diviso per il gap iniziale di CPSO Global sul medesimo problema; si calcola la mediana sulle cinque istanze e poi sulle 24 funzioni. Le curve collegano i checkpoint osservati. Questa normalizzazione è conservata come diagnostica originaria e resta distinta dalla frazione di target risolti delle ECDF.}\label{fig:restored-bbob-convergence}
+\end{figure}
+\begin{figure}[!tp]\centering
+\includegraphics[width=0.88\textwidth]{fig_bbob_topology_by_function.pdf}
+\caption{Rango medio per funzione di CPSO Global e CPSO R8 nel confronto BBOB originario a dodici metodi, per le due dimensioni. Il dettaglio mostra come l'effetto del vicinato vari fra funzioni; i ranghi sono riferiti all’insieme storico dei concorrenti.}\label{fig:restored-bbob-function}
+\end{figure}
+\FloatBarrier

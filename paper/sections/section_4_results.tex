@@ -1,58 +1,93 @@
 \section{Risultati}\label{sec:results}
 
-\subsection{Passo temporale e scelta del vicinato}
-Lo screening interno seleziona $\Delta t=1$. Sui 30 nuovi semi, la differenza media nella metrica logaritmica dell'Eq.~\eqref{eq:dt-criterion}, calcolata come passo congelato meno concorrente, è $-0{,}408$ rispetto a $30$ (IC bootstrap 95\% $[-0{,}426,-0{,}391]$) e $-0{,}160$ rispetto a $3{,}6$ ($[-0{,}178,-0{,}144]$). Rispetto a $0{,}38125$ la differenza è $-0{,}003$ ($[-0{,}019,0{,}011]$). La scelta di $1$ è quindi compatibile con una regione di passi favorevoli. I dati sostengono in particolare la scelta rispetto al riferimento $30$.
+\subsection{RQ1: scelta del passo e lettura della dinamica locale}
+Lo screening interno seleziona $h=1$. Sui 30 nuovi semi, la differenza media della metrica logaritmica, candidato congelato meno concorrente, è $-0.408$ rispetto a $30$ (IC bootstrap 95\% $[-0.426,-0.391]$) e $-0.160$ rispetto a $3.6$ ($[-0.178,-0.144]$). Rispetto a $0.38125$ la differenza è $-0.003$ ($[-0.019,0.011]$). L'evidenza individua quindi una regione favorevole attorno ai passi moderati e un netto svantaggio del riferimento $30$ al budget interno.
 
-Al passo fissato, R8 ottiene il miglior rango medio di qualità fra gli otto vicinati in tutte e quattro le combinazioni interne. Su Rastrigin i ranghi medi sono $2{,}54$ e $2{,}50$ a $D=30$ e $100$; su diffusione inversa sono $2{,}21$ e $1{,}67$. La replica con più grafi per sciame attenua la conclusione: R8 supera Random di grado quattro su 11 sciami su 12 sia su diffusione a $D=30$ sia su Rastrigin a $D=100$, ma il minimo $p$ corretto fra gli otto contrasti è $0{,}0508$. Su diffusione a $D=100$ R8 prevale sulla griglia soltanto su tre sciami su 12. Abbiamo quindi scelto R8 per il confronto esterno sulla base del rango medio, conservando Global come controllo. La Figura~\ref{fig:graph-rep} riporta i rapporti appaiati per obiettivo e dimensione.
+Il propagatore locale permette di interpretare l'effetto del passo attraverso l'inviluppo $e^{-\alpha h}$ e la fase $\nu h$, con $\alpha=(1-\mu)/2$ e $\nu=\sqrt{\omega_k^2-\alpha^2}$ nel regime sottosmorzato. Per $\mu\in[0.4,0.9]$, $h=1$ produce inviluppi fra $0.741$ e $0.951$; con $h=30$ gli estremi sono $0.000123$ e $0.223$. Il passo maggiore attenua quindi fortemente la memoria dello stato rispetto all'equilibrio congelato. La proprietà riguarda l'aggiornamento locale: l'efficacia della ricerca dipende anche da cambiamenti dei leader, vincoli e budget. L'Appendice~\ref{app:dynamics} confronta il flusso analitico con la matrice discreta.
 
-\begin{figure}[!htbp]
-  \centering
-  \includegraphics[width=\linewidth]{images/fig_graph_replication.pdf}%
-  \caption{Rapporto appaiato tra i valori finali della funzione obiettivo per R8 e per il grafo di confronto. Un rapporto inferiore a uno favorisce R8. Le realizzazioni dei grafi sono aggregate entro sciame prima del confronto.}
-  \label{fig:graph-rep}
-\end{figure}
+La calibrazione esterna sulle istanze BBOB 3--5 seleziona $h=1$ come passo unico e $1,0.35$ come passi per $D=5,20$. Sul hold-out a $D=20$, il passo $0.35$ migliora il rango al checkpoint finale da $7.88$ a $7.48$, ma peggiora quello ai due checkpoint precedenti. Il contrasto finale registra 17 vittorie e sette sconfitte per funzione, con $p_{\mathrm{Holm}}=0.511$ nella famiglia originaria. Il risultato localizza un effetto dipendente dal budget, mantenendo distinta la scelta del passo dall'evidenza di un suo vantaggio.
 
-\subsection{Costo della valutazione e scelta dei worker}
-Per R8 a $D=100$, su Rastrigin lo speedup interno al backend particle-parallel sale a $2{,}62$ con quattro worker e scende a $2{,}20$ con otto (efficienze $65\%$ e $27\%$). Sulla diffusione inversa alla medesima dimensione, gli speedup corrispondenti sono $3{,}52$ e $4{,}62$ (efficienze $88\%$ e $58\%$). In quest'ultimo caso il tempo continua a diminuire passando da quattro a otto worker anche se l'efficienza diminuisce. Le Figure~\ref{fig:top-sc} e~\ref{fig:top-eff} estendono la lettura alle otto topologie.
+\subsection{RQ2: equivalenza delle esecuzioni sincrone}
+La campagna recente contiene 4\,608 esecuzioni individuali, comprese 384 esecuzioni seriali di riferimento. Nei 4\,224 confronti con alternative sincrone o repliche concorrenti, gli hash della storia del best e della posizione migliore coincidono entro seme, dinamica e lavoro effettivo. I budget delle modalità appaiate coincidono. Il controllo copre propagatori analitici e discreti con casualità scalare, $D=30$, quattro livelli di costo e tre sessioni. Il confronto verifica i campi registrati e sostiene l'interpretazione delle differenze temporali come effetti dell'esecuzione del medesimo lavoro stocastico.
 
-\begin{figure*}[!htbp]
-  \centering
-  \includegraphics[width=\linewidth]{images/fig_topology_scaling.pdf}%
-  \caption{Strong scaling del backend particle-parallel sulle otto topologie del CPSO. Il denominatore di riferimento per lo speedup è il tempo parallelo a $p$ worker, il numeratore è il tempo dello stesso backend a un worker.}
-  \label{fig:top-sc}
-\end{figure*}
-\begin{figure*}[!htbp]
-  \centering
-  \includegraphics[width=\linewidth]{images/fig_topology_efficiency.pdf}%
-  \caption{Efficienza $E(p)=S(p)/p$ sul MacBook Air M2. La diffusione inversa e Rastrigin differiscono per il lavoro richiesto da ciascuna valutazione.}
-  \label{fig:top-eff}
-\end{figure*}
+\subsection{RQ3: accelerazione, fasi e scelta dei worker}
+La Tabella~\ref{tab:parallel-key} mette sullo stesso piano riferimento seriale, strong scaling ed overhead. Alla terza sessione, per la CPSO particle-parallel a costo minimo l'accelerazione nativa mediana è $1.34$ a quattro worker e $0.91$ a otto. Quando la valutazione costa circa $968\,\mu$s, gli otto worker raggiungono $A(8)=6.27$, con $S(8)=6.28$ ed efficienza interna $78.5\%$. La dinamica discreta raggiunge $A(8)=5.98$ nello stesso regime. L'Appendice~\ref{app:parallel-results} riporta entrambi i backend e le due dinamiche.
 
-Nell'esperimento a carico controllato, la configurazione con tempo minore nelle prime due sessioni è risultata la più veloce anche nella terza in tutte le 24 celle (due dimensioni, tre grafi, quattro carichi). È stata selezionata l'esecuzione particle-parallel con quattro worker ai livelli $0,128,1024$ e con otto al livello $8192$. Per R8 al carico massimo, l'accelerazione nella terza sessione rispetto al \emph{seriale nativo} è $3{,}61$ a $D=30$ e $3{,}55$ a $D=100$. Il diverso riferimento temporale e il carico controllato rendono questi ultimi valori distinti dagli speedup di strong scaling. La Figura~\ref{fig:crossover} mostra a quali costi di valutazione cambia il vantaggio relativo fra quattro e otto worker.
+\begin{table}[!htbp]\centering\small
+\caption{Particle-parallel nella terza sessione a $D=30$. Costo nominale per FE; mediana dei rapporti appaiati su due ripetizioni. $H$ è l'overhead a un worker.}\label{tab:parallel-key}
+\begin{tabular}{@{}llrrrr@{}}\toprule
+Dinamica & Costo & $A(4)$ & $A(8)$ & $S(8)$ & $H$ (\%)\\\midrule
+Analitica & minimo & 1.34 & 0.91 & 1.14 & 25.3\\
+Analitica & $10\,\mu$s & 2.89 & 3.60 & 3.84 & 6.7\\
+Analitica & $100\,\mu$s & 3.67 & 5.36 & 5.23 & $-2.6$\\
+Analitica & 1 ms & 3.69 & 6.27 & 6.28 & 0.1\\
+Discreta & minimo & 0.91 & 0.58 & 0.85 & 46.6\\
+Discreta & 1 ms & 3.64 & 5.98 & 5.98 & 0.03\\\bottomrule
+\end{tabular}\end{table}
 
-\begin{figure*}[!htbp]
-  \centering
-  \includegraphics[width=\linewidth]{images/fig_crossover.pdf}%
-  \caption{Rapporto dei tempi $T_4/T_8$ in funzione del costo seriale di una valutazione, per backend, grafo e dimensione. Sopra la linea unitaria otto worker completano il lavoro più rapidamente di quattro.}
-  \label{fig:crossover}
-\end{figure*}
+I timer spiegano il cambiamento di regime. Nel lotto CPSO seriale al costo minimo, la mediana del tempo nativo è $16.68$ ms, di cui $12.09$ ms di propagazione e $0.75$ ms di valutazione. Con otto worker particle-parallel le due componenti diventano $9.27$ e $5.91$ ms: il costo della valutazione distribuita cresce rispetto al lavoro utile molto piccolo. Al costo nominale di 1 ms, la valutazione seriale richiede $1.487$ s su $1.492$ s totali; con otto worker particle-parallel richiede $0.234$ s su $0.238$ s. Questi tempi si riferiscono a lotti di diversa lunghezza fra livelli di costo.
 
-\subsection{Confronto con la famiglia PSO}
-Su BBOB a $D=5$, R8 con $\Delta t=1$ occupa il primo posto per rango medio finale sia sulle istanze 6--10 ($3{,}39$) sia sulle istanze 11--15 ($3{,}50$). SL-PSO è secondo nei due gruppi ($4{,}00$ e $3{,}90$). Sulle istanze 11--15 il CPSO prevale su sette delle dieci baseline dopo correzione di Holm al livello $0{,}05$. Contro SL-PSO il bilancio per funzione è di 13 vittorie, 10 sconfitte e un pareggio ($p_\mathrm{Holm}=1$). La Figura~\ref{fig:conv} mostra la riduzione del gap sulle istanze del primo confronto.
+La verifica del modello sulle 16 celle backend--dinamica--costo seleziona il numero di worker ottimo in 11 casi. L'errore relativo assoluto mediano di previsione varia fra $6.2\%$ e $7.1\%$ nelle quattro coppie backend--dinamica. Nei cinque disaccordi, il regret relativo è compreso fra $14.9\%$ e $68.2\%$; il caso più sfavorevole è la scelta di un solo worker per il particle-parallel analitico al costo minimo, contro l'oracolo a quattro. Per costi nominali $100\,\mu$s e 1 ms, tutte le otto decisioni selezionano correttamente otto worker.
 
-\begin{figure*}[!htbp]
-  \centering
-  \includegraphics[width=\linewidth]{images/fig_bbob_convergence_observer.pdf}%
-  \caption{Convergenza su BBOB, istanze 6--10. Il gap dal minimo è diviso per il gap iniziale di CPSO Global sul medesimo problema. Si calcola la mediana sulle cinque istanze e poi sulle 24 funzioni. Le curve collegano i budget osservati e le colonne ripetono i due CPSO per confronto.}
-  \label{fig:conv}
+Nel confronto a lavoro uguale, lo spawn di nuovi processi rende le repliche concorrenti costose per questi lotti brevi. Per la CPSO il miglior speedup di lotto delle repliche varia da $0.022$ al costo minimo a $1.018$ al costo di 1 ms. Quest'ultimo usa quattro processi, contro $6.211$ per otto worker particle-parallel. Sono risultati del ciclo completo di creazione, esecuzione e chiusura dei processi.
+
+Gli esperimenti precedenti su R8 a $D=100$ riportano strong scaling $S(4)=2.62$, $S(8)=2.20$ su Rastrigin e $3.52$, $4.62$ sulla diffusione inversa. Lo studio separato della scelta empirica dell'esecutore trova accordo con la configurazione più rapida in 24 celle su 24 nella sessione successiva. La verifica del modello appena descritta aggiunge il regret e riguarda un diverso disegno, con due dinamiche e costi estesi fino al millisecondo.
+
+
+Le Figure~\ref{fig:restored-scaling} e~\ref{fig:restored-efficiency} riportano le curve complete sulle otto topologie; la Figura~\ref{fig:restored-crossover} mostra il confronto fra quattro e otto worker nel precedente esperimento a carico controllato.
+
+\begin{figure*}[!htbp]\centering
+\includegraphics[width=\textwidth]{fig_topology_scaling.pdf}
+\caption{Strong scaling del backend particle-parallel sulle otto topologie, due obiettivi e due dimensioni della campagna interna. Il riferimento è lo stesso backend a un worker: $S(p)=T_{a,1}/T_{a,p}$. Le curve si riferiscono a $h=1$, $N=64$, $K=96$. La voce storica ``Wheel (star) indica il grafo a stella.}\label{fig:restored-scaling}
 \end{figure*}
 
-La calibrazione indipendente sulle istanze 3--5 sceglie $1$ come passo unico e $1$ e $0{,}35$ come passi specifici per $D=5$ e $20$. A $D=20$ sulle istanze 11--15, il controllo a passo $1$ è davanti al passo $0{,}35$ a $64D$ (ranghi $5{,}61$ e $8{,}09$) e a $192D$ ($6{,}53$ e $7{,}53$). A $384D$ l'ordine si inverte: $7{,}48$ con il passo più piccolo e $7{,}88$ con il controllo, ottavo e nono su tredici. Il passo ridotto vince su 17 funzioni e perde su sette nel contrasto appaiato ($p_\mathrm{Holm}=0{,}511$). In testa si collocano CSO ($2{,}74$) e SL-PSO ($3{,}06$); quest'ultimo supera il CPSO calibrato su 21 delle 24 funzioni ($p_\mathrm{Holm}=0{,}0050$).
+\begin{figure*}[!htbp]\centering
+\includegraphics[width=\textwidth]{fig_topology_efficiency.pdf}
+\caption{Efficienza $E(p)=S(p)/p$ del particle-parallel sulle otto topologie, in percentuale. Il riferimento temporale è quello della Figura~\ref{fig:restored-scaling}; gli otto core M2 comprendono quattro performance core e quattro efficiency core.}\label{fig:restored-efficiency}
+\end{figure*}
 
-Sul CEC, R8 con il passo unico è primo per rango medio a 512 FE ($3{,}26$), con CPSO Global secondo ($3{,}58$). Il suo rango passa a $6{,}00$ a 2\,048 FE e a $7{,}09$ a 4\,096 FE, ottavo su dodici. Al budget finale prevale su CLPSO e FIPS in tutte le 15 funzioni ($p_\mathrm{Holm}=0{,}00067$ per ciascun confronto); CSO lo supera su 12 funzioni e DMS-PSO su 13 ($p_\mathrm{Holm}=0{,}281$ e $0{,}066$, rispettivamente). La Figura~\ref{fig:rank} mostra il cambiamento di posizione lungo il budget; l'Appendice~\ref{app:external-ranks} riporta tutti i metodi.
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{images/fig_bbob_ranks.pdf}%
-  \caption{Rango medio ai tre checkpoint su BBOB (istanze 11--15) e CEC (15 funzioni). I ranghi inferiori sono migliori. A $D=20$ compare anche il controllo a passo fisso, distinto dalla variante calibrata. Le ascisse indicano FE per dimensione nei pannelli BBOB e FE totali nel pannello CEC.}
-  \label{fig:rank}
-\end{figure}
+\begin{figure*}[!htbp]\centering
+\includegraphics[width=\textwidth]{fig_crossover.pdf}
+\caption{Esperimento storico di costo controllato: rapporto appaiato $T_4/T_8$ in funzione del costo seriale per valutazione, distinto per backend, grafo e dimensione. Sopra uno, otto worker sono più rapidi di quattro. Questo disegno precede lo studio recente a tre sessioni con due propagatori e modello di overhead.}\label{fig:restored-crossover}
+\end{figure*}
+\subsection{RQ4: vicinato, propagatore e forma della casualità}
+Nel confronto interno a $h=1$, R8 presenta il miglior rango medio di qualità nelle quattro celle: $2.54$ e $2.50$ su Rastrigin a $D=30,100$; $2.21$ e $1.67$ sulla diffusione inversa. La replica dei grafi mostra sensibilità alla realizzazione: R8 supera R4 su 11 sciami su 12 in due celle, mentre sulla diffusione a $D=100$ supera la griglia su tre sciami su 12. Il minimo $p$ corretto degli otto contrasti è $0.0508$. Il primo studio usa un grafo associato al seme; il secondo aggrega più grafi entro sciame, cambiando la misura della variabilità strutturale.
+
+La Figura~\ref{fig:restored-graph-replication} conserva i contrasti della replica dei grafi; la graduatoria completa delle otto topologie della prima campagna è mostrata in Appendice~\ref{app:campaigns}, Figura~\ref{fig:restored-topology-ranks}.
+
+\begin{figure*}[!htbp]\centering
+\includegraphics[width=0.90\textwidth]{fig_graph_replication.pdf}
+\caption{Rapporti appaiati fra fitness finale R8 e comparatore, per obiettivo e dimensione. Valori inferiori a uno favoriscono R8. Le realizzazioni dei grafi sono aggregate entro sciame prima del confronto. Le etichette Random 8 e random4 corrispondono a R8 e R4.}\label{fig:restored-graph-replication}
+\end{figure*}
+Nel fattoriale BBOB, R4 e griglia hanno grado medio rispettivamente $4.086$ e $4$ e cammino medio $3.093$ e $4.063$; R8 ha grado $8.202$ e cammino $2.178$. La Tabella~\ref{tab:graph-properties} documenta tutte le topologie e il clustering. La maggiore diffusione dell'informazione in R8 si accompagna a un maggior numero di vicini.
+
+A $h=1$, l'effetto mediano analitico meno discreto per R8 scalare è $-0.203$ a $D=5$ e $+0.094$ a $D=20$. Per R8 con coefficienti per coordinata è $-0.619$ e $-0.918$. A $D=20$ il cambio di casualità modifica dunque il segno dell'effetto osservato del propagatore. Le analisi di interazione passo--topologia e dinamica--topologia sono riportate in Appendice~\ref{app:controlled-results}. Tutti gli 84 contrasti pianificati hanno $p_{\mathrm{Holm}}=1$: con quattro funzioni, gli effetti osservati restano esplorativi. Il test omnibus di Friedman distingue le configurazioni ($p\simeq4.99\cdot10^{-10}$ a $D=5$ e $2.53\cdot10^{-18}$ a $D=20$), con approssimazione asintotica sul piccolo numero di blocchi.
+
+La diagnostica geometrica a $D=1000$ restituisce rango affine iniziale 127 per tutti i tre semi. Senza clipping, entrambe le dinamiche scalari mantengono il residuo del best rispetto al sottospazio iniziale all'ordine di $10^{-15}$. Nella CPSO scalare con clipping le mediane sono $0.101$ per Global e $0.047$ per R8; nella CPSO per coordinata senza clipping sono $0.461$ e $0.370$. Il residuo del minimo rispetto allo stesso sottospazio ha mediana $0.356$. Il meccanismo di confinamento e la sua rottura sono quindi direttamente misurati sul problema diagnostico.
+
+\subsection{RQ5: qualità rispetto alla famiglia PSO e target esterni}
+Nel confronto a undici metodi, la CPSO R8 ha rango medio $3.133$ su BBOB a $D=5$, davanti a SL-PSO ($3.400$). L'IC bootstrap del CPSO è $[2.467,3.842]$ e la quota di primo posto bootstrap è $71.8\%$. La replica con nuovo seme produce rango $3.075$, IC $[2.517,3.667]$ e quota $77.6\%$; SL-PSO resta secondo con $3.408$. Il contrasto CPSO--SL-PSO presenta rispettivamente 13 vittorie, un pareggio e 10 sconfitte e, nella replica, 17 vittorie e sette sconfitte; entrambi hanno $p_{\mathrm{Holm}}=1$ sulla famiglia delle 55 coppie. La quota bootstrap descrive la stabilità del rango sul campione.
+
+Nel primo campione a $D=5$, i vantaggi corretti al livello $0.05$ riguardano Classic gbest, Constriction, CLPSO, FIPS, SPSO-2011 e DMS-PSO: sei baseline. Nella replica riguardano Classic gbest, Inertia lbest ring, CLPSO, FIPS e SPSO-2011: cinque. La famiglia più ampia di Holm spiega la differenza rispetto ai sette vantaggi riportati nella precedente analisi con un insieme diverso di contrasti. Le Tabelle~\ref{tab:family-ranks} e~\ref{tab:family-contrasts} rendono espliciti metodi e valori corretti.
+
+A $D=20$ la ricetta CPSO calibrata è ottava su undici, con rango $6.758$; CSO ($2.442$) e SL-PSO ($2.783$) guidano la graduatoria. Sul CEC a $4\,096$ FE, R8 è ottavo con $6.667$, mentre CSO è primo con $2.213$. Il CPSO supera CLPSO e FIPS dopo correzione in entrambi i casi; SL-PSO supera il CPSO a $D=20$. Il passaggio dal primo rango CEC a 512 FE all'ottavo finale nella campagna originaria descrive la diversa rapidità di miglioramento dei concorrenti durante l'avvio della ricerca.
+
+
+Le Figure~\ref{fig:restored-original-ranks} e~\ref{fig:restored-family-intervals} mantengono visibili i due livelli del confronto: la graduatoria storica a dodici/tredici configurazioni e l'analisi statistica a undici metodi. L'Appendice~\ref{app:external-ranks} conserva inoltre le figure storiche di convergenza e il dettaglio per funzione, accanto alle nuove tabelle.
+
+\begin{figure*}[!htbp]\centering
+\includegraphics[width=\textwidth]{fig_bbob_ranks.pdf}
+\caption{Graduatorie ai checkpoint del confronto originario BBOB (istanze 11--15) e CEC (15 funzioni). Il rango minore è migliore. A $D=20$ il controllo R8 a passo fisso è distinto dalla configurazione calibrata. Le ascisse BBOB usano FE per dimensione; CEC usa FE totali. I ranghi appartengono all’insieme originario di dodici/tredici configurazioni.}\label{fig:restored-original-ranks}
+\end{figure*}
+
+\begin{figure*}[!htbp]\centering
+\includegraphics[width=\textwidth]{fig_pso_rank_intervals.pdf}
+\caption{Ranghi medi e intervalli bootstrap al 95\% nella successiva analisi a undici metodi, inclusa la replica BBOB a cinque dimensioni con nuovo seme. Il bootstrap ricampiona le funzioni, mantenendo le istanze annidate. La sovrapposizione degli intervalli è una rappresentazione descrittiva; i contrasti corretti sono riportati in Appendice~\ref{app:external-ranks}.}\label{fig:restored-family-intervals}
+\end{figure*}
+Le ECDF del fattoriale (Figura~\ref{fig:controlled-ecdf}) sostituiscono la precedente normalizzazione sul gap iniziale di un singolo metodo. A $D=5$, R8 analitico scalare risolve il $32.1\%$ delle coppie problema--target entro $512D$ FE, contro $36.9\%$ per R8 analitico per coordinata e $33.3\%$ per DE. A $D=20$ le percentuali sono $7.1\%$, $22.6\%$ e $23.8\%$. Le curve includono quattro funzioni, tre istanze e 21 target: 252 coppie per dimensione e metodo.
+\begin{figure*}[!htbp]\centering
+\includegraphics[width=\textwidth]{fig_controlled_ecdf.pdf}
+\caption{ECDF dei target BBOB nel campione controllato. Ogni curva mantiene 252 coppie problema--target nel denominatore. I metodi PSO usano $h=1$; ``coord.'' indica coefficienti indipendenti per coordinata. I pannelli condividono budget normalizzati per dimensione e scala verticale.}\label{fig:controlled-ecdf}
+\end{figure*}
+
+Per R8 analitico scalare a $D=5$, il target $g\le1$ è raggiunto in quattro run su 12: l'ERT aggregato è $5\,713$ FE e $19.0$ ms. A $D=20$ lo stesso target ha zero successi e l'ERT rimane indefinito. Gli ERT incorporano il budget intero degli insuccessi; possono quindi superare il budget di una singola run. Questi tempi provengono dall'esecuzione seriale con callback e sono riportati insieme ai successi in Appendice~\ref{app:controlled-results}.

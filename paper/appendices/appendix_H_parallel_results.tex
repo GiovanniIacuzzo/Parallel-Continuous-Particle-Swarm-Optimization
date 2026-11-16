@@ -1,0 +1,12 @@
+\section{Dettaglio del costo e della verifica temporale}\label{app:parallel-results}
+\subsection{Lavoro sintetico e bilanciamento del disegno}
+L'obiettivo restituisce Sphere più $10^{-30}$ volte il valore assoluto di un accumulatore deterministico aggiornato mediante \texttt{fma}. Il numero di aggiornamenti dell'accumulatore controlla il costo e viene calibrato separatamente per ogni sessione. L'ottimizzatore conserva $N=64$, $D=30$, Global, casualità scalare e $h=1$. Ai costi nominali $0,10,100,1000\,\mu$s si eseguono rispettivamente $K=31,31,14,1$ aggiornamenti, ossia $2\,048$, $2\,048$, $960$, $128$ FE per run. Il lotto contiene sempre otto semi. Ciascuna sessione comprende 192 lotti: 16 celle dinamica--costo--ripetizione per 12 modalità. Le tre sessioni producono 576 lotti e 4\,608 esecuzioni individuali.
+
+I tempi di fase del CSV sono somme dei tempi nativi delle run del lotto. Per le repliche concorrenti tale somma misura il lavoro, mentre il cronometro esterno misura il tempo trascorso. Il confronto di throughput usa esclusivamente quest'ultimo. La creazione e la chiusura del pool di processi fanno parte del lotto; un pool persistente rappresenterebbe un diverso esperimento.
+\subsection{Accelerazione e overhead}
+\input{tables/parallel.tex}
+\subsection{Modello e hold-out}
+Il modello dell'Eq.~\eqref{eq:overhead-model} viene stimato per ciascun backend e dinamica mediante minimi quadrati non negativi. Il termine $aB$ rappresenta una quota seriale proporzionale alle FE, $bB\widehat\tau_f/p$ il costo delle valutazioni distribuite e $cp$ un overhead dipendente dai worker. I coefficienti sono parametri empirici del lotto osservato.
+\input{tables/model.tex}
+\input{tables/regret.tex}
+La mediana dell'errore relativo assoluto di previsione è $7.15\%$ (analitico MS), $6.42\%$ (analitico PP), $6.92\%$ (discreto MS) e $6.17\%$ (discreto PP). La scelta coincide con l'oracolo in 11 celle su 16. La discrepanza al costo minimo mostra che accuratezza complessiva e regret decisionale descrivono aspetti diversi del modello.

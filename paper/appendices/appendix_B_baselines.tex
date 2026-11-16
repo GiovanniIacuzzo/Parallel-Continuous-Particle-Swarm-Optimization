@@ -121,3 +121,6 @@ La baseline DMS-PSO usa sottosciami di dimensione obiettivo tre, riorganizzati c
 \label{eq:app-dms}
 \end{equation}
 con inerzia lineare da $0.9$ a $0.2$. La variante di progetto non include ricerca locale quasi-Newton; il resto della partizione è aggiunto all'ultimo sottosciame.
+
+\subsection{Controllo discreto delle ablazioni}
+La PSO discreta nativa delle ablazioni condivide inizializzazione, stream per particella, attrattori, coefficienti, schedule e restituzione con la CPSO. Essa usa la formula~\eqref{eq:controlled-discrete} senza limite di velocità. La baseline Inertia gbest della comparazione esterna mantiene invece il proprio limite $0.2w_j$ e l'implementazione NumPy. Il confronto controllato analitico--discreto identifica la sostituzione del propagatore entro una ricetta comune; il confronto con la baseline valuta le ricette complete.

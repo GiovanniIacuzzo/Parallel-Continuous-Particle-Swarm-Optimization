@@ -127,7 +127,7 @@
     \node[pnode] at (n\i) {};
   }
 \end{tikzpicture}
-\par\vspace{0.5mm}\scriptsize \textbf{(d) Wheel nell'API (hub-and-spoke)}
+\par\vspace{0.5mm}\scriptsize \textbf{(d) Star (stella)}
 \end{minipage}
 \\[2.2ex]
 % ==================== (e) RANDOM CONNESSA k~4 ====================
@@ -157,7 +157,7 @@
     \node[pnode] at (n\i) {};
   }
 \end{tikzpicture}
-\par\vspace{0.5mm}\scriptsize \textbf{(e) Random connessa, $k\approx4$}
+\par\vspace{0.5mm}\scriptsize \textbf{(e) R4, grado obiettivo 4}
 \end{minipage}
 &
 % ==================== (f) RANDOM CONNESSA k~8 ====================
@@ -197,7 +197,7 @@
     \node[pnode] at (n\i) {};
   }
 \end{tikzpicture}
-\par\vspace{0.5mm}\scriptsize \textbf{(f) Random connessa, $k\approx8$}
+\par\vspace{0.5mm}\scriptsize \textbf{(f) R8, grado obiettivo 8}
 \end{minipage}
 &
 % ==================== (g) SMALL-WORLD k=4 ====================
@@ -260,6 +260,6 @@
 \par\vspace{0.5mm}\scriptsize \textbf{(h) Scale-free, $k=4$}
 \end{minipage}
 \end{tabular}
-\caption{Schemi delle otto topologie di comunicazione analizzate nel manoscritto. I pannelli illustrano qualitativamente la struttura del vicinato e non corrispondono alla reale dimensione dello sciame impiegata negli esperimenti. Per le topologie random, small-world e scale-free si riportano realizzazioni rappresentative; la topologia \texttt{wheel} implementata nell'API corrisponde a una struttura \emph{hub-and-spoke} (grafo a stella) priva di anello periferico. Nella griglia di von Neumann (c) gli archi tratteggiati blu indicano le condizioni al contorno periodiche della topologia toroidale, mentre nel grafo small-world (g) evidenziano gli \emph{shortcut} a lungo raggio rispetto al reticolo locale.}
+\caption{Schemi qualitativi degli otto vicinati sociali. La stella è priva di anello periferico. Gli archi tratteggiati rappresentano periodicità nella griglia e collegamenti a lungo raggio nella small-world. I pannelli usano numeri di nodi illustrativi; gli esperimenti impiegano $N=64$. R4 e R8 identificano i due parametri di grado della famiglia casuale, la cui connettività è ottenuta anche mediante ponti.}
 \label{fig:topology-schematics}
 \end{figure*}

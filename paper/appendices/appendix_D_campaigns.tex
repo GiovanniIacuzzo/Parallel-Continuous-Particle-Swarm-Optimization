@@ -1,56 +1,46 @@
-\section{Protocollo operativo, profili e unit\`a statistiche}
-\label{app:campaigns}
+\section{Campagne completate e tracciabilità}\label{app:campaigns}
+La Tabella~\ref{tab:campaigns} distingue gli esperimenti storici dagli approfondimenti disponibili con la revisione. I conteggi si riferiscono a run, record o lotti secondo l'unità indicata. Le configurazioni estese presenti nel software costituiscono proposte di ulteriori esperimenti e sono escluse dai risultati di questo articolo.
+\begin{table}[H]\centering\small
+\caption{Inventario delle evidenze usate nel manoscritto.}\label{tab:campaigns}
+\begin{tabularx}{\textwidth}{@{}p{3.3cm}Xr@{}}\toprule
+Esperimento & Disegno completato & Quantità\\\midrule
+Screening del passo & 6 funzioni, 2 dimensioni, 5 passi, 5 semi, $K=30$ & 300 run\\
+Validazione del passo & 12 celle, 4 passi, 30 nuovi semi, $K=30$ & 1\,440 run\\
+Topologie interne & 4 celle, 8 grafi, 24 semi, 3 ripetizioni, 4 worker count & 9\,216 run\\
+BBOB iniziale & 24 funzioni, 2 dimensioni, 5 istanze, 12 metodi & 2\,880 run\\
+Calibrazione BBOB & 24 funzioni, 2 dimensioni, 3 istanze, 4 passi & 576 run\\
+Validazione BBOB & 24 funzioni, 2 dimensioni, 5 istanze, 13 etichette & 3\,120 record\\
+CEC a budget ridotto & 15 funzioni, 5 semi, 12 metodi & 900 run\\
+Replica BBOB $D=5$ & 24 funzioni, 5 istanze, 11 metodi, nuovo seme & 1\,320 run\\
+Ablazione controllata & 4 funzioni, 2 dimensioni, 3 istanze, 65 metodi & 1\,560 run\\
+Costo e parallelismo & 3 sessioni, 4 costi, 2 dinamiche, 2 ripetizioni, 12 modalità; 8 semi per lotto & 576 lotti\\
+Diagnostica affine & 3 dimensioni, 3 semi, 16 configurazioni & 144 run\\
+\bottomrule\end{tabularx}\end{table}
 
-I risultati interni provengono da \texttt{pilot/01\_dt}, \texttt{topology\_m2\_v1} e \texttt{decision\_m2\_v1}. Per il confronto iniziale si usano i riepiloghi di \texttt{bbob\_transfer\_v1/paper/analysis}; per calibrazione, validazione e CEC si usano i checkpoint, i ranghi medi e i contrasti di \texttt{transfer\_v2/study}. Gli ultimi due disegni sono implementati rispettivamente in \texttt{bbob\_study.py} e \texttt{transfer\_study.py}. I profili generali illustrati di seguito documentano anche configurazioni ulteriori.
+\subsection{Parametri condivisi ed eccezioni}
+Il nucleo usa $c_c=c_s=2.05$, $\mu_{\max}=0.9$, $\mu_{\min}=0.4$, velocità iniziale uniforme in $[-0.1w_j,0.1w_j]$ e restituzione $e=0.5$. La popolazione è $N=64$. Il passo delle topologie e degli approfondimenti temporali e geometrici è $1$. Il fattoriale varia il passo analitico; la comparazione esterna trasferisce quello selezionato nel proprio disegno. Le schedule d'inerzia dipendono dal budget programmato: un checkpoint intermedio appartiene alla traiettoria del budget massimo.
 
-\subsection{Tracciabilit\`a delle configurazioni}
-Il punto di ingresso del disegno generale originario \`e \texttt{study.py}; \texttt{--profile pilot} e \texttt{--profile paper} selezionano disegni distinti e producono directory separate sotto \texttt{results/}. L'ordine metodologicamente vincolante \`e selezione/holdout del passo, poi scaling, analisi delle semantiche e suite esterne. Il driver legge il passo \texttt{frozen\_dt\_if\_holdout} dal riepilogo della validazione e lo propaga alle configurazioni degli stadi successivi. Se la validazione non \`e presente, l'esecuzione delle fasi successive viene rifiutata; se un protocollo gi\`a scritto differisce dai parametri richiesti, il runner non lo sovrascrive silenziosamente.
+\subsection{Versioni e identificazione dei dati}
+La base del manoscritto e il codice consultato corrispondono al commit:\par\noindent
+\texttt{c56be76eda7dd7299bd697928576b0bb286b6297}.
+I metadati delle campagne recenti registrano come HEAD:\par\noindent
+\texttt{bbdedd02346cb62209aa596ffb8a076d01ee2ae3}; gli hash dei singoli sorgenti e del binario identificano anche eventuali modifiche locali rispetto a quell'HEAD. La build dichiarata è AppleClang 21.0.0.21000099, C++20, Release, arm64, opzioni \texttt{-O3 -DNDEBUG}, ABI 7. I risultati provengono dalla macchina dell'autore; la compilazione del manoscritto è un'operazione distinta.
 
-La Tabella~\ref{tab:app-parameters} specifica i parametri del nucleo. Gli stessi valori di default non costituiscono prova dell'identit\`a delle condizioni fra tutti i profili: il passo della campagna topologica separata, ad esempio, \`e fissato a $1$, e i confronti esterni dedicati impiegano $N=64$.
+I riepiloghi recenti allegati ai sorgenti contengono i disegni, la provenienza, i ranghi, tutti i contrasti, le ECDF, gli ERT e i timer di fase. La famiglia BBOB controllata utilizza esclusivamente la versione corretta con minimo letto dall'Observer dopo la chiusura del logger. Gli output delle esecuzioni precedenti interrotte sono esclusi. L'analisi statistica successiva ricava le tre matrici dalla validazione storica, con undici metodi: l'esclusione dei controlli CPSO aggiuntivi modifica i ranghi e la famiglia di Holm rispetto alle tabelle originarie.
 
-\begin{table}[H]
-\centering\small
-\caption{Parametri dinamici del profilo principale, a meno delle eccezioni di campagna indicate.}
-\label{tab:app-parameters}
-\begin{tabularx}{\textwidth}{@{}p{4.0cm}p{3.4cm}X@{}}
-\toprule
-Parametro & Valore nel codice & Ambito e vincoli \\
-\midrule
-$c_c,c_s$ & $2.05,2.05$ & Coefficienti cognitivi e sociali della CPSO.\\
-$\mu_{\max},\mu_{\min}$ & $0.9,0.4$ & Inerzia lineare rispetto agli aggiornamenti previsti.\\
-Scala velocit\`a iniziale & $0.1$ & Met\`a ampiezza, in frazioni della larghezza del box.\\
-Restituzione $e$ & $0.5$ & Clipping e inversione della componente uscente.\\
-Popolazione interna & $N=64$ & $\Delta t$, scaling, topologie e dinamica.\\
-Popolazione esterna & $N=40$ / $64$ & Driver generale / confronti BBOB e CEC qui riportati.\\
-Passo $\Delta t$ & Valore selezionato e congelato & Scalatura, semantiche dinamiche e suite esterne via \texttt{study.py}.\\
-Passo topologie dedicato & $1$ & \texttt{study.py topologies} e \texttt{decision\_study.py}.\\
-Grado reti random & $4$ e $8$ & Due configurazioni della stessa famiglia.\\
-Rewiring small-world & $0.15$ & Ring iniziale di grado quattro.\\
-Isole & $M=4$, $p=4$ & Migrazione ad anello ogni $10$ generazioni; nessuna migrazione finale.\\
-\bottomrule
-\end{tabularx}
-\end{table}
+\subsection{Graduatorie visive della campagna topologica interna}
+La Figura~\ref{fig:restored-topology-ranks} riproduce la graduatoria completa di qualità e tempi della campagna interna a $h=1$. Le colonne misurano criteri diversi: rango della fitness finale e rango del tempo con quattro worker su Rastrigin e otto sulla diffusione inversa. Il confronto va distinto dal fattoriale BBOB della successiva Appendice~\ref{app:controlled-results}.
+\begin{figure}[H]\centering
+\includegraphics[width=0.90\textwidth,height=0.76\textheight,keepaspectratio]{fig_topology_ranks.pdf}
+\caption{Ranghi appaiati delle otto topologie nelle quattro celle obiettivo--dimensione: qualità finale (sinistra) e tempo (destra: quattro worker su Rastrigin, otto su diffusione inversa). Le barre riportano gli intervalli della sintesi originaria per seme. ``Wheel (star)'' identifica la stella.}\label{fig:restored-topology-ranks}
+\end{figure}
 
-\subsection{Differenza tra pilot, paper e configurazioni confermative}
-Il pilot di selezione di $\Delta t$ contiene cinque candidati e cinque semi, con $30$ aggiornamenti per run; il profilo paper usa invece 16 candidati, 30 semi e 500 aggiornamenti. Il holdout conserva sempre 30 nuovi semi, generati in un intervallo disgiunto da quello di selezione. Il runner di scaling usa nel pilot due semi e due ripetizioni, contro dieci semi e cinque ripetizioni nel profilo paper. Il numero di worker e le otto configurazioni di grafo sono invece gli stessi in entrambi i profili. Il lavoro RK4 \`e rispettivamente $64$ e $2\,048$, e il numero di aggiornamenti \`e rispettivamente $8$ e $64$. I numeri di esecuzioni del pilot servono a verificare il processo, non a fornire un risultato di pubblicazione.
 
-Per le suite esterne, il pilot utilizza tre funzioni BBOB, due dimensioni e due istanze per ciascuna delle due suite COCO, oltre a quattro funzioni CEC su due semi con un massimo di $800$ FE. Il profilo paper aumenta la copertura delle funzioni BBOB e delle istanze e considera tutte le 15 funzioni CEC con cinque semi. Esistono inoltre tre configurazioni esplicitamente confermative, che non vengono attivate dal solo uso di \texttt{--profile paper}: BBOB a 24 funzioni, dimensioni $2,3,5,10,20,40$, 15 istanze e $10^4D$ FE; BBOB-LargeScale a 24 funzioni, dimensioni $20,40,80,160,320,640$, 15 istanze e $10^4D$ FE; CEC 2013 LSGO a 15 funzioni, 25 seed e $3\cdot10^6$ FE (checkpoint $1.2\cdot10^5$, $6\cdot10^5$, $3\cdot10^6$). Tali configurazioni sono un livello di estensione, non risultati sottintesi.
+\subsection{Ambiente temporale osservato}
+I metadati delle tre sessioni registrano otto CPU logiche e quattro core in ciascuno dei due livelli di prestazione M2. Lo stato di alimentazione osservato è collegato alla rete elettrica, con batteria carica. I campi relativi a modalità a basso consumo, temperatura e stato termico sono non disponibili. Le sessioni 1--2 addestrano il modello e la 3 verifica la scelta, sulla stessa macchina. La calibrazione del lavoro viene ripetuta per sessione; i confronti di equivalenza raggruppano per il lavoro intero effettivamente eseguito.
 
-L'uso di budget FE inferiori al protocollo esteso non \`e metodologicamente neutro. Sul CEC, in particolare, una graduatoria dopo $4\,000$ FE descrive la fase iniziale della ricerca e non il comportamento dopo $3\cdot10^6$ FE. Anche il confronto tra dimensioni $905$ e $1000$ non identifica un effetto dimensionale puro, poich\'e le funzioni F13 e F14 sono differenti dalle altre funzioni della suite.
+\subsection{Regole di sintesi}
+Nel confronto storico delle topologie si aggregano prima le ripetizioni di uno stesso seme. Nella replica dei grafi si aggregano le realizzazioni entro sciame. Nell'analisi della famiglia PSO il bootstrap ricampiona le funzioni conservando le cinque istanze; il test dei segni usa le mediane delle differenze appaiate per funzione. Nel fattoriale le tre istanze sono aggregate entro funzione prima dell'inferenza. Nel costo controllato la tabella temporale riporta la mediana dei rapporti delle due ripetizioni nella terza sessione: i suoi valori sono descrittivi, mentre i lotti contengono gli stessi otto semi.
 
-\subsection{Esperimenti supplementari per la scelta del backend}
-La campagna topologica \texttt{topology\_m2\_v1} usa 24 semi per cella, tre ripetizioni, $N=64$, $K=96$ e worker $1,2,4,8$ per particle-parallel; l'inclusione della seriale consente il controllo di equivalenza. Le figure prodotte da \texttt{topology\_study.py} riportano ranghi appaiati di qualit\`a e tempo, strong scaling e \emph{efficiency} $100S(p)/p$ per le otto configurazioni, con una diagnostica di compromesso qualit\`a--tempo osservato. Si riportano separatamente i costi della selezione sociale, che possono essere influenzati dalla struttura del grafo e dal rapporto fra FE e overhead.
 
-L'esperimento \texttt{decision\_study.py cost} distingue global, grid e random grado otto e introduce livelli di lavoro aritmetico aggiuntivo nel calcolo della Rastrigin. Esso misura tutti i backend sincroni e confronta il rapporto appaiato $T_4/T_8$ per stabilire quando otto worker superano quattro worker; le tre sessioni hanno ruoli di replicazione temporale e di holdout della decisione. I rapporti $T_4/T_8>1$ favoriscono otto worker; intervalli bootstrap e accordo tra sessioni possono identificare livelli di costo supportati, senza trasformare un crossover osservato in una legge universale delle CPU. La valutazione supplementare \texttt{graph} confronta realizzazioni multiple dei grafi random grado quattro e otto con una griglia di riferimento a seed di sciame fissato, permettendo di distinguere variabilit\`a dello sciame e variabilit\`a strutturale. Il calcolo delle fasi \texttt{phases} usa dati completi della campagna topologica, senza ridefinire l'unit\`a statistica delle misure.
-
-\subsection{Unit\`a statistica e qualit\`a del dato}
-Un blocco appaiato dello scaling \`e definito da funzione, dimensione, grafo, seed dello sciame e ripetizione temporale; ogni metodo deve avere il proprio record e il medesimo valore finale e asse FE della seriale. La sintesi prima aggrega le ripetizioni all'interno di ciascun seed, poi riassume i seed mediante mediana e intervallo bootstrap al 95\%. Nel confronto delle topologie i ranghi sono calcolati a seed appaiati; i test dei segni sui contrasti della stessa famiglia richiedono correzione per molteplicit\`a. Quando vengono replicate realizzazioni di uno stesso grafo, il seed di grafo \`e un ulteriore fattore di disegno e non va contato come nuovo problema indipendente.
-
-Nella sensibilit\`a a $\Delta t$, un blocco contiene tutte le varianti del passo per la stessa funzione, dimensione e seed; i ricampionamenti accoppiano tutte le dodici celle mediante l'identificatore del seed. I contrasti eseguiti sullo stesso campione da cui \`e stato selezionato il vincitore non costituiscono test confermativi del candidato. A questo serve l'holdout, sul quale il candidato rimane pre-impegnato. Le misure su sei funzioni rappresentano quelle sei funzioni, non una popolazione probabilistica di tutti i problemi black-box.
-
-Per COCO, l'unit\`a elementare \`e una coppia funzione--istanza--dimensione, con i target di una stessa traiettoria dipendenti. I test di rango devono mantenere il problema come blocco ed evitare che i target multipli di uno stesso run aumentino artificialmente il numero di osservazioni indipendenti. Per CEC, le repliche casuali sono annidate entro la funzione e i checkpoint appartengono alla stessa traiettoria; i confronti devono conservare questa struttura. Prima di presentare percentuali di vittoria o intervalli si verifica che non vi siano run mancanti, duplicate o di budget difforme. Il post-processing esporta una tabella per problema e un riepilogo dei ranghi, ma un rango medio non autorizza da solo dichiarazioni di significativit\`a statistica.
-
-\subsection{Tempi di esecuzione e portata delle conclusioni}
-Le misure di accelerazione sono riferite al motore nativo C++ con obiettivi CPU riproducibili e thread a memoria condivisa. La valutazione esterna della qualit\`a usa CPSO seriale nativa e baseline NumPy: \`e possibile confrontarne le FE, ma non attribuire un vantaggio temporale del CPSO parallelo rispetto alle baseline senza un benchmark wall-clock dedicato, sulla stessa piattaforma e con obiettivi equivalenti. Le curve di efficienza e strong scaling hanno significato solo con un riferimento esplicitato, coerente con le raccomandazioni del benchmarking HPC \citep{HoeflerBelli2015}.
-
-Le campagne registrano configurazioni e manifest, identificatori delle build native e firme del sorgente o del protocollo; la tracciabilit\`a va conservata insieme ai dati grezzi. Le campagne di temporizzazione dovrebbero essere eseguite separatamente, annotando alimentazione, processi concorrenti e condizioni termiche del MacBook Air M2. L'hardware disponibile e il tetto di otto worker descrivono un esperimento multicore locale, non una dimostrazione di scalabilit\`a distribuita o di efficienza su HPC. Nessuna di queste limitazioni impone di ignorare il contributo, ma ne delimita correttamente il dominio di validit\`a.
+\FloatBarrier

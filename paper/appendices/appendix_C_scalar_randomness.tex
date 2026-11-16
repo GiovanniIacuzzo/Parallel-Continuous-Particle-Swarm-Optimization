@@ -1,24 +1,41 @@
-\section{Casualit\`a scalare e sottospazi invarianti del propagatore non vincolato}
-\label{app:scalar-randomness}
+\section{Sottospazio affine e diagnostica della casualità}\label{app:scalar-randomness}
 
-Una scelta implementativa rilevante \`e l'uso di due numeri casuali scalari per particella e aggiornamento, riutilizzati in tutte le coordinate. Questa convenzione coincide con il codice in \texttt{optimizer\_internal.hpp} e nel backend asincrono. La sua conseguenza geometrica riguarda il tratto di dinamica privo di correzioni al dominio e va distinta da un'asserzione di convergenza.
+L'impiego di coefficienti scalari comuni alle coordinate impone una struttura geometrica alla dinamica. La relazione fra regola di aggiornamento, scala e sistema di riferimento è oggetto della letteratura sulla PSO \citep{Wilke2007Invariance}. Qui si formalizza la proprietà utile al controllo sperimentale e se ne misura la validità con e senza correzione ai bordi.
 
-\begin{proposition}[Invarianza dello span per la dinamica non corretta]
-Siano $\bm x_i^0,\bm v_i^0\in\R^D$, $i=1,\ldots,N$, e
+\begin{proposition}[Invarianza affine della dinamica scalare libera]
+Sia $x_\circ=x_1^0$ e si definisca
 \begin{equation}
-\mathcal S_0=\operatorname{span}\{\bm x_1^0,\ldots,\bm x_N^0,
-\bm v_1^0,\ldots,\bm v_N^0\}.
+ \mathcal V_0=\operatorname{span}\{x_i^0-x_\circ\}_{i=2}^N
+ +\operatorname{span}\{v_i^0\}_{i=1}^N,\qquad
+ \mathcal A_0=x_\circ+\mathcal V_0.
 \end{equation}
-Supponiamo che i coefficienti del propagatore locale siano scalari comuni alle coordinate di una particella; che i leader sociali e i migliori personali siano posizioni gi\`a generate; e che nessuna correzione al dominio o operazione esterna introduca nuovi vettori. Allora, per ogni particella e ogni aggiornamento, posizioni, velocit\`a, migliori personali e leader appartengono a $\mathcal S_0$, con
-$\dim\mathcal S_0\le\min\{D,2N\}$.
+Supponiamo che i coefficienti siano scalari per particella, che migliori e leader siano posizioni già prodotte e che l'evoluzione sia priva di correzioni ai bordi o perturbazioni esterne. Per il propagatore analitico e per l'aggiornamento discreto~\eqref{eq:controlled-discrete}, tutte le posizioni e i leader appartengono a $\mathcal A_0$, le velocità appartengono a $\mathcal V_0$ e
+\begin{equation}
+ \dim\mathcal V_0\le\min(D,2N-1).
+\end{equation}
 \end{proposition}
-
 \begin{proof}
-La tesi vale all'inizializzazione. Supponiamo valga al passo $k$. Il migliore personale e il leader sociale sono elementi di $\mathcal S_0$ per ipotesi induttiva. Se $q=a+b>0$, l'equilibrio $\bm x_{\rm eq}=(a\bm p+b\bm s)/q$ appartiene a $\mathcal S_0$. La soluzione di un sistema lineare scalare identico lungo ciascuna coordinata \`e una combinazione lineare di $\bm x^k$, $\bm v^k$ e $\bm x_{\rm eq}$, con gli stessi coefficienti scalari in tutte le coordinate; quindi $\bm x^{k+1},\bm v^{k+1}\in\mathcal S_0$. Per $q=0$ la soluzione \`e combinazione dei soli $\bm x^k$ e $\bm v^k$. La selezione di un nuovo best da posizioni generate preserva lo span. L'induzione conclude la prova e la stima dimensionale segue dal numero dei generatori.
+La tesi vale all'inizializzazione. Se posizione, personal best e leader sono in $\mathcal A_0$, le loro differenze appartengono a $\mathcal V_0$. Per $q>0$, l'equilibrio è una combinazione affine di personal best e leader. La differenza fra posizione ed equilibrio e la velocità sono quindi in $\mathcal V_0$. Il propagatore analitico combina tali vettori con coefficienti scalari, mantenendo posizione in $\mathcal A_0$ e velocità in $\mathcal V_0$. Il caso $q=0$ aggiunge alla posizione un multiplo della velocità. La formula discreta combina analogamente velocità e differenze fra posizioni. Infine la selezione del best sceglie una posizione generata. L'induzione conclude e i generatori di $\mathcal V_0$ sono al più $(N-1)+N$.
 \end{proof}
 
-\paragraph{Limiti della proposizione.}
-Il clipping componente per componente non \`e in generale una trasformazione lineare comune a tutte le coordinate, e pu\`o rompere l'invarianza. Anche l'introduzione di un immigrato proveniente da un'altra isola pu\`o ampliare lo span locale. Pertanto non \`e corretto interpretare $\dim\mathcal S_0\le2N$ come una restrizione assoluta dell'implementazione con vincoli attivi.
+Con $N=64$ il limite affine è 127, affinamento della stima lineare $2N=128$. Per $D=5,20,100$ il bound permette il rango pieno; a $D=1000$ permette un sottospazio proprio. Clipping coordinato e coefficienti casuali per coordinata cambiano la trasformazione geometrica e possono introdurre nuove direzioni.
 
-\paragraph{Interpretazione rispetto ai problemi studiati.}
-Per $N=64$ il limite superiore $2N=128$ non impone uno span proprio nelle dimensioni interne $D=30,100$. Per il confronto esterno con $N=64$, il valore $2N=128$ \`e invece inferiore alle dimensioni di CEC 2013 LSGO e ad alcune dimensioni del protocollo esteso BBOB-LargeScale. Questa osservazione segnala un possibile meccanismo geometrico da misurare, non una prova di scarsa prestazione: il rango effettivo dipende anche da inizializzazione, box, traiettorie e correzioni. Nelle isole omogenee di dimensione locale $n$, il corrispondente limite \`e $2n$ prima di migrazione e correzioni. Un'eventuale versione con coefficienti casuali indipendenti per coordinata rappresenterebbe un algoritmo distinto e non viene confusa con la CPSO attualmente confrontata.
+\subsection{Problema diagnostico e misura del residuo}
+Si campiona una traslazione $s\in[-2,2]^D$ e un vettore normale normalizzato $h$. L'obiettivo è
+\begin{equation}
+ f(x)=\sum_{j=1}^D\lambda_j[H(x-s)]_j^2,\quad
+ H=I-2hh^\top,\quad \lambda_j=10^{6(j-1)/(D-1)}.
+\end{equation}
+Il minimo è $x^*=s$ e $H$ è una riflessione ortogonale di Householder. La matrice delle direzioni iniziali è
+\begin{equation}
+ Z=[x_2^0-x_\circ,\ldots,x_N^0-x_\circ,v_1^0,\ldots,v_N^0].
+\end{equation}
+La SVD usa soglia $\max(D,2N-1)\epsilon_{\mathrm{mach}}\sigma_1$. Se $Q$ contiene una base ortonormale del rango numerico ottenuto, il residuo è
+\begin{equation}
+ r(x)=\frac{\|(I-QQ^\top)(x-x_\circ)\|}{\max(\|x-x_\circ\|,10^{-15})}.
+\end{equation}
+La stessa quantità viene calcolata per il minimo. Il test senza clipping verifica $r(x_{\mathrm{best}})\le10^{-10}$ per la casualità scalare. Il disegno incrocia due propagatori, due casualità, due grafi e due condizioni al bordo, per tre dimensioni e tre semi. I casi senza clipping rappresentano una diagnostica libera nello spazio decisionale; i casi con clipping usano il box $[-5,5]^D$ e restituzione comune.
+
+\subsection{Risultati a mille dimensioni}
+Per i tre semi il rango iniziale è sempre 127. Il residuo del minimo ha mediana 0.356. La Tabella~\ref{tab:subspace} riporta le mediane sui tre semi dei residui del best, mostrando confinamento delle due dinamiche scalari libere e uscite dal sottospazio nelle altre condizioni. I contatti con i bordi sono conteggi di coordinate valutate sul bordo, includendo ripetizioni della stessa coordinata. L'uscita dal sottospazio e la riduzione della fitness sono osservabili distinti.
+\input{tables/subspace.tex}

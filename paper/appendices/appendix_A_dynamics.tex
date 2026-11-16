@@ -1,7 +1,45 @@
 \section{Propagatore analitico, grafi e dettagli dei backend}
 \label{app:dynamics}
 
-\subsection{Flusso esatto del problema locale}
+
+\subsection{Soluzione analitica nella notazione del PDF}
+Nella notazione originale, le radici dell'Eq.~(13) sono
+\begin{equation}
+ \lambda_1^k=-\omega_k\left[\zeta_k+\sqrt{\zeta_k^2-1}\right],\qquad
+ \lambda_2^k=-\omega_k\left[\zeta_k-\sqrt{\zeta_k^2-1}\right].
+ \label{eq:or-roots}
+\end{equation}
+Per $\lambda_1^k\ne\lambda_2^k$, le Eqq.~(14)--(15) del PDF riportano
+\begin{equation}
+ p_{[(k-1)dt,kdt]}(t)=c_1^k\exp(\lambda_1^k t)
+ +c_2^k\exp(\lambda_2^k t)+\frac{f_k}{\omega_k^2},
+ \label{eq:or-distinct-solution}
+\end{equation}
+\begin{equation}
+ c_1^k=\frac{\left(p_k-\dfrac{f_k}{\omega_k^2}\right)\lambda_2^k-\dot p_k}
+ {(\lambda_2^k-\lambda_1^k)\exp(\lambda_1^k kdt)},\qquad
+ c_2^k=\frac{\dot p_k-\left(p_k-\dfrac{f_k}{\omega_k^2}\right)\lambda_1^k}
+ {(\lambda_2^k-\lambda_1^k)\exp(\lambda_2^k kdt)}.
+ \label{eq:or-distinct-coefficients}
+\end{equation}
+Per $\lambda_1^k=\lambda_2^k=\overline\lambda^k$, le Eqq.~(16)--(18) originali sono
+\begin{equation}
+ p_{[(k-1)dt,kdt]}(t)=(c_1^k+c_2^k t)\exp(\overline\lambda^k t)
+ +\frac{f_k}{\omega_k^2},\label{eq:or-critical-solution}
+\end{equation}
+\begin{equation}
+ c_1^k=\left[\left(p_k-\frac{f_k}{\omega_k^2}\right)(1+\overline\lambda^k kdt)
+ -\dot p_k kdt\right]\exp(-\overline\lambda^k kdt),\label{eq:or-critical-c1}
+\end{equation}
+\begin{equation}
+ c_2^k=\dot p_k-\overline\lambda^k\left(p_k-\frac{f_k}{\omega_k^2}\right).
+ \label{eq:or-critical-c2-printed}
+\end{equation}
+Queste espressioni mantengono la forma stampata nel PDF, compreso l'indice dell'intervallo nelle Eqq.~(14) e~(16). L'Eq.~(10) della stessa fonte usa invece $[kdt,(k+1)dt]$. Inoltre, per una scrittura in tempo assoluto, imporre $p(kdt)=p_k$ e $\dot p(kdt)=\dot p_k$ richiede nel secondo coefficiente critico il fattore $\exp(-\overline\lambda^k kdt)$, assente nell'Eq.~(18) stampata. La trascrizione dell'Eq.~\eqref{eq:or-critical-c2-printed} conserva tale formula; la valutazione numerica sottostante usa il tempo locale $\tau=t-kdt$, con condizioni iniziali a $\tau=0$. Questa distinzione evita di assimilare una correzione matematica alla riproduzione testuale della fonte.
+
+Nella fonte $\omega$ è la pulsazione non smorzata e $\zeta$ il rapporto di smorzamento. Con $\alpha=\zeta\omega$, la pulsazione smorzata è $\nu=\omega\sqrt{1-\zeta^2}$ quando $\zeta<1$. Il testo seguente usa $q=\omega_k^2$ e $\alpha=\zeta_k\omega_k$ per le formule numeriche, mantenendo distinta $\nu$ da $\omega_k$.
+
+\subsection{Valutazione numerica in tempo locale}
 Si consideri una singola coordinata della dinamica~\eqref{eq:cpso-model}. Posto $a=c_c r_1$, $b=c_s r_2$, $q=a+b$, $\alpha=(1-\mu_k)/2$ e $F=ap+bs$, il problema locale \`e $x''+2\alpha x'+qx=F$. Per $q>0$ si definiscono $x_{\rm eq}=F/q$ e $y=x-x_{\rm eq}$; allora
 \begin{equation}
  y''+2\alpha y'+qy=0,\quad y(0)=x^k-x_{\rm eq},\quad y'(0)=v^k.
@@ -10,10 +48,10 @@ Si consideri una singola coordinata della dinamica~\eqref{eq:cpso-model}. Posto 
 Con $h=\Delta t$ e $\Delta=\alpha^2-q$, il propagatore C++ distingue i tre casi seguenti.
 
 \paragraph{Sottosmorzamento ($\Delta<0$).}
-Definiti $\omega=\sqrt{-\Delta}$, $C=(v^k+\alpha y_0)/\omega$, $G=y_0\cos(\omega h)+C\sin(\omega h)$, si ha
+Definiti $\nu=\sqrt{-\Delta}$, $C=(v^k+\alpha y_0)/\nu$, $G=y_0\cos(\nu h)+C\sin(\nu h)$, si ha
 \begin{equation}
  y(h)=e^{-\alpha h}G,\quad
- v(h)=e^{-\alpha h}\big[-\omega y_0\sin(\omega h)+\omega C\cos(\omega h)-\alpha G\big].
+ v(h)=e^{-\alpha h}\big[-\nu y_0\sin(\nu h)+\nu C\cos(\nu h)-\alpha G\big].
 \end{equation}
 
 \paragraph{Sovrasmorzamento ($\Delta>0$).}
@@ -73,7 +111,7 @@ Configurazione & Costruzione nel codice \\
 Global-best & Leader scelto tra i personal best di tutte le particelle.\\
 Ring & Due vicini periodici ($i-1,i+1$), pi\`u self.\\
 Von Neumann & Griglia toroidale con quattro adiacenze ortogonali; per $N=64$ la forma \`e $8\times8$.\\
-Wheel / hub-and-spoke & Stella con un hub e archi hub--periferia; hub assegnato a un indice casuale. Nessun arco fra periferici.\\
+Star (stella) & Stella con un hub e archi hub--periferia; hub assegnato a un indice casuale. Nessun arco fra periferici.\\
 Random $k=4$ & Campionamento Bernoulli con $p=4/(N-1)$ e connessione delle componenti residue con ponti.\\
 Random $k=8$ & Stessa costruzione con $p=8/(N-1)$; \`e la seconda impostazione di una stessa famiglia.\\
 Small-world $k=4$ & Anello iniziale di grado quattro, rewiring per arco con probabilit\`a $0.15$.\\
@@ -84,12 +122,44 @@ Scale-free $k=4$ & Crescita per attaccamento preferenziale con $m=k/2=2$ archi p
 
 L'algoritmo che collega le componenti del grafo Bernoulli mediante ponti \`e differente dalla generazione condizionata di $G(N,p)$ a connettivit\`a imposta. Le permutazioni di hub e nodi scale-free servono a non associare sistematicamente i ruoli strutturali agli indici che determinano gli stream casuali delle particelle.
 
-\subsection{Contabilit\`a degli eventi e migrazioni}
-Nella CPSO sincrona la storia best-so-far contiene un campione iniziale e uno per generazione, agli ascissi FE $N,2N,\dots,(K+1)N$. Nell'asincrona ogni commit di una particella aggiunge un campione: la storia contiene $1+NK$ osservazioni e l'asse FE varia a incrementi unitari dopo l'inizializzazione. Entrambe le modalit\`a rispettano il budget~\eqref{eq:fe-budget}. Per lo scaling i quattro campi confrontati esattamente con il seriale sono best finale, posizione migliore, storia best-so-far e ascisse FE.
 
-Per le isole, $N=M n$ con $n\ge2$; il numero di worker non supera $M$. Con intervallo di migrazione $\tau\ge1$ ed esclusione dello scambio dopo l'ultima generazione, le epoche programmate sono
+\subsection{Contabilizzazione delle generazioni}
+Una storia sincrona contiene un best iniziale e uno per generazione, agli ascissi $N,2N,\ldots,(K+1)N$. Gli esperimenti recenti confrontano storia e posizione mediante hash a parità di seme e lavoro, controllando separatamente il budget FE. Il pool C++ rimane attivo durante la run; i task acquisiscono dinamicamente indici da un contatore atomico e il thread chiamante attende la fine del lotto. Snapshot e commit avvengono ai confini delle generazioni.
+
+\subsection{Lettura spettrale del passo}
+Per il problema a equilibrio congelato, lo stato $(y,v)$ evolve mediante $e^{hL}$ con
 \begin{equation}
- N_{\rm epoche}=\left\lfloor\frac{K-1}{\tau}\right\rfloor,
- \qquad N_{\rm tentativi}=M N_{\rm epoche}.
+ L=\begin{pmatrix}0&1\\-q&-2\alpha\end{pmatrix},\qquad
+ \lambda_\pm=-\alpha\pm\sqrt{\alpha^2-q}.
 \end{equation}
-Ogni destinatario considera un solo immigrato all'epoca, ma una migrazione \`e conteggiata come \emph{effettiva} solo quando il valore del candidato \`e strettamente inferiore al peggior personal best locale. Gli incumbent emigranti vengono congelati prima di qualsiasi sostituzione; gli stream pseudocasuali delle particelle destinatarie non sono re-inizializzati. Per il profilo attuale $M=4$, $\tau=10$, $K=500$ corrispondono a $49$ epoche e $196$ tentativi massimi per run, non a un numero preassegnato di migrazioni riuscite.
+Nel regime sottosmorzato, il raggio spettrale del flusso è $e^{-\alpha h}$ e la fase è $h\sqrt{q-\alpha^2}$. Con $c_c=c_s=2.05$ e due uniformi indipendenti, $q$ varia fra 0 e 4.1, mentre $\alpha\in[0.05,0.30]$. Il regime sottosmorzato occupa quindi quasi tutto il dominio dei coefficienti. La Tabella~\ref{tab:local-envelope} riporta valori analitici dell'inviluppo.
+\begin{table}[H]\centering\small
+\caption{Fattore d'inviluppo $e^{-\alpha h}$ del flusso sottosmorzato a coefficienti congelati. I valori sono calcolati dalla formula, indipendentemente dalle run di ottimizzazione.}\label{tab:local-envelope}
+\begin{tabular}{@{}rrrrr@{}}\toprule
+$\mu$ & $\alpha$ & $h=0.38125$ & $h=1$ & $h=30$\\\midrule
+0.4 & 0.300 & 0.8919 & 0.7408 & 0.0001234\\
+0.65 & 0.175 & 0.9355 & 0.8395 & 0.005248\\
+0.9 & 0.050 & 0.9811 & 0.9512 & 0.223130\\\bottomrule
+\end{tabular}\end{table}
+
+La PSO discreta a passo unitario, con lo stesso equilibrio congelato, ha matrice
+\begin{equation}
+ M(q,\mu)=\begin{pmatrix}1-q&\mu\\-q&\mu\end{pmatrix},\qquad
+ \det M=\mu,\quad \operatorname{tr}M=1-q+\mu.
+\end{equation}
+Per $0<\mu<1$ le condizioni di Schur sono $0<q<2(1+\mu)$. In particolare alcuni valori possibili di $q$ oltrepassano tale soglia. Il fattore di costrizione $\chi\simeq0.7298$ sostituisce la matrice con $M(\chi q,\chi)$ e cambia quindi una diversa legge di aggiornamento. Una corrispondenza basata solo sull'inviluppo uguaglierebbe $e^{-\alpha h}$ a $\sqrt\chi$ nel regime di autovalori complessi: essa non uguaglia fase e attrattori. Queste relazioni descrivono la stabilità locale a coefficienti congelati; leader e coefficienti della ricerca cambiano dopo ciascuna FE.
+
+\subsection{Obiettivi interni e diffusione inversa}
+Le sei funzioni di screening sono le formulazioni standard non traslate: Sphere $\sum_jx_j^2$; Rastrigin $10D+\sum_j[x_j^2-10\cos(2\pi x_j)]$; Rosenbrock $\sum_{j=1}^{D-1}[100(x_{j+1}-x_j^2)^2+(1-x_j)^2]$; Ackley con parametri $20,0.2,2\pi$; Griewank $1+\sum_jx_j^2/4000-\prod_j\cos(x_j/\sqrt j)$; Salomon $1-\cos(2\pi\|x\|)+0.1\|x\|$. Gli ottimi sono nell'origine, tranne Rosenbrock in $\bm1$, tutti con minimo zero. I box di default del runner sono rispettivamente $[-100,100]$, $[-5.12,5.12]$, $[-5,10]$, $[-32.768,32.768]$, $[-600,600]$ e $[-100,100]$ per coordinata.
+
+L'obiettivo denominato diffusione inversa è un problema sintetico deterministico di identificazione della sorgente. Con $D$ variabili, il vettore di verità è $\theta_j^\dagger=0.4\sin(2\pi j/(D+1))$, $j=1,\ldots,D$. Si integra lo stato differenza $u(0)=0$:
+\begin{equation}
+ \dot u_j=-\lambda_ju_j+0.2(u_{j-1}-2u_j+u_{j+1})
+ +[1+0.2\sin(2\pi t)]\,[\tanh\theta_j-\tanh\theta_j^\dagger],
+\end{equation}
+con $u_0=u_1$, $u_{D+1}=u_D$ e $\lambda_j=1.1+0.02((j-1)\bmod11)$. Il tempo finale è $2$. La differenza spaziale usa il coefficiente scritto, senza un fattore $\Delta x^{-2}$: il benchmark è il sistema semidiscreto così definito. Si usa RK4 e si osserva lo stato a quattro tempi equispaziati. La funzione obiettivo è
+\begin{equation}
+ f(\theta)=\frac{1}{4D}\sum_{m=1}^4\sum_{j=1}^D u_j(m/2)^2
+ +\frac{10^{-3}}D\sum_{j=1}^D(\theta_j-\theta_j^\dagger)^2.
+\end{equation}
+Il minimo noto è zero in $\theta^\dagger$. Nello studio topologico il numero di passi RK4 è 256 e il box del driver è $[-2,2]^D$. Il lavoro RK4 viene mantenuto identico fra backend entro ciascuna cella.

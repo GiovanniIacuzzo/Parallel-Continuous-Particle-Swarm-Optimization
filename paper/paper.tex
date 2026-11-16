@@ -6,7 +6,7 @@
 \usepackage{amsmath,amssymb,amsthm,mathtools,bm}
 \usepackage{mathptmx,microtype}
 \usepackage{courier}
-\usepackage{booktabs,array,tabularx,graphicx,xcolor}
+\usepackage{booktabs,array,tabularx,longtable,graphicx,xcolor}
 \usepackage{tikz}
 \usetikzlibrary{calc}
 \usepackage{caption}
@@ -14,8 +14,10 @@
 \captionsetup[table]{skip=5pt}
 \usepackage{placeins,stfloats,float}
 \usepackage[numbers,sort&compress]{natbib}
+\usepackage{xurl}
 \usepackage[colorlinks=true,linkcolor=blue!40!black,citecolor=blue!40!black,urlcolor=blue!40!black]{hyperref}
 \usepackage[nameinlink,noabbrev]{cleveref}
+\hypersetup{pdftitle={Continuous Particle Swarm Optimization su CPU multicore},pdfauthor={Giovanni Giuseppe Iacuzzo},pdfsubject={Revisione italiana del 16 novembre 2026}}
 \newtheorem{proposition}{Proposizione}[section]
 \newtheorem{theorem}[proposition]{Teorema}
 \newtheorem{lemma}[proposition]{Lemma}
@@ -38,7 +40,7 @@
 \setlength{\dblfloatsep}{9pt plus 2pt minus 2pt}
 \raggedbottom
 
-\title{Parallelizzazione della Continuous Particle Swarm Optimization: semantiche di esecuzione, topologie e protocolli di valutazione}
+\title{Continuous Particle Swarm Optimization su CPU multicore: costo computazionale, vicinati sociali e dinamica di ricerca}
 \author{
   \textbf{Giovanni Giuseppe Iacuzzo}\textsuperscript{1,*} \\
   \small \textsuperscript{1}Dipartimento di Ingegneria e Architettura, Universit\`a degli Studi di Enna ``Kore'', Enna, Italia \\
@@ -46,12 +48,10 @@
 }
 \date{}
 \graphicspath{{images/}}
-% Per una figura con testo a fianco si può usare wrapfigure (vedi sezione Risultati).
-\usepackage{wrapfig}
 \begin{document}
 \maketitle
 \begin{abstract}
-Su una CPU a memoria condivisa, la scelta del numero di worker e quella del vicinato sociale rispondono a due criteri diversi: tempo per completare un budget fissato e qualità della soluzione a quel budget. Studiamo entrambi per la Continuous Particle Swarm Optimization di Orlando e Ricciardello su un MacBook Air M2. In una sessione temporale tenuta da parte, la regola scelta nelle prime due sessioni riproduce la configurazione più veloce in tutte le 24 condizioni esaminate: quattro worker per particella ai tre carichi inferiori e otto al carico maggiore. Su diffusione inversa a 100 dimensioni, con vicinato casuale di grado obiettivo otto, lo speedup a otto worker rispetto allo stesso backend a un worker è $4{,}62$ (efficienza $58\%$). A parità di valutazioni, il CPSO con tale vicinato ottiene il miglior rango medio finale su BBOB a cinque dimensioni in due gruppi distinti di istanze. A venti dimensioni la calibrazione del passo riduce il rango medio da $7{,}88$ a $7{,}48$ sul gruppo di validazione. Su CEC 2013 LSGO il CPSO è primo per rango medio a 512 valutazioni e ottavo a 4\,096. Questi risultati delimitano i regimi di costo e di budget in cui le scelte computazionali e dinamiche risultano vantaggiose.
+L'efficacia della Continuous Particle Swarm Optimization (CPSO) su CPU multicore dipende sia dal costo delle valutazioni sia dalle scelte che governano l'esplorazione. Presentiamo uno studio su Apple M2 che combina verifica delle traiettorie sincrone, misura dei tempi di fase e confronto fra propagazione analitica e discreta nello stesso motore. Con valutazioni di costo vicino al millisecondo, l'esecuzione per particella a otto worker raggiunge un'accelerazione mediana di $6{,}27$ rispetto alla seriale. Un modello di overhead, verificato su una sessione di hold-out, individua i regimi nei quali la scelta dei worker richiede maggiore cautela. Sul piano della ricerca, un vicinato casuale con grado obiettivo otto ottiene il miglior rango medio BBOB a cinque dimensioni fra undici metodi PSO e mantiene tale posizione nella replica a nuovo seme. Le ablazioni su dinamica, vicinato e casualità mostrano che l'effetto del propagatore cambia con la dimensione e con l'uso di coefficienti scalari o per coordinata. Una diagnostica geometrica ad alta dimensione misura inoltre il confinamento affine e la sua rottura mediante clipping. I risultati forniscono criteri sperimentali per scegliere congiuntamente configurazione di ricerca ed esecuzione parallela, entro i budget e la piattaforma studiati.
 \end{abstract}
 \noindent\textbf{Parole chiave:} Continuous Particle Swarm Optimization; parallelismo multicore; propagatore analitico; topologie sociali; strong scaling; benchmarking.
 
@@ -67,12 +67,11 @@ Su una CPU a memoria condivisa, la scelta del numero di worker e quella del vici
 
 
 \input{sections/section_4_results.tex}
-\FloatBarrier
 \input{sections/section_5_discussion.tex}
 \input{sections/section_6_conclusions.tex}
 
 \paragraph{Disponibilità del codice.}
-Il motore e gli script di base sono disponibili nel \href{https://github.com/GiovanniIacuzzo/Parallel-Continuous-Particle-Swarm-Optimization}{repository del progetto}. L'Appendice~\ref{app:campaigns} identifica i disegni sperimentali e i riepiloghi utilizzati.
+Il motore e gli script di base sono disponibili nel \href{https://github.com/GiovanniIacuzzo/Parallel-Continuous-Particle-Swarm-Optimization}{repository del progetto}. L'Appendice~\ref{app:campaigns} identifica le campagne completate; i riepiloghi numerici e i metadati della revisione accompagnano i sorgenti del manoscritto.
 \bibliographystyle{unsrtnat}
 \bibliography{references}
 \clearpage\onecolumn\appendix
@@ -89,5 +88,7 @@ Il motore e gli script di base sono disponibili nel \href{https://github.com/Gio
 \input{appendices/appendix_D_campaigns.tex}
 \input{appendices/appendix_E_extended_results.tex}
 \input{appendices/appendix_F_cec_values.tex}
+\input{appendices/appendix_G_controlled_results.tex}
+\input{appendices/appendix_H_parallel_results.tex}
 \clearpage
 \end{document}

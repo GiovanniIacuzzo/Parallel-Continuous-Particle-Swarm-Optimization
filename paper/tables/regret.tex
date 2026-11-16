@@ -1,0 +1,22 @@
+\begin{table}[H]\centering\small
+\caption{Verifica di tutte le 16 decisioni del modello nella sessione di hold-out. L'oracolo minimizza la mediana dei tempi osservati entro backend.}\label{tab:regret}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule Dinamica & Costo $\mu$s & Backend & Scelta & Oracolo & Regret \%\\\midrule
+A & 0 & MS & 1 & 1 & 0.0\\
+A & 0 & PP & 1 & 4 & 68.2\\
+A & 10 & MS & 4 & 8 & 14.9\\
+A & 10 & PP & 8 & 8 & 0.0\\
+A & 100 & MS & 8 & 8 & 0.0\\
+A & 100 & PP & 8 & 8 & 0.0\\
+A & 1000 & MS & 8 & 8 & 0.0\\
+A & 1000 & PP & 8 & 8 & 0.0\\
+D & 0 & MS & 1 & 1 & 0.0\\
+D & 0 & PP & 1 & 4 & 32.5\\
+D & 10 & MS & 4 & 8 & 18.4\\
+D & 10 & PP & 4 & 8 & 15.5\\
+D & 100 & MS & 8 & 8 & 0.0\\
+D & 100 & PP & 8 & 8 & 0.0\\
+D & 1000 & MS & 8 & 8 & 0.0\\
+D & 1000 & PP & 8 & 8 & 0.0\\
+\bottomrule\end{tabular}
+\end{table}
