@@ -1,46 +1,44 @@
-\section{Campagne completate e tracciabilità}\label{app:campaigns}
-La Tabella~\ref{tab:campaigns} distingue gli esperimenti storici dagli approfondimenti disponibili con la revisione. I conteggi si riferiscono a run, record o lotti secondo l'unità indicata. Le configurazioni estese presenti nel software costituiscono proposte di ulteriori esperimenti e sono escluse dai risultati di questo articolo.
+\section{Disegni sperimentali e tracciabilità}\label{app:campaigns}
+Questa appendice identifica l'unità statistica, le condizioni di selezione e i budget delle campagne. Le figure principali si riferiscono al profilo \emph{pilot} della pipeline attuale; le analisi precedenti sono mantenute per documentare i meccanismi del propagatore e il comportamento delle topologie, senza aggregare popolazioni sperimentali differenti.
+
+\subsection{Protocollo delle tre campagne principali}
 \begin{table}[H]\centering\small
-\caption{Inventario delle evidenze usate nel manoscritto.}\label{tab:campaigns}
-\begin{tabularx}{\textwidth}{@{}p{3.3cm}Xr@{}}\toprule
-Esperimento & Disegno completato & Quantità\\\midrule
-Screening del passo & 6 funzioni, 2 dimensioni, 5 passi, 5 semi, $K=30$ & 300 run\\
-Validazione del passo & 12 celle, 4 passi, 30 nuovi semi, $K=30$ & 1\,440 run\\
-Topologie interne & 4 celle, 8 grafi, 24 semi, 3 ripetizioni, 4 worker count & 9\,216 run\\
-BBOB iniziale & 24 funzioni, 2 dimensioni, 5 istanze, 12 metodi & 2\,880 run\\
-Calibrazione BBOB & 24 funzioni, 2 dimensioni, 3 istanze, 4 passi & 576 run\\
-Validazione BBOB & 24 funzioni, 2 dimensioni, 5 istanze, 13 etichette & 3\,120 record\\
-CEC a budget ridotto & 15 funzioni, 5 semi, 12 metodi & 900 run\\
-Replica BBOB $D=5$ & 24 funzioni, 5 istanze, 11 metodi, nuovo seme & 1\,320 run\\
-Ablazione controllata & 4 funzioni, 2 dimensioni, 3 istanze, 65 metodi & 1\,560 run\\
-Costo e parallelismo & 3 sessioni, 4 costi, 2 dinamiche, 2 ripetizioni, 12 modalità; 8 semi per lotto & 576 lotti\\
-Diagnostica affine & 3 dimensioni, 3 semi, 16 configurazioni & 144 run\\
-\bottomrule\end{tabularx}\end{table}
+\caption{Disegno del profilo pilot utilizzato nelle nuove figure. I budget sono completi e indipendenti dove indicato.}\label{tab:campaigns}
+\begin{tabularx}{\textwidth}{@{}p{2.6cm}X p{3.2cm}@{}}\toprule
+Studio & Fattori e unità di analisi & Separazione dei campioni\\\midrule
+Sensibilità $h$ & Sei funzioni; $D=30,100$; dodici passi; $N=64$; $K=15,63,127$ (1\,024/4\,096/8\,192 FE). & Otto semi di selezione e dodici di hold-out; scelta congelata\\
+Framework & Seriale, master--slave, particle-parallel, asincrono, isole; otto vicinati; worker $1,2,4,8$; Rastrigin e diffusione inversa; $D=30,100$. & Semi e sessioni distinti; selezione con soglia di qualità e minimo tempo\\
+Varianti PSO & CPSO selected, dieci PSO; sei funzioni native; $D=5,20,100$; $B=1\,024,4\,096,8\,192$ FE. & Scelte trasferite dal framework; ogni budget è una run completa\\
+Controllo BBOB & 24 funzioni; $D=5,20$; tre istanze pilot; checkpoint $64D,192D,512D$ FE. & CPSO seriale di riferimento; callback COCO non parallela\\
+\bottomrule\end{tabularx}
+\end{table}
 
-\subsection{Parametri condivisi ed eccezioni}
-Il nucleo usa $c_c=c_s=2.05$, $\mu_{\max}=0.9$, $\mu_{\min}=0.4$, velocità iniziale uniforme in $[-0.1w_j,0.1w_j]$ e restituzione $e=0.5$. La popolazione è $N=64$. Il passo delle topologie e degli approfondimenti temporali e geometrici è $1$. Il fattoriale varia il passo analitico; la comparazione esterna trasferisce quello selezionato nel proprio disegno. Le schedule d'inerzia dipendono dal budget programmato: un checkpoint intermedio appartiene alla traiettoria del budget massimo.
+Per la sensibilità del passo, il candidato congelato è $h=0.5$; i tre confronti hold-out sono $0.38125$, $0.7$ e $30$. Le differenze di qualità sono appaiate sui medesimi semi e funzioni, mantenendo i budget come strati separati. Il profilo esteso \emph{paper} è definito a 24 passi e a $K=31,127,511$, con 30 semi sia per selezione sia per hold-out; tali impostazioni non vengono attribuite alle figure pilot.
 
-\subsection{Versioni e identificazione dei dati}
-La base del manoscritto e il codice consultato corrispondono al commit:\par\noindent
-\texttt{c56be76eda7dd7299bd697928576b0bb286b6297}.
-I metadati delle campagne recenti registrano come HEAD:\par\noindent
-\texttt{bbdedd02346cb62209aa596ffb8a076d01ee2ae3}; gli hash dei singoli sorgenti e del binario identificano anche eventuali modifiche locali rispetto a quell'HEAD. La build dichiarata è AppleClang 21.0.0.21000099, C++20, Release, arm64, opzioni \texttt{-O3 -DNDEBUG}, ABI 7. I risultati provengono dalla macchina dell'autore; la compilazione del manoscritto è un'operazione distinta.
+Nel framework le isole adottano quattro sottopopolazioni; nel pilot sono previsti intervalli di migrazione $0,2,5$ con collegamento ring o fully connected, senza duplicare il caso di migrazione assente. La selezione minimizza il tempo geometrico fra i casi che soddisfano una perdita media di qualità al più pari a $0.10$ unità logaritmiche, verificata mediante intervallo bootstrap. Il protocollo esteso prevede inoltre sessioni di selezione e hold-out indipendenti; le due campagne non sono fuse nella stima dei risultati.
 
-I riepiloghi recenti allegati ai sorgenti contengono i disegni, la provenienza, i ranghi, tutti i contrasti, le ECDF, gli ERT e i timer di fase. La famiglia BBOB controllata utilizza esclusivamente la versione corretta con minimo letto dall'Observer dopo la chiusura del logger. Gli output delle esecuzioni precedenti interrotte sono esclusi. L'analisi statistica successiva ricava le tre matrici dalla validazione storica, con undici metodi: l'esclusione dei controlli CPSO aggiuntivi modifica i ranghi e la famiglia di Holm rispetto alle tabelle originarie.
+\subsection{Parametri del motore CPSO}
+Il nucleo adotta $c_c=c_s=2.05$, $\mu_{\max}=0.9$, $\mu_{\min}=0.4$, popolazione $N=64$, velocità iniziale uniforme in $[-0.1w_j,0.1w_j]$ e coefficiente di restituzione ai bordi $e=0.5$. La modalità scalare campiona una coppia di coefficienti casuali per particella e intervallo. Le configurazioni a coefficienti per coordinata sono impiegate nelle ablazioni, non trasferite implicitamente al CPSO selected del pilot. I parametri di ogni campagna sono registrati nei relativi file di configurazione.
 
-\subsection{Graduatorie visive della campagna topologica interna}
-La Figura~\ref{fig:restored-topology-ranks} riproduce la graduatoria completa di qualità e tempi della campagna interna a $h=1$. Le colonne misurano criteri diversi: rango della fitness finale e rango del tempo con quattro worker su Rastrigin e otto sulla diffusione inversa. Il confronto va distinto dal fattoriale BBOB della successiva Appendice~\ref{app:controlled-results}.
+\subsection{Ulteriori profili di sensibilità al passo}
 \begin{figure}[H]\centering
-\includegraphics[width=0.90\textwidth,height=0.76\textheight,keepaspectratio]{fig_topology_ranks.pdf}
-\caption{Ranghi appaiati delle otto topologie nelle quattro celle obiettivo--dimensione: qualità finale (sinistra) e tempo (destra: quattro worker su Rastrigin, otto su diffusione inversa). Le barre riportano gli intervalli della sintesi originaria per seme. ``Wheel (star)'' identifica la stella.}\label{fig:restored-topology-ranks}
+\includegraphics[width=0.75\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/selection/fig_dt_profiles_d30.pdf}
+\caption{Profili del log-residuo del passo temporale nel campione selezione, $D=30$, con sei funzioni e tre budget di run complete da 1\,024, 4\,096 e 8\,192 FE. Intervalli riferiti ai semi appaiati.}\label{fig:new-dt-profiles}
+\end{figure}
+\begin{figure}[H]\centering
+\includegraphics[width=0.75\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/selection/fig_dt_profiles_d100.pdf}
+\caption{Profili del log-residuo del passo temporale nel campione selezione, $D=100$, con sei funzioni e tre budget di run complete da 1\,024, 4\,096 e 8\,192 FE. Intervalli riferiti ai semi appaiati.}\label{fig:new-dt-profiles-extra}
 \end{figure}
 
+\begin{figure}[H]\centering
+\includegraphics[width=0.75\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/holdout/fig_dt_profiles_d30.pdf}
+\caption{Profili del log-residuo del passo temporale nel campione hold-out, $D=30$, con sei funzioni e tre budget di run complete da 1\,024, 4\,096 e 8\,192 FE. Intervalli riferiti ai semi appaiati.}\label{fig:new-dt-profiles-holdout}
+\end{figure}
+\begin{figure}[H]\centering
+\includegraphics[width=0.75\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/holdout/fig_dt_profiles_d100.pdf}
+\caption{Profili del log-residuo del passo temporale nel campione hold-out, $D=100$, con sei funzioni e tre budget di run complete da 1\,024, 4\,096 e 8\,192 FE. Intervalli riferiti ai semi appaiati.}\label{fig:new-dt-profiles-holdout-extra}
+\end{figure}
 
-\subsection{Ambiente temporale osservato}
-I metadati delle tre sessioni registrano otto CPU logiche e quattro core in ciascuno dei due livelli di prestazione M2. Lo stato di alimentazione osservato è collegato alla rete elettrica, con batteria carica. I campi relativi a modalità a basso consumo, temperatura e stato termico sono non disponibili. Le sessioni 1--2 addestrano il modello e la 3 verifica la scelta, sulla stessa macchina. La calibrazione del lavoro viene ripetuta per sessione; i confronti di equivalenza raggruppano per il lavoro intero effettivamente eseguito.
-
-\subsection{Regole di sintesi}
-Nel confronto storico delle topologie si aggregano prima le ripetizioni di uno stesso seme. Nella replica dei grafi si aggregano le realizzazioni entro sciame. Nell'analisi della famiglia PSO il bootstrap ricampiona le funzioni conservando le cinque istanze; il test dei segni usa le mediane delle differenze appaiate per funzione. Nel fattoriale le tre istanze sono aggregate entro funzione prima dell'inferenza. Nel costo controllato la tabella temporale riporta la mediana dei rapporti delle due ripetizioni nella terza sessione: i suoi valori sono descrittivi, mentre i lotti contengono gli stessi otto semi.
-
-
+\subsection{Unità di analisi e provenienza}
+I rapporti temporali sono costruiti all'interno di blocchi appaiati prima dell'aggregazione. Nel pilot del framework i bootstrap ricampionano i semi, non le sessioni temporali come nuove realizzazioni della qualità; i grafi rimangono fattori di disegno. Nei confronti PSO i ranghi attribuiscono pari peso alle funzioni. La documentazione di implementazione e di generazione delle figure è disponibile in \texttt{docs/PROTOCOLLO.md} e \texttt{publication\_tools/} della repository; i nomi e i percorsi dei PDF nello ZIP seguono quelli delle campagne originali.
 \FloatBarrier

@@ -1,58 +1,51 @@
 \section{Disegno sperimentale e criteri di analisi}\label{sec:exp}
 
-\subsection{Sequenza degli esperimenti e piattaforma}
-Lo studio comprende una fase iniziale di selezione del passo, topologia e trasferimento ai benchmark e tre approfondimenti: analisi statistica con replica BBOB, confronto controllato dei propagatori e diagnostica di costo e geometria. La Tabella~\ref{tab:campaigns} in Appendice~\ref{app:campaigns} riporta i disegni effettivamente completati. I profili software più estesi costituiscono configurazioni disponibili per nuove campagne.
+\subsection{Piattaforma e sequenza delle campagne}
+Le tre indagini principali sono organizzate come studi successivi, ciascuno con campione di selezione e campione di verifica. La prima determina la sensibilità al passo $h=\Delta t$; la seconda sceglie un framework CPSO mediante qualità e tempo di esecuzione; la terza trasferisce la configurazione congelata al confronto con dieci varianti PSO. I risultati delle figure di questo articolo derivano dal profilo \emph{pilot}, distinto dal profilo \emph{paper} predisposto nel codice e dalle campagne precedenti. L'inventario completo è riportato in Appendice~\ref{app:campaigns}.
 
-Le misure temporali sono state raccolte su MacBook Air M2, CPU a otto core organizzati in quattro core performance e quattro efficiency, con raffreddamento passivo \citep{AppleM2Specs,AppleM2Design}. I metadati delle sessioni recenti confermano la ripartizione $4+4$, l'esecuzione arm64 e l'alimentazione di rete. La build nativa usa C++20, AppleClang 21.0.0.21000099 e modalità Release con \texttt{-O3 -DNDEBUG}. Il pool di thread persiste durante ciascuna run, assegna dinamicamente indici di particella e attende il completamento del lotto prima del commit. Il generatore è \texttt{mt19937\_64}, inizializzato mediante \texttt{seed\_seq} dal seme della run e dall'indice della particella. I dettagli di riproducibilità sono raccolti in Appendice~\ref{app:campaigns}.
+I risultati sono stati ottenuti su MacBook Air con Apple M2, CPU a otto core (quattro performance e quattro efficiency) e memoria condivisa \citep{AppleM2Specs,AppleM2Design}. Il motore nativo C++20 adotta il propagatore analitico, un pool di thread, generatori di numeri casuali associati alle particelle e callback di valutazione. Le esecuzioni sincrone conservano lo snapshot a inizio generazione e il commit ordinato definiti nella Sezione~\ref{sec:model}; asincrono e isole realizzano semantiche di ricerca distinte. Popolazione, parametri dinamici e vincoli sono descritti in Appendice~\ref{app:campaigns}.
 
-\subsection{Passo temporale e topologie interne}
-Lo screening iniziale usa sei funzioni (Sphere, Rastrigin, Rosenbrock, Ackley, Griewank e Salomon), $D=30,100$, $N=64$ e $K=30$ aggiornamenti. Cinque candidati ($0.175$, $0.38125$, $1$, $3.6$, $30$) su cinque semi producono 300 run. La validazione considera quattro candidati su 30 nuovi semi, per 1\,440 run allo stesso budget. Con minimo noto $f^*=0$, la riduzione normalizzata è
+\subsection{Studio I: sensibilità al passo temporale}
+Lo studio nativo comprende Sphere, Rastrigin, Rosenbrock, Ackley, Griewank e Salomon, a $D\in\{30,100\}$ e con $N=64$ particelle. Nel profilo pilot si valutano dodici passi su una griglia comprendente $0.38125$, $0.5$, $0.7$, $1$, $3.6$ e il riferimento $30$. Si eseguono tre budget indipendenti, $K\in\{15,63,127\}$ aggiornamenti, equivalenti a $B=N(K+1)\in\{1024,4096,8192\}$ FE. Ogni budget corrisponde a una run completa, con schedule di inerzia propria; non è un checkpoint di una traiettoria più lunga. Otto semi appaiati alimentano la selezione, dodici nuovi semi l'hold-out.
+
+Con $f^*=0$ per queste funzioni, la metrica primaria è il log-residuo finale normalizzato rispetto al migliore valore iniziale:
 \begin{equation}
- z(h)=\log_{10}\!\left[\operatorname{clip}_{[10^{-16},1]}
+ z(h;B)=\log_{10}\!\left[\operatorname{clip}_{[10^{-16},1]}
  \frac{\max\{f^{(B)}(h),0\}}{f^{(0)}}\right].\label{eq:dt-criterion}
 \end{equation}
-Il best iniziale è positivo e condiviso entro blocco. La sintesi pesa ugualmente le dodici celle funzione--dimensione. Il bootstrap appaia i semi sulle celle; il candidato scelto nello screening rimane congelato durante la validazione, con Wilcoxon bilaterale e correzione di Holm. Il clipping impone un pavimento di precisione alla metrica. La selezione riguarda la griglia provata e il budget $B=1\,984$ FE.
+La metrica secondaria integra il medesimo log-residuo lungo le FE. Funzioni, dimensioni e budget hanno uguale peso nella sintesi. Il passo minimizzante viene scelto solo sui semi di selezione; i tre candidati migliori e $h=30$ sono poi confrontati, senza nuova ottimizzazione, sui semi dell'hold-out. Le differenze sono appaiate per seme e problema; gli intervalli derivano da bootstrap appaiato e i contrasti sono corretti secondo Holm.
 
-Lo studio topologico fissa $h=1$, $N=64$, $K=96$, due obiettivi, due dimensioni, otto vicinati, 24 semi, tre ripetizioni temporali e $p=1,2,4,8$. Esso produce 9\,216 esecuzioni. Ogni run usa $6\,208$ FE; le ripetizioni e i worker replicano la stessa qualità per seme e grafo. Un ulteriore esperimento confronta R4, R8 e griglia con più grafi entro ciascuno di 12 sciami. La variabilità del grafo viene aggregata entro sciame prima dei contrasti. I confronti di qualità e le misure temporali mantengono così unità di analisi separate.
+\subsection{Studio II: selezione del framework multicore}
+Si confrontano cinque organizzazioni: seriale, master--slave, particle-parallel, asincrono e isole. I backend sincroni differiscono per la distribuzione di propagazione e valutazioni; asincrono e isole modificano anche la dinamica effettiva degli aggiornamenti. Il fattore sociale comprende otto configurazioni (Global, ring, von Neumann, star, random R4/R8, small-world e scale-free). I worker assumono $p\in\{1,2,4,8\}$; il modello a isole usa quattro sottopopolazioni e, nel pilot, migrazione assente oppure ogni due o cinque aggiornamenti con grafo di migrazione ring o fully connected. Le combinazioni incompatibili con le dimensioni delle isole non sono generate.
 
-\subsection{Tempi, equivalenza e costo controllato}
-Per una cella appaiata definiamo $T_s$ come tempo seriale, $T_{a,1}$ come tempo del backend $a$ a un worker e $T_{a,p}$ come tempo a $p$ worker:
+La campagna pilot usa due funzioni di natura differente, Rastrigin e diffusione inversa, entrambe a $D=30,100$, $N=64$, $K=15$ e lavoro nativo controllato. Selezione e hold-out usano semi e sessioni distinti; il protocollo prevede riscaldamento e ordine randomizzato dei casi. Il criterio primario è la qualità finale della \emph{run completata}, misurata dal rapporto tra fitness finale e fitness iniziale; fra le configurazioni ammissibili per qualità, si minimizza il tempo geometrico wall-clock. Una perdita fino a $0.10$ unità logaritmiche rispetto alla migliore qualità osservata in selezione è ammissibile soltanto quando il limite superiore dell'intervallo bootstrap resta entro la soglia. Si congelano una scelta globale e scelte per obiettivo/dimensione, poi verificate su nuovi semi e sessioni.
+
+Per i backend che riproducono la stessa traiettoria della seriale si distinguono accelerazione e strong scaling:
 \begin{equation}
- A_a(p)=\frac{T_s}{T_{a,p}},\quad S_a(p)=\frac{T_{a,1}}{T_{a,p}},\quad
+ A_a(p)=\frac{T_s}{T_{a,p}},\qquad
+ S_a(p)=\frac{T_{a,1}}{T_{a,p}},\qquad
  E_a(p)=\frac{S_a(p)}p.\label{eq:speedup-efficiency}
 \end{equation}
-L'overhead relativo a un worker è $H_a=T_{a,1}/T_s-1$. La scelta operativa minimizza il tempo assoluto. I rapporti sono calcolati entro blocco prima della sintesi. I timer di fase distinguono tempi wall-clock e somme del lavoro dei thread; le medie o mediane di rapporti e componenti vengono mantenute come statistiche distinte.
+$T_s$ indica il tempo della seriale e $T_{a,p}$ il tempo del backend $a$ con $p$ worker. Le medie geometriche e gli intervalli bootstrap sono costruiti su rapporti appaiati. Per asincrono e isole il rapporto $T_s/T_{a,p}$ è denominato \emph{rapporto temporale} e non speedup di una traiettoria invariata. Il timer operativo è il wall-clock della chiamata completa, distinto dal cronometro del solver e dalle verifiche indipendenti dei valori obiettivo. Le curve di speedup ed efficienza si riferiscono ai soli backend sincroni.
 
-L'approfondimento recente impiega Sphere con lavoro sintetico deterministico aggiuntivo a $D=30$, vicinato Global, casualità scalare e $h=1$, per entrambe le dinamiche analitica e discreta. I quattro costi nominali sono $0$, $10\,\mu$s, $100\,\mu$s e $1$ ms per FE, calibrati separatamente in ciascuna sessione. Il livello zero indica assenza del lavoro aggiuntivo. Le run hanno rispettivamente $K=31,31,14,1$: il confronto fra backend conserva il lavoro entro livello, mentre il confronto fra livelli cambia anche la durata della run. Ogni lotto contiene otto semi, con due ripetizioni e tre sessioni. Seriale, master--slave e particle-parallel sono misurati con $p=1,2,4,8$; le repliche concorrenti usano processi separati con $p=2,4,8$. In totale si raccolgono 576 lotti, ossia 4\,608 esecuzioni individuali.
+\subsection{Studio III: confronto con la famiglia PSO}
+La competizione nativa trasferisce il framework e il vicinato congelati dallo Studio II. Il CPSO così selezionato è il metodo principale; una sua esecuzione seriale con il medesimo vicinato serve da controllo e non partecipa al ranking, evitando di contare due volte la stessa famiglia. I concorrenti sono Classic gbest, Inertia gbest, Inertia lbest ring, Constriction, CLPSO, FIPS ring, SPSO-2011, SL-PSO, CSO e DMS-PSO, definiti in Appendice~\ref{app:baselines}. Le valutazioni effettive, inclusa la popolazione iniziale, sono pareggiate; ogni budget della scala richiede una run autonoma.
 
-Il cronometro di lotto include dispatch Python e creazione/distruzione del pool di processi; il tempo nativo è aggregato sulle otto run sequenziali quando si parallelizza ciascuna run. L'accelerazione delle repliche usa il tempo wall-clock del lotto. Per l'equivalenza si controllano budget e hash della coppia (storia del best, posizione migliore) dei record appaiati; il controllo precedente dello scaling comprende anche valori e ascisse FE.
+Nel pilot si considerano $D\in\{5,20,100\}$ e $B\in\{1024,4096,8192\}$ FE per sei funzioni native. I ranghi sono attribuiti entro problema a parità di budget, mantenendo eguale peso alle funzioni. Gli intervalli dei ranghi sono ottenuti ricampionando le funzioni; i confronti primari utilizzano differenze relative limitate e bootstrap per semi appaiati. I tempi rappresentano il costo delle implementazioni effettivamente eseguite: il CPSO utilizza C++ nativo, mentre le baseline utilizzano Python/NumPy con valutatori matematicamente corrispondenti. La verifica indipendente delle funzioni, inclusa la diffusione inversa con integrazione RK4, controlla la concordanza dei valori finali. Le figure costo--qualità collegano risultati di \emph{run completate} a budget diversi e non sono interpretate come curve al primo raggiungimento di un target.
 
-Sulle sessioni 1--2 si adatta, per dinamica e backend, il modello non negativo
+Il controllo esterno BBOB comprende 24 funzioni, $D=5,20$, tre istanze del pilot e checkpoint a $64D$, $192D$ e $512D$ FE di una traiettoria programmata al budget massimo. Il riferimento CPSO viene eseguito serialmente per il vincolo dell'interfaccia callback corrente; la verifica BBOB riguarda quindi la qualità dell'algoritmo, non il guadagno multicore della configurazione asincrona. L'Observer COCO identifica i minimi e le soglie di target \citep{Hansen2021,Hansen2016Procedure}. L'ECDF conserva tutti gli insuccessi nel denominatore e usa 21 target, da $10^2$ a $10^{-8}$.
+
+\subsection{Controlli statistici e studi complementari}
+Le campagne precedenti comprendono la replica BBOB a nuovo seme, il confronto nello stesso motore fra propagatore analitico e discreto, l'ablazione della casualità scalare/per coordinata e una diagnostica geometrica a $D=1000$. Restano disponibili come risultati complementari nelle Appendici~\ref{app:external-ranks} e~\ref{app:controlled-results}, senza sostituire il confronto principale con CPSO parallelo. Per gli effetti appaiati controllati si mantiene la metrica
 \begin{equation}
- \widehat T_{a,p}=aB+b\frac{B\widehat\tau_f}{p}+cp,\qquad a,b,c\ge0,\label{eq:overhead-model}
+ d_{L,R}=\frac{g_L-g_R}{\max(g_L+g_R,10^{-16})},\qquad
+ g=\max(f-f^*,0),\label{eq:relative-effect}
 \end{equation}
-dove $B$ è il numero totale di FE nel lotto e $\widehat\tau_f$ è il costo seriale mediano per FE stimato sulle sessioni di addestramento. La sessione 3 misura errore predittivo e regret della scelta
+con valori negativi favorevoli a $L$. Le famiglie inferenziali e l'unità di ricampionamento rimangono quelle dichiarate nelle rispettive campagne \citep{Demsar2006,Garcia2010}.
+
+L'analisi temporale a costo sintetico controllato mantiene inoltre il modello empirico a coefficienti non negativi
 \begin{equation}
- R=\frac{T_{a,\widehat p}}{\min_p T_{a,p}}-1.\label{eq:regret}
+ \widehat T_{a,p}=aB+b\frac{B\widehat\tau_f}{p}+cp,
+ \quad a,b,c\ge0,\label{eq:overhead-model}
 \end{equation}
-La selezione confronta i worker entro backend; seriale e throughput delle repliche sono analizzati separatamente.
-
-\subsection{Confronto con dieci varianti PSO}
-Il confronto esterno comprende CPSO Global, CPSO R8 e dieci baseline descritte in Appendice~\ref{app:baselines}. Tutte usano $N=64$ e il medesimo budget entro problema. Il CPSO usa il motore C++ con callback; le baseline usano NumPy. I semi sono condivisi per problema, mentre generatori e inizializzazioni seguono ciascun metodo.
-
-Su BBOB si considerano tutte le 24 funzioni, $D=5,20$ e checkpoint della stessa traiettoria a $64D,192D,384D$ FE. Il primo confronto usa le istanze 6--10 e $h=1$ (2\,880 run). Una calibrazione separata sulle istanze 3--5 prova $h=0.35,1,3.6,30$ per R8 (576 run), selezionando un passo unico e un passo per dimensione. Le istanze 11--15 verificano la scelta (3\,120 record, con duplicazione logica della ricetta coincidente a $D=5$). L'hold-out è relativo alle istanze delle stesse funzioni. Su CEC 2013 LSGO si trasferisce il passo unico BBOB e si usano 15 funzioni, cinque semi e checkpoint a 512, 2\,048 e 4\,096 FE (900 run). F13--F14 hanno $D=905$; le altre $D=1000$.
-
-L'analisi statistica successiva fissa una ricetta CPSO ($h=1$ a $D=5$ e su CEC, $h=0.35$ a $D=20$) contro dieci baseline, per undici metodi. I ranghi sono calcolati entro istanza e poi mediati entro funzione. Friedman usa le sintesi per funzione; gli intervalli bootstrap al 95\% ricampionano le funzioni. La quota di primo posto bootstrap divide il credito in caso di parità. I contrasti usano il segno della mediana per funzione delle differenze appaiate di fitness, con Holm su tutte le 55 coppie entro suite/dimensione. Una replica a $D=5$ conserva funzioni e istanze 11--15, cambia il seme di campagna a 20261117 e produce ulteriori 1\,320 run a $1\,920$ FE. Il seme identifica una replica della casualità dell'ottimizzatore sulle stesse istanze.
-
-\subsection{Ablazioni controllate, target e diagnostica geometrica}
-Le ablazioni recenti eseguono nel medesimo motore le otto topologie, casualità scalare o per coordinata, propagatore analitico a $h=0.38125,1,3.6$ e PSO discreta a passo unitario: 64 configurazioni. Si aggiunge Differential Evolution (DE, \texttt{best1bin}, popolazione iniziale 64, aggiornamento differito, senza polishing). Il disegno completato contiene BBOB F1, F8, F15 e F21, $D=5,20$, istanze 1--3 e $512D$ FE, per 1\,560 run. La PSO discreta controllata usa gli stessi $c_c,c_s,\mu_k$, box e restituzione della CPSO, senza limite di velocità. Essa è distinta dalla baseline Inertia gbest dell'Appendice~\ref{app:baselines}, che usa un limite di velocità. Le varianti native condividono l'inizializzazione verificata mediante hash; entro lo stesso tipo di casualità la coppia di propagatori condivide anche gli stream. Fra casualità scalare e per coordinata cambia il consumo dei numeri casuali.
-
-I ranghi di questa campagna sono attribuiti alle mediane del gap $f-f^*$ sulle istanze entro funzione. I contrasti pianificati usano la mediana entro funzione dell'effetto appaiato limitato
-\begin{equation}
- d_{L,R}=\frac{g_L-g_R}{\max(g_L+g_R,10^{-16})},\qquad g=\max(f-f^*,0).\label{eq:relative-effect}
-\end{equation}
-Valori negativi favoriscono $L$. Si applicano Wilcoxon bilaterale, effetto biseriale dei ranghi e bootstrap sulle funzioni, con Holm sulle 84 ipotesi pianificate. La famiglia separata dei contrasti di R8 contro le altre 64 configurazioni in entrambe le dimensioni contiene 128 ipotesi. La funzione costituisce il blocco inferenziale \citep{Demsar2006,Garcia2010}.
-
-L'Observer COCO fornisce il minimo di riferimento e le tracce dei raggiungimenti \citep{Hansen2021,Hansen2016Procedure}. Si usano 21 target logaritmici da $10^2$ a $10^{-8}$. L'ECDF conta le coppie problema--target risolte entro budget, mantenendo tutti gli insuccessi nel denominatore. Per ciascun target, l'expected running time (ERT) divide la somma dei costi, attribuendo l'intero budget agli insuccessi, per il numero di successi; con zero successi resta indefinito. Sono disponibili costi in FE e tempi osservati al primo raggiungimento.
-
-Infine, un ellissoide traslato e ruotato con condizionamento $10^6$ misura il confinamento affine e l'uscita dal sottospazio iniziale. Si incrociano $D=5,20,1000$, tre semi, due dinamiche, due casualità, Global/R8 e presenza/assenza di clipping: 144 run a $4\,096$ FE. La costruzione e il residuo geometrico sono definiti in Appendice~\ref{app:scalar-randomness}.
+con \emph{regret} decisionale $R=T_{a,\widehat p}/\min_p T_{a,p}-1$ (Appendice~\ref{app:parallel-results}); questo studio quantifica separatamente l'effetto della granularità del lavoro e non determina la scelta del framework nella campagna pilot.

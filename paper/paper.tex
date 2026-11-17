@@ -17,7 +17,7 @@
 \usepackage{xurl}
 \usepackage[colorlinks=true,linkcolor=blue!40!black,citecolor=blue!40!black,urlcolor=blue!40!black]{hyperref}
 \usepackage[nameinlink,noabbrev]{cleveref}
-\hypersetup{pdftitle={Continuous Particle Swarm Optimization su CPU multicore},pdfauthor={Giovanni Giuseppe Iacuzzo},pdfsubject={Revisione italiana del 16 novembre 2026}}
+\hypersetup{pdftitle={Continuous Particle Swarm Optimization multicore: sensibilità, architetture e confronto PSO},pdfauthor={Giovanni Giuseppe Iacuzzo}}
 \newtheorem{proposition}{Proposizione}[section]
 \newtheorem{theorem}[proposition]{Teorema}
 \newtheorem{lemma}[proposition]{Lemma}
@@ -40,7 +40,7 @@
 \setlength{\dblfloatsep}{9pt plus 2pt minus 2pt}
 \raggedbottom
 
-\title{Continuous Particle Swarm Optimization su CPU multicore: costo computazionale, vicinati sociali e dinamica di ricerca}
+\title{Continuous Particle Swarm Optimization su CPU multicore: sensibilità al passo, architetture parallele e confronto con varianti PSO}
 \author{
   \textbf{Giovanni Giuseppe Iacuzzo}\textsuperscript{1,*} \\
   \small \textsuperscript{1}Dipartimento di Ingegneria e Architettura, Universit\`a degli Studi di Enna ``Kore'', Enna, Italia \\
@@ -51,9 +51,9 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-L'efficacia della Continuous Particle Swarm Optimization (CPSO) su CPU multicore dipende sia dal costo delle valutazioni sia dalle scelte che governano l'esplorazione. Presentiamo uno studio su Apple M2 che combina verifica delle traiettorie sincrone, misura dei tempi di fase e confronto fra propagazione analitica e discreta nello stesso motore. Con valutazioni di costo vicino al millisecondo, l'esecuzione per particella a otto worker raggiunge un'accelerazione mediana di $6{,}27$ rispetto alla seriale. Un modello di overhead, verificato su una sessione di hold-out, individua i regimi nei quali la scelta dei worker richiede maggiore cautela. Sul piano della ricerca, un vicinato casuale con grado obiettivo otto ottiene il miglior rango medio BBOB a cinque dimensioni fra undici metodi PSO e mantiene tale posizione nella replica a nuovo seme. Le ablazioni su dinamica, vicinato e casualità mostrano che l'effetto del propagatore cambia con la dimensione e con l'uso di coefficienti scalari o per coordinata. Una diagnostica geometrica ad alta dimensione misura inoltre il confinamento affine e la sua rottura mediante clipping. I risultati forniscono criteri sperimentali per scegliere congiuntamente configurazione di ricerca ed esecuzione parallela, entro i budget e la piattaforma studiati.
+La Continuous Particle Swarm Optimization (CPSO) sostituisce l'aggiornamento discreto delle particelle con la soluzione analitica locale di un problema dinamico. Ne esaminiamo le prestazioni su CPU multicore mediante tre studi coordinati: selezione del passo temporale su budget indipendenti, confronto di architetture parallele e valutazione rispetto a dieci varianti della PSO. Nella campagna pilota il passo $\Delta t=0.5$, selezionato su semi dedicati, viene verificato su un campione indipendente; la sua efficacia dipende dall'obiettivo e dal budget. La selezione congiunta di architettura, vicinato e worker individua una configurazione asincrona Global a otto worker. Nel successivo hold-out il rapporto tra tempo seriale e tempo della configurazione scelta è $3.99$ e $4.16$ sulla diffusione inversa a 30 e 100 dimensioni, mentre su Rastrigin è $0.87$ e $1.72$: il guadagno computazionale non coincide necessariamente con uno speedup di traiettorie equivalenti. Il confronto nativo mette il CPSO con framework selezionato in competizione con la famiglia PSO su tre budget completi; BBOB fornisce un controllo esterno separato, eseguito serialmente. Il quadro sperimentale collega sensibilità del propagatore, costo della valutazione, organizzazione parallela e competitività della ricerca.
 \end{abstract}
-\noindent\textbf{Parole chiave:} Continuous Particle Swarm Optimization; parallelismo multicore; propagatore analitico; topologie sociali; strong scaling; benchmarking.
+\noindent\textbf{Parole chiave:} Continuous Particle Swarm Optimization; parallelismo multicore; sensibilità del passo; modelli asincroni e a isole; speedup; benchmark PSO.
 
 \input{sections/section_1_introduction.tex}
 \FloatBarrier
@@ -63,14 +63,12 @@ L'efficacia della Continuous Particle Swarm Optimization (CPSO) su CPU multicore
 \FloatBarrier
 \input{sections/section_3_experimental_protocol.tex}
 \FloatBarrier
-
-
 \input{sections/section_4_results.tex}
 \input{sections/section_5_discussion.tex}
 \input{sections/section_6_conclusions.tex}
 
 \paragraph{Disponibilità del codice.}
-Il motore e gli script di base sono disponibili nel \href{https://github.com/GiovanniIacuzzo/Parallel-Continuous-Particle-Swarm-Optimization}{repository del progetto}. L'Appendice~\ref{app:campaigns} identifica le campagne completate; i riepiloghi numerici e i metadati della revisione accompagnano i sorgenti del manoscritto.
+Il motore di ottimizzazione, le configurazioni e gli script di analisi sono disponibili nella \href{https://github.com/GiovanniIacuzzo/Parallel-Continuous-Particle-Swarm-Optimization}{repository pubblica}. Il protocollo e le campagne a cui si riferiscono le figure sono identificati nelle appendici.
 \bibliographystyle{unsrtnat}
 \bibliography{references}
 \clearpage\onecolumn\appendix
