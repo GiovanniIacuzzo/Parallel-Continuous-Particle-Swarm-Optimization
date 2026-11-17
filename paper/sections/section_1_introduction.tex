@@ -1,3 +1,6 @@
+\section{Introduzione}
+\label{sec:introduction}
+
 La Continuous Particle Swarm Optimization (CPSO) descrive il moto delle particelle mediante un sistema differenziale risolvibile analiticamente quando coefficienti e attrattori sono congelati durante ciascun aggiornamento \citep{Orlando2021}. Questa struttura consente di distribuire la propagazione e le valutazioni dell'obiettivo su più core. La sua utilità operativa dipende però da due condizioni: il costo della valutazione deve giustificare la distribuzione del lavoro e la dinamica deve produrre soluzioni competitive al budget disponibile. Il presente studio esamina queste condizioni mediante misure temporali, confronti esterni e ablazioni controllate.
 
 La domanda centrale è \emph{quali scelte di esecuzione, vicinato e aggiornamento rendano efficace la CPSO su una CPU multicore}. Consideriamo una piattaforma Apple M2 a memoria condivisa e distinguiamo tre quantità osservabili: il tempo necessario a completare un lavoro fissato, la qualità raggiunta con un numero fissato di valutazioni (FE) e il primo raggiungimento di target comuni. Questa distinzione permette di collegare l'organizzazione del calcolo alla ricerca stocastica attraverso esperimenti nei quali ciascun fattore è identificabile.

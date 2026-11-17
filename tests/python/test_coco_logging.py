@@ -2,7 +2,7 @@
 from pathlib import Path
 import numpy as np
 import pytest
-from review_study import observer_optimum, target_hits, archive_interrupted_observer
+from publication_tools.coco_logging import observer_optimum, target_hits, archive_interrupted_observer
 
 
 def test_official_header_optimum(tmp_path):
@@ -62,7 +62,7 @@ def test_real_coco_logger_without_private_problem_access(tmp_path):
 
 def test_logger_with_destination_longer_than_coco_limit(tmp_path):
     import os
-    from review_study import short_coco_observer
+    from publication_tools.coco_logging import short_coco_observer
     cocoex=pytest.importorskip('cocoex')
     destination=tmp_path/('a'*80)/('b'*80)/('c'*50)/'observer'
     previous=Path.cwd()
@@ -77,7 +77,7 @@ def test_logger_with_destination_longer_than_coco_limit(tmp_path):
 
 
 def test_logger_preserves_partial_logs_and_restores_cwd(tmp_path):
-    from review_study import short_coco_observer
+    from publication_tools.coco_logging import short_coco_observer
     cocoex=pytest.importorskip('cocoex')
     previous=Path.cwd()
     suite=cocoex.Suite('bbob','instances: 1','dimensions: 5 function_indices: 1')

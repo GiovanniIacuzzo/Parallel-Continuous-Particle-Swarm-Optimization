@@ -1,3 +1,0 @@
-# Additions for the controlled review experiments. Install after -e '.[analysis,test]'.
-pandas>=2.0
-coco-experiment==2.8.3

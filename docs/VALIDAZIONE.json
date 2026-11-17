@@ -1,0 +1,65 @@
+{
+  "base_commit": "5c09645b2dacb9fc9399e780d179b09be06d8f50",
+  "platform": "Linux x86_64; these checks are software validation, not Apple M2 performance evidence",
+  "python_tests": {
+    "passed": 141,
+    "skipped": 1,
+    "skip_reason": "cec2013lsgo optional package not installed"
+  },
+  "native_tests": {
+    "passed": 4
+  },
+  "standalone_scaling_regression": "passed",
+  "protected_paths": 61,
+  "protected_diff": "",
+  "smoke_stages": {
+    "02_parallel/selection": {
+      "equivalent_sync_rows": 64,
+      "phase": "selection",
+      "runs": 160
+    },
+    "02_parallel/holdout": {
+      "equivalent_sync_rows": 0,
+      "phase": "holdout",
+      "runs": 40
+    },
+    "01_dt/selection": {
+      "dt": 30.0,
+      "phase": "selection",
+      "runs": 80,
+      "scope": "fixed native benchmark suite",
+      "seeds": 2
+    },
+    "01_dt/holdout": {
+      "dt": 30.0,
+      "phase": "holdout",
+      "runs": 48,
+      "scope": "fixed native benchmark suite",
+      "seeds": 2
+    },
+    "03_comparison/bbob": {
+      "runs": 22,
+      "scope": "serial external quality control"
+    },
+    "03_comparison/inverse": {
+      "native_target_timestamps": false,
+      "ranked_methods": 11,
+      "runs": 96,
+      "timing_scope": "implementation performance: native C++ CPSO versus NumPy baselines"
+    },
+    "03_comparison/native": {
+      "native_target_timestamps": false,
+      "ranked_methods": 11,
+      "runs": 192,
+      "timing_scope": "implementation performance: native C++ CPSO versus NumPy baselines"
+    }
+  },
+  "pdf_qa": {
+    "vector_pdfs": 30,
+    "text_outside_page": 0,
+    "visually_inspected": "dt sensitivity and holdout effects; framework quality-cost and scaling; comparison ranks/tradeoff; BBOB ECDF"
+  },
+  "scientific_campaigns_executed": false,
+  "resume_check": "passed: completed native comparison reloaded without repeating cached runs",
+  "source_fingerprint_verified_against_delivery": true
+}

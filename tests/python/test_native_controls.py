@@ -67,7 +67,7 @@ def test_graph_seed_changes_graph_not_initial_swarm():
 
 
 def test_graph_metric_definitions():
-    from review_study import graph_statistics
+    from publication_tools.common import graph_statistics
     c=replace(cfg(),topology='wheel')
     m=graph_statistics(controlled_graph(c,42))
     assert m['clustering']==0.

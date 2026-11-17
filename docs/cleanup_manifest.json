@@ -1,0 +1,147 @@
+[
+  {
+    "path": "bbob_study.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "transfer_study.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "decision_study.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "pso_statistics.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "review_mechanism.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "review_parallel.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "review_stability.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "review_study.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "review_support.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_review.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_review_publication.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "requirements-review.txt",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "configs/benchmarks/review_cec_subset.json",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "README.md",
+    "action": "replaced",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "study.py",
+    "action": "replaced",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_results/atlas_common.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_results/build_atlas.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_results/replot_strong_scaling_pilot.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_results/__init__.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_results/run_all.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_results/plot_external_atlas.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_results/plot_parallel_publication.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_results/plot_dt_atlas.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "plot_results/plot_internal_atlas.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "tests/python/test_review_analysis.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "tests/python/test_review_publication_plots.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "tests/python/test_review_support.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "tests/python/test_controlled_review.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  },
+  {
+    "path": "tests/python/test_review_coco_compat.py",
+    "action": "removed from active tree",
+    "reason": "historical overlapping workflows; recoverable in recovery archive"
+  }
+]
