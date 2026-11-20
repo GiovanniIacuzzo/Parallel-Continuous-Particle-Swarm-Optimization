@@ -115,7 +115,8 @@ int run_impl(
     const std::size_t error_capacity,
     const CpsoObjectiveCallback custom_objective = nullptr,
     void* custom_objective_context = nullptr,
-    const int experiment_flags = 0, const std::uint64_t graph_seed = 0) {
+    const int experiment_flags = 0, const std::uint64_t graph_seed = 0,
+    const double research_wall_seconds = 0.0, const bool research_summary = false) {
     try {
         if (config == nullptr || execution == nullptr || c_result == nullptr
             || best_position_out == nullptr || history_out == nullptr) {
@@ -150,6 +151,7 @@ int run_impl(
             }
             expected_history = population_size * iterations + 1U;
         }
+        if (research_summary) expected_history = 1U;
         if (history_capacity < expected_history) {
             throw std::invalid_argument("history_out capacity is too small for the selected architecture");
         }
@@ -163,11 +165,17 @@ int run_impl(
             throw std::invalid_argument("topology_rewiring_probability must lie in [0,1]");
         }
 
-        if (experiment_flags < 0 || experiment_flags > 15) {
+        if (experiment_flags < 0 || experiment_flags > 31) {
             throw std::invalid_argument("Invalid experiment flags");
         }
         cpso::Config cpp_config;
         cpp_config.apply_boundaries = (experiment_flags & 8) == 0;
+        cpp_config.adaptive_recovery = (experiment_flags & 16) != 0;
+        if (research_wall_seconds < 0.0 || !std::isfinite(research_wall_seconds))
+            throw std::invalid_argument("Invalid research time limit");
+        cpp_config.wall_time_limit_seconds = research_wall_seconds;
+        cpp_config.summary_only = research_summary;
+
         cpp_config.discrete_dynamics = (experiment_flags & 1) != 0;
         cpp_config.coordinate_randomness = (experiment_flags & 2) != 0;
         if ((experiment_flags & 4) != 0) cpp_config.graph_seed = graph_seed;
@@ -399,6 +407,26 @@ extern "C" CPSO_API int cpso_run_experiment(
     }
     return run_impl(config, execution, result, position, history, fe, capacity,
                     error, error_capacity, callback, context, flags, graph_seed);
+}
+
+
+// Independent opt-in research interface: no changes to legacy structs/ABI.
+extern "C" CPSO_API int cpso_run_research(
+    const CpsoCConfig* config, const CpsoCExecutionConfig* execution,
+    int flags, double time_limit_seconds,
+    CpsoCResult* result, double* position, double* history, std::uint64_t* fe,
+    std::size_t capacity, char* error, std::size_t error_capacity) {
+    if (execution == nullptr || execution->algorithm_id != CPSO_ALGORITHM_ASYNCHRONOUS) {
+        write_error(error, error_capacity, "Research interface requires asynchronous CPSO");
+        return -1;
+    }
+    if (flags != 0 && flags != 16) {
+        write_error(error, error_capacity, "Research flags must be 0 (original) or 16 (adaptive)");
+        return -1;
+    }
+    return run_impl(config, execution, result, position, history, fe, capacity,
+                    error, error_capacity, nullptr, nullptr, flags, 0,
+                    time_limit_seconds, true);
 }
 
 extern "C" CPSO_API int cpso_experiment_graph(

@@ -177,6 +177,14 @@ CPSO_API int cpso_experiment_initial_state(uint64_t, size_t, size_t,
 CPSO_API int cpso_experiment_graph(int, size_t, size_t, size_t, uint64_t,
                                   size_t, double, unsigned char*, char*, size_t);
 
+// Opt-in asynchronous comparison: flags 0=original, 16=adaptive dt+recovery.
+// time_limit_seconds=0 means FE cap only; summary contains final best/FE.
+// The maximum FE is population_size*(iterations+1).
+CPSO_API int cpso_run_research(
+    const CpsoCConfig*, const CpsoCExecutionConfig*, int flags, double time_limit_seconds,
+    CpsoCResult*, double*, double*, uint64_t*, size_t,
+    char*, size_t);
+
 // Additive research entry point; existing ABI structures are unchanged.
 // flags: bit 0 discrete, bit 1 coordinate randomness, bit 2 separate graph seed,
 // bit 3 disable boundary map (unconstrained geometric diagnostics only).

@@ -182,6 +182,7 @@ def _run(
     work_iterations: int = 0,
     custom_objective: Optional[Callable[[Sequence[float]], float]] = None,
     experiment: tuple[int, int] | None = None,
+    research: tuple[int, float] | None = None,
 ) -> CpsoResult:
     config.validate()
     if custom_objective is not None and architecture != "serial":
@@ -242,7 +243,11 @@ def _run(
     lower = (ctypes.c_double * config.dimension)(*(float(x) for x in config.lower_bounds))
     upper = (ctypes.c_double * config.dimension)(*(float(x) for x in config.upper_bounds))
     best_position = (ctypes.c_double * config.dimension)()
-    if architecture == "asynchronous":
+    if research is not None:
+        if architecture != "asynchronous" or experiment is not None or custom_objective is not None:
+            raise ValueError("Research mode requires native asynchronous objective")
+        history_capacity = 1
+    elif architecture == "asynchronous":
         history_capacity = config.population_size * config.iterations + 1
     else:
         history_capacity = config.iterations + 1
@@ -301,7 +306,18 @@ def _run(
         callback = _ObjectiveCallback(evaluate_custom)
     else:
         callback = None
-    if experiment is not None:
+    if research is not None:
+        function = library.cpso_run_research
+        function.argtypes = [ctypes.POINTER(_CConfig), ctypes.POINTER(_CExecutionConfig),
+            ctypes.c_int, ctypes.c_double, ctypes.POINTER(_CResult),
+            ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_uint64), ctypes.c_size_t, ctypes.c_char_p,
+            ctypes.c_size_t]
+        function.restype = ctypes.c_int
+        status = function(ctypes.byref(c_config), ctypes.byref(execution),
+            research[0], research[1], ctypes.byref(c_result), best_position,
+            history, history_evaluations, history_capacity, error, len(error))
+    elif experiment is not None:
         function = library.cpso_run_experiment
         function.argtypes = [ctypes.POINTER(_CConfig), ctypes.POINTER(_CExecutionConfig),
             ctypes.c_int, ctypes.c_uint64, _ObjectiveCallback, ctypes.c_void_p,
@@ -529,3 +545,14 @@ def controlled_initial_state(config: CpsoConfig):
     if status: raise RuntimeError(error.value.decode())
     return (np.ctypeslib.as_array(x).reshape(n,d).copy(),
             np.ctypeslib.as_array(v).reshape(n,d).copy())
+
+
+def run_research(config: CpsoConfig, benchmark: str, *, adaptive: bool = False,
+                 workers: int = 4, seconds: float = 0.0,
+                 work_iterations: int = 0) -> CpsoResult:
+    """Opt-in native asynchronous CPSO. Uses one-value summary to bound memory."""
+    if not math.isfinite(seconds) or seconds < 0.0:
+        raise ValueError("seconds must be a finite nonnegative duration")
+    return _run(config, benchmark, architecture="asynchronous", workers=workers,
+                work_iterations=work_iterations,
+                research=(16 if adaptive else 0, float(seconds)))

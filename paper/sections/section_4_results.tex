@@ -1,65 +1,95 @@
 \section{Risultati}\label{sec:results}
 
-\subsection{Selezione del passo temporale}
-La ricerca sul passo temporale identifica $h=0.5$ come configurazione pilota di riferimento. La Figura~\ref{fig:new-dt-budget} mostra i profili della qualità finale e dell'integrale della qualità lungo le valutazioni, separatamente per i tre budget completi. I profili per funzione e dimensione, raccolti in Appendice~\ref{app:campaigns}, evidenziano che l'ordinamento dei passi cambia con il problema e con la durata della ricerca. Ne deriva una selezione basata sul criterio aggregato fissato prima dell'hold-out, non sull'ottimo di una singola funzione.
+\subsection{Sensibilità del propagatore e scelta del passo}\label{subsec:res-dt}
+La campagna estesa evidenzia una dipendenza marcatamente non monotona della qualità dal passo $h$. La Figura~\ref{fig:new-dt-budget} mostra, nel campione di selezione, una regione favorevole compresa approssimativamente tra $0.2$ e $0.7$, con uno spostamento del minimo in funzione del budget. La sintesi prespecificata sulle sei funzioni, due dimensioni e tre budget seleziona $h=0.38125$.
 
-\begin{figure*}[!htbp]\centering
-\includegraphics[width=0.91\textwidth]{01_dt/selection/fig_dt_budget_sensitivity.pdf}
-\caption{Sensibilità al passo nella selezione pilot su sei funzioni native, $D=30,100$ e $N=64$. A sinistra, media del log-residuo finale normalizzato; a destra, integrale medio dello stesso residuo durante la run. I budget di $1\,024$, $4\,096$ e $8\,192$ FE sono esecuzioni indipendenti, non checkpoint di un'unica traiettoria. Valori minori indicano una qualità migliore.}\label{fig:new-dt-budget}
+\begin{figure*}[htbp]
+ \centering
+ \includegraphics[width=0.8\textwidth]{01_dt/selection/fig_dt_budget_sensitivity.pdf}
+ \caption{Sensibilità del passo nel campione di selezione dello Studio I. Media del log-residuo finale normalizzato su sei funzioni, $D=30,100$, $N=64$ e 30 semi, per tre budget \emph{indipendenti}: $2\,048$, $8\,192$ e $32\,768$ FE. La linea verticale indica il passo congelato per la verifica indipendente. Valori inferiori corrispondono a una maggiore riduzione del residuo.}
+ \label{fig:new-dt-budget}
 \end{figure*}
 
-L'hold-out verifica la scelta $h=0.5$ con nuovi semi. La Figura~\ref{fig:new-dt-holdout} riporta le differenze appaiate della metrica primaria: il passo selezionato supera nettamente il riferimento $h=30$ a ciascun budget, con un vantaggio più marcato nel caso lungo. Il confronto con $h=0.38125$ è prossimo allo zero nella sintesi dei tre budget; quello con $h=0.7$ varia con il budget. La regione di prestazioni favorevoli è quindi localizzata attorno a passi subunitari, mentre la scelta $h=0.5$ fornisce il riferimento operativo per gli studi successivi.
+Il controllo su 30 semi \emph{hold-out} conferma la competitività del passo congelato, senza stabilire una superiorità rispetto a tutti i valori vicini. Come mostra la Figura~\ref{fig:new-dt-holdout}, i contrasti aggregati con $h=0.35$ e $h=0.5$ sono prossimi allo zero e i rispettivi intervalli comprendono la parità; il confronto con il controllo $h=30$ è invece nettamente favorevole a $h=0.38125$. Quest'ultimo confronto identifica un regime di passo elevato poco efficace, ma non costituisce una dimostrazione di superiorità rispetto alle migliori tarature discrete della PSO.
 
-\begin{figure}[H]\centering
-\includegraphics[width=\columnwidth]{01_dt/holdout/fig_dt_holdout_effects.pdf}
-\caption{Validazione hold-out del passo congelato $h=0.5$ rispetto agli altri candidati selezionati e al riferimento $h=30$. Differenze medie appaiate del log-residuo finale su sei funzioni e due dimensioni, aggregate sui dodici semi indipendenti; barre: intervalli bootstrap al 95\%. I confronti sono riportati sia sull'insieme dei budget sia separatamente per $K=15$, $63$ e $127$ ($N=64$). I valori negativi favoriscono il passo congelato.}\label{fig:new-dt-holdout}
+\begin{figure}[t]
+ \centering
+ \includegraphics[width=\columnwidth]{01_dt/holdout/fig_dt_holdout_effects.pdf}
+ \caption{Confronti appaiati nel campione indipendente di 30 semi. Le ascisse riportano la differenza media del log-residuo tra il passo congelato $h=0.38125$ e ciascun riferimento, aggregando funzioni, dimensioni e budget; le barre indicano intervalli bootstrap al 95\%. Valori negativi favoriscono il passo congelato.}
+ \label{fig:new-dt-holdout}
 \end{figure}
 
-La struttura dell'aggiornamento analitico offre una spiegazione del fenomeno. Nel regime sottosmorzato l'inviluppo locale contiene $e^{-\alpha h}$ con $\alpha=(1-\mu)/2$ e una fase $\nu h$, $\nu=\sqrt{\omega_k^2-\alpha^2}$. Aumentare $h$ modifica simultaneamente lo smorzamento e la fase del moto rispetto agli attrattori congelati; passi molto grandi possono ridurre rapidamente la memoria della velocità senza produrre un corrispondente miglioramento del best. La relazione con la formulazione originaria e con la discretizzazione è sviluppata in Appendice~\ref{app:dynamics}.
+\subsection{Confronto delle otto topologie di comunicazione}\label{subsec:res-topologies}
+Il primo livello di analisi dello Studio II riguarda l'effetto del vicinato sociale sulla scalabilità dell'esecutore parallelo. Per evitare che differenze di architettura o di costo della funzione obiettivo confondano il confronto, si fissa il backend \emph{particle-parallel} sincrono e si esaminano tutte le otto topologie sul problema di diffusione inversa, a $D=30$ e $D=100$. Si tratta di un confronto esplorativo fra grafi sociali,a parità di grafo, i run a uno, due, quattro e otto worker eseguono lo stesso numero di valutazioni e riproducono la medesima traiettoria.
 
-\subsection{Architetture multicore e selezione costo--qualità}
-La Figura~\ref{fig:new-framework-frontier} confronta tutte le configurazioni ammissibili nel campione di selezione. La qualità è espressa come residuo geometrico finale rispetto al valore iniziale, mentre il tempo è quello della chiamata completa. L'analisi comprende la seriale, i due backend sincroni, l'asincrono e le isole, con numero di worker e vicinato variabili. L'uso congiunto di qualità e costo individua, nel pilot, la configurazione \emph{asincrona, Global, otto worker}; la scelta è fissata prima della valutazione hold-out.
+La Figura~\ref{fig:topology-strong-speedup} riporta lo \emph{strong speedup} $S_g(p)$ per ciascuna topologia $g$. Le curve delle due dimensioni sono mantenute separate e la retta $S(p)=p$ rappresenta il limite ideale. I risultati devono essere letti come prestazioni di \emph{scaling}: un vicinato con rapporto temporale più favorevole non è necessariamente quello che determina il miglior valore della funzione obiettivo.
 
-\begin{figure*}[!htbp]\centering
-\includegraphics[width=0.93\textwidth]{02_parallel/selection/fig_framework_quality_cost.pdf}
-\caption{Frontiera costo--qualità della selezione pilot del framework CPSO. Ogni punto identifica una configurazione completa; le ascisse mostrano il tempo wall-clock geometrico della run (ms, scala logaritmica), le ordinate il residuo finale geometrico $f_B/f_0$. I colori identificano i worker, i punti pieni soddisfano la regola di ammissibilità fissata in selezione e i punti vuoti le altre configurazioni. L'ultimo pannello riporta la frontiera non dominata e la scelta congelata (stella): asincrono, Global, otto worker. I punti sono endpoint di run completate.}\label{fig:new-framework-frontier}
+\begin{figure*}[!htbp]
+  \centering
+  \includegraphics[width=\textwidth]{02_parallel/fig_8topologies_inverse_diffusion_particle_parallel_strong_speedup.pdf}
+  \caption{Strong speedup del CPSO \emph{particle-parallel} sincrono per gli otto grafi di comunicazione sociale: Global, Ring, Von Neumann, Wheel, Random ($k=4$), Random ($k=8$), Small-world ($k=4$) e Scale-free ($k=4$). Per ogni grafo sono rappresentate separatamente le dimensioni $D=30$ e $D=100$ sulla diffusione inversa. Il riferimento temporale è lo stesso backend a un worker e con lo stesso grafo, $S_g(p)=T_{g,1}/T_{g,p}$; la linea tratteggiata rappresenta $S(p)=p$. Barre di incertezza: intervalli bootstrap al 95\% dello screening, con repliche temporali aggregate per seme. A parità di grafo, il backend sincrono conserva la traiettoria di ricerca.}
+  \label{fig:topology-strong-speedup}
 \end{figure*}
 
-Nel campione indipendente il rapporto $T_s/T_{\mathrm{sel}}$ è $3.99$ per la diffusione inversa a $D=30$ e $4.16$ a $D=100$. Sulla Rastrigin lo stesso confronto fornisce $0.87$ a $D=30$ e $1.72$ a $D=100$ (Figura~\ref{fig:new-framework-holdout}). Il caso $0.87$ corrisponde a un'esecuzione più lenta della seriale, risultato incorporato nella valutazione della scelta e non escluso dalla sintesi. La differenza fra obiettivi quantifica il ruolo della granularità del lavoro e della dinamica asincrona. Poiché il metodo selezionato aggiorna i leader in ordine diverso dalla seriale, questi rapporti misurano il tempo relativo di completamento, non lo speedup di una traiettoria identica.
+La Figura~\ref{fig:topology-efficiency} presenta la corrispondente efficienza $E_g(p)=S_g(p)/p$. Questa quantità non costituisce una seconda osservazione indipendente dello speedup, ma ne esplicita il rendimento per worker. La distanza dalla linea ideale $E_g(p)=1$ consente di valutare quanto l'aumento del parallelismo sia accompagnato da una perdita relativa di efficienza. Il confronto congiunto delle due figure distingue pertanto il beneficio in tempo dall'utilizzazione delle risorse computazionali.
 
-\begin{figure}[H]\centering
-\includegraphics[width=\columnwidth]{02_parallel/holdout/fig_framework_holdout.pdf}
-\caption{Rapporto temporale hold-out della configurazione congelata (asincrono, Global, otto worker) rispetto alla seriale con lo stesso vicinato, per diffusione inversa e Rastrigin a $D=30,100$. Punti: rapporti appaiati; barre: intervalli bootstrap appaiati al 95\%. La linea di riferimento a uno distingue esecuzioni più rapide e più lente della seriale. La traiettoria asincrona può differire, pertanto l'ordinata non è una misura di strong scaling.}\label{fig:new-framework-holdout}
-\end{figure}
-
-Per i due esecutori sincroni l'equivalenza dei campi osservati consente invece una misura di accelerazione vera e propria. Le Figure~\ref{fig:new-sync-speedup} e~\ref{fig:new-sync-efficiency} mostrano due tagli rappresentativi dello studio sui backend sincroni: il riferimento $S(p)$ è sempre lo stesso backend a un worker, mentre $A(p)$ usa la seriale. La separazione dei due rapporti mette in evidenza l'overhead proprio del backend, soprattutto per gli obiettivi più economici. Il dettaglio di tutte le curve per obiettivo e dimensione è disponibile in Appendice~\ref{app:parallel-results}.
-
-\begin{figure*}[!htbp]\centering
-\includegraphics[width=\textwidth]{02_parallel/selection/fig_strong_speedup_rastrigin_d30.pdf}
-\caption{Strong scaling dei backend sincroni nel campione di selezione, Rastrigin a $D=30$. Ogni curva usa come riferimento il proprio backend a un worker, preservando la medesima traiettoria a parità di seme e topologia; l'ascissa è il numero di worker. Le altre dimensioni e l'obiettivo di diffusione inversa sono riportati in Appendice~\ref{app:parallel-results}.}\label{fig:new-sync-speedup}
+\begin{figure*}[!htbp]
+  \centering
+  \includegraphics[width=\textwidth]{02_parallel/fig_8topologies_inverse_diffusion_particle_parallel_strong_efficiency.pdf}
+  \caption{Efficienza di strong scaling dei medesimi otto grafi e delle medesime esecuzioni della Figura~\ref{fig:topology-strong-speedup}. L'efficienza è $E_g(p)=S_g(p)/p$ e la linea tratteggiata identifica il limite ideale $E_g(p)=1$. Gli intervalli al 95\% sono ottenuti dividendo per $p$ gli intervalli dello strong speedup. Il numero di worker non coincide necessariamente con il numero di core omogenei della piattaforma M2; la misura esprime il rapporto fra accelerazione e risorse impiegate, non il consumo energetico.}
+  \label{fig:topology-efficiency}
 \end{figure*}
 
-\begin{figure*}[!htbp]\centering
-\includegraphics[width=\textwidth]{02_parallel/selection/fig_efficiency_inverse_diffusion_d100.pdf}
-\caption{Efficienza interna $E(p)=S(p)/p$ dei backend sincroni sulla diffusione inversa a $D=100$, nel campione di selezione. Il denominatore conta i worker logici dell'M2, che comprendono core performance ed efficiency di capacità differenti. Le altre curve di efficienza sono riportate in Appendice~\ref{app:parallel-results}.}\label{fig:new-sync-efficiency}
+L'analisi delle topologie fornisce così il quadro comparativo delle otto strategie di comunicazione nell'esecuzione sincrona. Per stabilire se l'accelerazione osservata sia sufficientemente stabile da sostenere conclusioni sull'impiego del multicore, è tuttavia necessario passare dal campione esplorativo a una verifica indipendente. Tale verifica è presentata nella sezione seguente, mantenendo fissa la configurazione e separando il confronto fra grafi dal problema della convenienza del parallelismo.
+
+\subsection{Conferma dello scaling sincrono a parità di traiettoria}\label{subsec:res-sync}
+La conferma indipendente dello Studio II isola il contributo del calcolo multicore dalla dinamica dell'ottimizzazione. Tutti i confronti fra backend sincroni hanno superato il controllo di identità della traiettoria e delle FE rispetto alla seriale. A differenza dello screening, questa campagna utilizza 30 nuovi semi e due sessioni temporali. Sulla diffusione inversa con $512$ passi RK4 per valutazione, la Figura~\ref{fig:confirmed-sync} riporta lo strong scaling del backend particle-parallel con topologia Global. A otto worker, lo strong speedup raggiunge $3.83$ a $D=30$ (IC 95\%: $3.71$--$3.94$) e $3.96$ a $D=100$ (IC 95\%: $3.88$--$4.05$), a $8\,192$ FE. Il risultato documenta un'accelerazione sostanziale su una funzione costosa senza modificare il percorso di ricerca.
+
+\begin{figure*}[!htbp]
+  \centering
+  \includegraphics[width=0.84\textwidth]{02_parallel/fig_main_sync_inverse.pdf}
+  \caption{Conferma indipendente dello strong scaling del CPSO particle-parallel sincrono su diffusione inversa ($512$ passi RK4 per FE, $K=127$, topologia Global). I 30 semi di ottimizzazione sono osservati in due sessioni temporali, aggregate entro ciascun seme. Il riferimento è lo stesso backend a un worker; la linea tratteggiata indica $S(p)=p$ e le bande gli intervalli bootstrap al 95\%. La traiettoria e il conteggio FE coincidono con quelli della seriale corrispondente.}
+  \label{fig:confirmed-sync}
 \end{figure*}
 
-\subsection{CPSO parallelo e varianti PSO}
-Il confronto principale impiega la configurazione CPSO congelata dallo studio sulle architetture, non il CPSO seriale. La Figura~\ref{fig:new-family-ranks} riporta i ranghi finali sui sei obiettivi nativi al budget lungo; i budget breve e intermedio sono documentati in Appendice~\ref{app:external-ranks}. La posizione relativa cambia con dimensione e budget: al budget di $8\,192$ FE il CPSO selezionato si colloca nella parte competitiva della graduatoria, mentre SL-PSO e CSO occupano i ranghi migliori nelle dimensioni mostrate. Il CPSO supera diversi riferimenti classici senza che il risultato implichi una superiorità uniforme su tutte le funzioni. Le differenze di rango e la dispersione sui problemi sono rappresentate con lo stesso insieme di concorrenti in ciascun pannello.
+L'incremento non è lineare: a $D=30$ lo strong speedup passa da $3.23$ con quattro worker a $3.83$ con otto. L'efficienza interna scende quindi da circa $0.81$ a $0.48$. Anche a $D=100$ il passaggio a otto worker accorcia la run ma riduce l'efficienza rispetto a quattro. Questo comportamento è compatibile con overhead di sincronizzazione e con l'eterogeneità dei core dell'M2, senza permettere di attribuire quantitativamente l'effetto a una sola causa.
 
-\begin{figure}[H]\centering
-\includegraphics[width=\columnwidth,height=0.76\textheight,keepaspectratio]{03_comparison/native/fig_rank_k127.pdf}
-\caption{Ranghi medi finali del confronto nativo CPSO--PSO a $8\,192$ FE ($K=127$), $D=5,20,100$ e undici metodi. Le barre rappresentano l'incertezza dei ranghi sulle funzioni considerate; valori minori sono migliori. ``CPSO selected'' è il framework congelato nello Studio II e il CPSO seriale non partecipa alla classifica. Gli altri due budget sono documentati in Appendice~\ref{app:external-ranks}.}\label{fig:new-family-ranks}
+\subsection{Granularità del lavoro e scelta fra quattro e otto worker}\label{subsec:res-workers}
+Il confronto fra topologie e la conferma dello scaling dimostrano che è possibile ridurre il tempo di una stessa ricerca mediante il calcolo sincrono. Resta però una domanda operativa distinta: \emph{a quale costo della valutazione conviene aumentare il numero di worker?} Il vantaggio di aggiungere worker non è uniforme. A $K=127$ il rapporto $T_4/T_8$ del particle-parallel su diffusione inversa cresce al crescere del lavoro RK4: a $D=30$ passa da $0.93$ con $16$ passi a $1.08$ con $64$, $1.20$ con $256$ e $1.19$ con $512$; a $D=100$ i rapporti corrispondenti sono $1.05$, $1.19$, $1.24$ e $1.28$. Gli intervalli mostrano che il vantaggio a $16$ passi e $D=100$ non è robusto dopo la correzione multipla. Questa transizione descrive la \emph{convenienza relativa} fra quattro e otto worker sulla famiglia di carichi considerata.
+
+Il budget più lungo, $K=511$ ($32\,768$ FE), conferma e rende particolarmente netto il contrasto fra i due obiettivi. La Figura~\ref{fig:confirmed-workers} mostra i rapporti a parità di traiettoria: sulla Rastrigin economica $T_4/T_8=0.715$ a $D=30$ e $0.872$ a $D=100$, dunque quattro worker sono più rapidi. Sulla diffusione inversa a $512$ passi RK4, gli stessi rapporti sono $1.250$ e $1.275$: otto worker riducono rispettivamente il tempo di circa il $20.0\%$ e il $21.6\%$ rispetto a quattro. Il controllo Random-8 sulla diffusione inversa a $D=30$ conduce a $T_4/T_8=1.220$, confermando il segno dell'effetto senza richiedere una nuova scelta della topologia.
+
+\begin{figure}[t]
+ \centering
+ \includegraphics[width=\columnwidth]{02_parallel/fig_main_4v8_forest.pdf}
+ \caption{Confronto diretto fra quattro e otto worker del backend particle-parallel al budget $K=511$ ($32\,768$ FE). Punti: rapporto geometrico appaiato $T_4/T_8$; barre: intervalli bootstrap al 95\% sui 30 semi, con due sessioni temporali aggregate per seme. La linea verticale a uno indica la parità. Valori maggiori di uno favoriscono otto worker. Il confronto preserva esattamente la traiettoria di ricerca.}
+ \label{fig:confirmed-workers}
 \end{figure}
 
-La dimensione temporale completa il confronto di qualità. La Figura~\ref{fig:new-family-tradeoff} affianca il rango finale e il tempo mediano di run per tutti gli algoritmi ai tre budget a $D=20$; le dimensioni $D=5$ e $D=100$ sono riportate in Appendice~\ref{app:external-ranks}. L'analisi rende visibile la relazione tra capacità di ricerca e costo di implementazione: il rapporto fra tempi comprende linguaggio, vettorizzazione, callback e organizzazione parallela; i ranghi, calcolati a parità di FE, restano la misura della qualità algoritmica. Le curve collegano endpoint di run completate e non sono tempi interpolati al raggiungimento di target.
+Per rendere esplicita la differenza fra velocità e uso delle risorse, la Tabella~\ref{tab:confirmed-workers} riporta anche l'accelerazione dei due backend rispetto alla seriale. Sulla Rastrigin a $D=30$, otto worker non raggiungono nemmeno un vantaggio temporale rispetto alla seriale, mentre quattro rimangono moderatamente più rapidi. La diffusione inversa, invece, beneficia di entrambe le configurazioni, con tempi minimi a otto worker e maggiore efficienza a quattro.
 
-\begin{figure}[H]\centering
-\includegraphics[width=\columnwidth]{03_comparison/native/fig_completed_run_tradeoff_d20.pdf}
-\caption{Qualità e tempo delle implementazioni consegnate nel confronto nativo a $D=20$. Ogni algoritmo è rappresentato ai budget indipendenti di $1\,024$, $4\,096$ e $8\,192$ FE. Rango medio finale (minore è migliore) e tempo wall-clock mediano (ms, scala logaritmica) sono presentati separatamente; il CPSO selezionato è evidenziato. Il caso $D=100$ è riportato in appendice.}\label{fig:new-family-tradeoff}
-\end{figure}
+\begin{table}[t]
+\centering\small
+\caption{Conferma a $32\,768$ FE, topologia Global e backend particle-parallel: accelerazione $A(p)$ rispetto alla seriale e rapporto temporale diretto $T_4/T_8$. I valori sono medie geometriche dei rapporti appaiati su 30 semi.}
+\label{tab:confirmed-workers}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Obiettivo & $D$ & $A(4)$ & $A(8)$ & $T_4/T_8$\\
+\midrule
+Rastrigin & 30  & 1.36 & 0.97 & 0.715\\
+Rastrigin & 100 & 2.22 & 1.94 & 0.872\\
+Diffusione inversa & 30  & 2.79 & 3.49 & 1.250\\
+Diffusione inversa & 100 & 2.84 & 3.62 & 1.275\\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection{Controllo esterno della qualità e interpretazione delle campagne precedenti}
-La Figura~\ref{fig:new-bbob-ecdf}, riportata in Appendice~\ref{app:external-ranks}, presenta la quota di target BBOB raggiunti dal CPSO seriale e dalle varianti PSO a budget normalizzato per dimensione. Le 24 funzioni e le istanze indipendenti estendono il controllo a obiettivi traslati e ruotati; gli insuccessi restano nel denominatore delle ECDF. La serialità del riferimento CPSO deriva dall'interfaccia corrente per la callback COCO: questi risultati documentano la qualità esterna, senza attribuire al framework asincrono le curve del controllo seriale.
+\subsection{Asincronia: qualità di ricerca e costo temporale}\label{subsec:res-async}
+L'asincrono non può essere valutato con lo stesso concetto di strong scaling: la pubblicazione immediata dei leader cambia la sequenza di stati visitati. Il confronto appaiato con particle-parallel, su $30$ semi e tre ripetizioni dello scheduling per ciascun seme e sessione, mostra in diversi casi una migliore qualità finale dell'asincrono, ma non un guadagno di tempo sistematico.
 
-Le precedenti campagne a passo $h=1$ rimangono informative sui meccanismi. In particolare, la topologia R8 aveva il miglior rango medio di qualità nelle quattro celle interne Rastrigin/diffusione inversa a $D=30,100$, mentre la replica dei grafi aveva mostrato dipendenza dalla realizzazione. Nel fattoriale controllato BBOB a $D=20$, il segno dell'effetto analitico--discreto cambiava per R8 passando da coefficienti scalari a coefficienti per coordinata; la diagnostica a $D=1000$ aveva misurato il confinamento affine della dinamica scalare in assenza di clipping. Questi risultati, conservati nelle Appendici~\ref{app:controlled-results} e~\ref{app:scalar-randomness}, spiegano perché vicinato, casualità e semantica di esecuzione debbano essere trattati come variabili distinte nell'interpretazione del CPSO parallelo.
+Sulla diffusione inversa a $D=30$, topologia Global e otto worker, la differenza media di log-residuo è $\Delta z=-0.253$ (IC 95\%: $[-0.323,-0.176]$), mentre il rapporto temporale $T_{\rm sync}/T_{\rm async}=1.022$ ha intervallo $[0.991,1.054]$. Con Random-8, sempre a $D=30$ e otto worker, si osserva $\Delta z=-0.110$ (IC 95\%: $[-0.150,-0.067]$) e un rapporto temporale $1.171$ (IC 95\%: $[1.132,1.214]$).
+
+In contrasto, su Rastrigin a $D=30$ con otto worker il rapporto temporale è $0.804$ (IC 95\%: $[0.776,0.831]$), a svantaggio dell'asincrono, e la differenza di qualità $\Delta z=-0.043$ ha un intervallo che comprende zero. Inoltre, ciascuna delle configurazioni esaminate mostra variabilità di qualità fra ripetizioni con il medesimo seme, coerentemente con una dipendenza dallo scheduling. Questi risultati motivano l'impiego del particle-parallel sincrono come \emph{riferimento principale} per l'analisi dell'accelerazione, mantenendo l'asincrono quale variante della dinamica di ricerca da discutere separatamente.
+
+\subsection{Ambito dei risultati e confronto PSO}\label{subsec:res-scope}
+La conferma quantitativa qui disponibile riguarda due obiettivi e una sola piattaforma multicore, con configurazioni e budget predefiniti. La selezione esplorativa fra architetture e vicinati resta utile a motivare i controlli, ma non è combinata con i nuovi campioni per ottenere intervalli artificiosamente più stretti. Analogamente, i ranghi PSO e le ECDF BBOB della campagna pilota, conservati in Appendice~\ref{app:external-ranks}, non rappresentano ancora un confronto definitivo del CPSO parallelo su benchmark trasformati a budget elevati. Per tale ragione non si ricavano da essi affermazioni di superiorità generale rispetto alla famiglia PSO. Il completamento dello Studio III è necessario prima di formulare la conclusione competitiva del manoscritto.

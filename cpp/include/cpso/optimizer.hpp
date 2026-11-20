@@ -37,6 +37,11 @@ struct Config {
     double cognitive{2.05};
     double social{2.05};
     double dt{0.7};
+    // Opt-in research mode: original CPSO path remains bit-for-bit unchanged.
+    bool adaptive_recovery{false};
+    double wall_time_limit_seconds{0.0};  // 0 means no time deadline.
+    bool summary_only{false};             // Avoid O(FE) history in timed runs.
+
     double initial_velocity_fraction{0.1};
     double boundary_restitution{0.5};
 

@@ -2,13 +2,17 @@
 #include "cpso/thread_pool.hpp"
 #include "optimizer_internal.hpp"
 
+#include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <cstdint>
 #include <exception>
 #include <limits>
 #include <mutex>
 #include <queue>
+#include <numeric>
 #include <stdexcept>
 #include <thread>
 #include <utility>
@@ -66,8 +70,14 @@ Result minimize_asynchronous(
     result.island_count = 1U;
     result.best_position.assign(dimension, 0.0);
     const std::size_t update_count = population_size * config.iterations;
-    result.best_history.reserve(1U + update_count);
-    result.history_evaluations.reserve(1U + update_count);
+    if (!config.summary_only) {
+        result.best_history.reserve(1U + update_count);
+        result.history_evaluations.reserve(1U + update_count);
+    }
+    const bool timed = config.wall_time_limit_seconds > 0.0;
+    const auto deadline = total_start + std::chrono::duration_cast<Clock::duration>(
+        std::chrono::duration<double>(config.wall_time_limit_seconds));
+
 
     const auto topology_start = Clock::now();
     const ParticleTopology topology(
@@ -108,8 +118,10 @@ Result minimize_asynchronous(
             global_best_particle = i;
         }
     }
-    result.best_history.push_back(result.best_value);
-    result.history_evaluations.push_back(result.function_evaluations);
+    if (!config.summary_only) {
+        result.best_history.push_back(result.best_value);
+        result.history_evaluations.push_back(result.function_evaluations);
+    }
 
     struct Event {
         std::size_t particle_index{};
@@ -120,6 +132,15 @@ Result minimize_asynchronous(
     std::vector<double> evaluation_task_seconds(population_size, 0.0);
     std::vector<double> social_task_seconds(population_size, 0.0);
     std::uint64_t committed_updates = 0U;
+    // All control state is protected by state_mutex, never by a per-worker lock.
+    double active_dt = config.dt;
+    const std::uint64_t stagnation_window = std::max<std::uint64_t>(
+        500U, 12U * static_cast<std::uint64_t>(population_size));
+    std::uint64_t last_global_improvement = 0U;
+    std::uint64_t last_recovery = 0U;
+    std::vector<bool> recovery_pending(population_size, false);
+    std::atomic<bool> expired{false};
+
 
     std::mutex queue_mutex;
     std::condition_variable queue_condition;
@@ -136,11 +157,19 @@ Result minimize_asynchronous(
         Particle& particle = particles[particle_index];
         std::vector<double> own_personal_best(dimension);
         std::vector<double> social_attractor(dimension);
+        double step_dt = config.dt;
+        bool recover_this_particle = false;
+
 
         const auto social_start = Clock::now();
         {
             std::lock_guard<std::mutex> lock(state_mutex);
             own_personal_best = particle.personal_best;
+            step_dt = active_dt;
+            if (config.adaptive_recovery && recovery_pending[particle_index]) {
+                recovery_pending[particle_index] = false;
+                recover_this_particle = particle_index != global_best_particle;
+            }
             if (config.topology == TopologyKind::GlobalBest) {
                 social_attractor = result.best_position;
             } else {
@@ -164,6 +193,22 @@ Result minimize_asynchronous(
         std::vector<double> candidate_position(dimension);
         std::vector<double> candidate_velocity(dimension);
         const auto propagation_start = Clock::now();
+        if (recover_this_particle) {
+            // Restart counts as exactly one regular FE: candidate evaluated below.
+            // Half of restarts sample globally; half sample around elite position.
+            const bool global_restart = (particle_index % 2U == 0U);
+            for (std::size_t j = 0; j < dimension; ++j) {
+                const double lo = config.lower_bounds[j];
+                const double hi = config.upper_bounds[j];
+                const double width = hi - lo;
+                const double centre = global_restart ? (lo + 0.5 * width)
+                                                    : social_attractor[j];
+                const double radius = global_restart ? 0.5 * width : 0.2 * width;
+                const double proposed = centre + (2.0 * uniform01(particle.random_engine)-1.0)*radius;
+                candidate_position[j] = std::clamp(proposed, lo, hi);
+                candidate_velocity[j] = 0.0;
+            }
+        } else {
         const double r1 = uniform01(particle.random_engine);
         const double r2 = uniform01(particle.random_engine);
         const double cognitive_weight = config.cognitive * r1;
@@ -178,7 +223,7 @@ Result minimize_asynchronous(
             }
             OscillatorState next = propagate_frozen_oscillator(
                 particle.position[j], particle.velocity[j], equilibrium,
-                omega2, mu, config.dt);
+                omega2, mu, step_dt);
             apply_clamped_restitution(
                 next.position, next.velocity,
                 config.lower_bounds[j], config.upper_bounds[j],
@@ -186,6 +231,7 @@ Result minimize_asynchronous(
             candidate_position[j] = next.position;
             candidate_velocity[j] = next.velocity;
         }
+        }  // end regular propagation / recovery branch
         propagation_task_seconds[particle_index] +=
             std::chrono::duration<double>(Clock::now() - propagation_start).count();
 
@@ -199,6 +245,18 @@ Result minimize_asynchronous(
 
         {
             std::lock_guard<std::mutex> lock(state_mutex);
+            // Do not count a candidate completed after the hard wall-clock deadline.
+            if (timed && Clock::now() >= deadline) {
+                expired = true;
+                return;
+            }
+            const double best_before = result.best_value;
+            if (recover_this_particle) {
+                // A restart forgets the particle's old local attractor but never
+                // deletes the global best archive (global-best particle is exempt).
+                particle.personal_best = particle.position;
+                particle.personal_best_value = candidate_value;
+            }
             if (candidate_value < particle.personal_best_value) {
                 particle.personal_best = particle.position;
                 particle.personal_best_value = candidate_value;
@@ -211,9 +269,38 @@ Result minimize_asynchronous(
                 global_best_particle = particle_index;
             }
             ++committed_updates;
-            result.best_history.push_back(result.best_value);
-            result.history_evaluations.push_back(
-                static_cast<std::uint64_t>(population_size) + committed_updates);
+            if (config.adaptive_recovery) {
+                if (result.best_value < best_before) {
+                    last_global_improvement = committed_updates;
+                    active_dt = std::max(config.dt, active_dt * 0.85);
+                }
+                if (committed_updates - last_global_improvement >= stagnation_window
+                    && committed_updates - last_recovery >= stagnation_window) {
+                    last_recovery = committed_updates;
+                    active_dt = std::min(3.0 * config.dt, active_dt * 1.25);
+                    // Schedule the worst fifth of the swarm for recovery.
+                    std::vector<std::size_t> indices(population_size);
+                    std::iota(indices.begin(), indices.end(), 0U);
+                    std::sort(indices.begin(), indices.end(), [&](std::size_t x, std::size_t y) {
+                        if (particles[x].personal_best_value != particles[y].personal_best_value)
+                            return particles[x].personal_best_value > particles[y].personal_best_value;
+                        return x < y;
+                    });
+                    const std::size_t count = std::max<std::size_t>(1, population_size / 5);
+                    std::size_t scheduled = 0;
+                    for (const auto i : indices) {
+                        if (i != global_best_particle && !recovery_pending[i]) {
+                            recovery_pending[i] = true;
+                            if (++scheduled >= count) break;
+                        }
+                    }
+                }
+            }
+            if (!config.summary_only) {
+                result.best_history.push_back(result.best_value);
+                result.history_evaluations.push_back(
+                    static_cast<std::uint64_t>(population_size) + committed_updates);
+            }
         }
     };
 
@@ -231,7 +318,9 @@ Result minimize_asynchronous(
                             queue_condition.wait(lock, [&] {
                                 return stopping || !ready_events.empty();
                             });
-                            if (stopping) {
+                            if (stopping || expired || (timed && Clock::now() >= deadline)) {
+                                stopping = true;
+                                queue_condition.notify_all();
                                 return;
                             }
                             event = ready_events.front();
@@ -255,6 +344,11 @@ Result minimize_asynchronous(
                         {
                             std::lock_guard<std::mutex> lock(queue_mutex);
                             if (stopping) {
+                                return;
+                            }
+                            if (expired || (timed && Clock::now() >= deadline)) {
+                                stopping = true;
+                                queue_condition.notify_all();
                                 return;
                             }
                             --remaining_updates;
@@ -296,11 +390,16 @@ Result minimize_asynchronous(
     if (first_exception) {
         std::rethrow_exception(first_exception);
     }
-    if (committed_updates != static_cast<std::uint64_t>(update_count)) {
+    if (!timed && committed_updates != static_cast<std::uint64_t>(update_count)) {
         throw std::runtime_error("Asynchronous scheduler stopped before all particle updates completed");
     }
-    result.function_evaluations += static_cast<std::uint64_t>(update_count);
-    result.iterations_completed = config.iterations;
+    result.function_evaluations += committed_updates;
+    result.iterations_completed = timed ? static_cast<std::size_t>(
+        committed_updates / population_size) : config.iterations;
+    if (config.summary_only) {
+        result.best_history.push_back(result.best_value);
+        result.history_evaluations.push_back(result.function_evaluations);
+    }
     for (std::size_t i = 0; i < population_size; ++i) {
         result.propagation_worker_seconds += propagation_task_seconds[i];
         result.evaluation_worker_seconds += evaluation_task_seconds[i];
