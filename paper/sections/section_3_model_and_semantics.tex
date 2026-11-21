@@ -4,7 +4,7 @@
 \subsection{Formulazione}
 \label{subsec:cpso-original-formulation}
 
-Il Continuous Particle Swarm Optimization (CPSO) introduce una descrizione continua del moto delle particelle a partire dal modello discreto del Particle Swarm Optimization (PSO)~\citep{orlando2020analytic}. Si consideri uno sciame composto da $N_p$ particelle in uno spazio di ricerca di dimensione $n$. La posizione e la velocit\`a della particella $i$ al passo $\lambda$ sono indicate rispettivamente con $p_i^\lambda$ e $v_i^\lambda$, mentre $p_{ib}$ e $p_{gb}$ rappresentano la migliore posizione individuale e quella globale. L'aggiornamento discreto \`e definito da
+Il Continuous Particle Swarm Optimization (CPSO)~\citep{orlando2020analytic} introduce una descrizione continua del moto delle particelle a partire dal modello discreto del Particle Swarm Optimization (PSO). Si consideri uno sciame composto da $N_p$ particelle in uno spazio di ricerca di dimensione $n$. La posizione e la velocit\`a della particella $i$ al passo $\lambda$ sono indicate rispettivamente con $p_i^\lambda$ e $v_i^\lambda$, mentre $p_{ib}$ e $p_{gb}$ rappresentano la migliore posizione individuale e quella globale. L'aggiornamento discreto \`e definito da
 \begin{equation}
  p_i^{\lambda+1}=p_i^\lambda+v_i^{\lambda+1},
  \label{eq:or-discrete-position}
@@ -108,7 +108,7 @@ La propagazione di posizione e velocit\`a deriva pertanto dalla soluzione analit
 \subsection{Notazione per l'estensione parallela}
 \label{subsec:cpso-implementation}
 
-Per l'estensione parallela si usano $N_p$ per la cardinalit\`a dello sciame, $D=n$ per la dimensione dello spazio di ricerca, $K$ per il numero di aggiornamenti e $h=\Delta t=dt$ per l'ampiezza del sottointervallo temporale. La posizione e la velocit\`a della particella $i$ all'inizio del sottointervallo $k$ sono indicate con $\bm x_i^k$ e $\bm v_i^k$. Si introducono inoltre il migliore individuale $\bm p_i^k$ e il leader sociale $\bm s_i^k$, coincidente con il migliore globale nel caso di comunicazione globale e con il migliore del vicinato nelle estensioni topologiche.
+Per l'estensione parallela si usano $N_p$ per la cardinalit\`a dello sciame, $D=n$ per la dimensione dello spazio di ricerca, $K$ per il numero di aggiornamenti e $dt$ per l'ampiezza del sottointervallo temporale. La posizione e la velocit\`a della particella $i$ all'inizio del sottointervallo $k$ sono indicate con $\bm x_i^k$ e $\bm v_i^k$. Si introducono inoltre il migliore individuale $\bm p_i^k$ e il leader sociale $\bm s_i^k$, coincidente con il migliore globale nel caso di comunicazione globale e con il migliore del vicinato nelle estensioni topologiche.
 
 Ponendo
 \begin{equation}

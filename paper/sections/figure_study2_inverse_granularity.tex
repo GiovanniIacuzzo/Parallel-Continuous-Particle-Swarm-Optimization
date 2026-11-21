@@ -1,0 +1,49 @@
+\begin{figure*}[!htbp]
+\centering
+\begin{tikzpicture}[x=1.72cm,y=6.8cm,font=\small,
+  master/.style={blue!60!black,thick},
+  particle/.style={orange!75!black,thick}]
+\newcommand{\scalingpanel}[1]{%
+  \foreach \y in {0.9,1.0,1.1,1.2,1.3} {
+    \draw[black!14] (-0.30,\y) -- (3.32,\y);
+    \draw (-0.30,\y) -- (-0.35,\y) node[left,font=\footnotesize] {\y};
+  }
+  \draw[black!65,dashed] (-0.30,1) -- (3.32,1);
+  \draw (-0.30,1.34) -- (-0.30,0.865) -- (3.32,0.865);
+  \foreach \x/\work in {0/16,1/64,2/256,3/512} {
+    \draw (\x,0.865) -- (\x,0.854) node[below,font=\footnotesize] {\work};
+  }
+  \node at (1.5,1.385) {$D=#1$};
+}
+
+\newcommand{\scalingcurve}[4]{%
+  \draw[#1] plot coordinates {#4};
+  \foreach \x/\y/\lo/\hi in {#3} {
+    \draw[#1,thin] (\x,\lo) -- (\x,\hi);
+    \draw[#1,thin] ({\x-0.035},\lo) -- ({\x+0.035},\lo);
+    \draw[#1,thin] ({\x-0.035},\hi) -- ({\x+0.035},\hi);
+    \node[draw,#1,#2,fill=white,inner sep=0pt,minimum size=3.5pt] at (\x,\y) {};
+  }
+}
+\begin{scope}[xshift=0cm]
+ \scalingpanel{30}
+ \scalingcurve{master}{circle}{-0.055/0.97298/0.94111/1.00499,0.945/1.12976/1.09054/1.17169,1.945/1.17520/1.12451/1.22457,2.945/1.23303/1.18543/1.27960}{(-0.055,0.97298) (0.945,1.12976) (1.945,1.17520) (2.945,1.23303)}
+ \scalingcurve{particle}{rectangle}{0.055/0.92828/0.88525/0.97257,1.055/1.08179/1.02412/1.14786,2.055/1.19914/1.13585/1.25511,3.055/1.18532/1.13921/1.22727}{(0.055,0.92828) (1.055,1.08179) (2.055,1.19914) (3.055,1.18532)}
+\end{scope}
+\begin{scope}[xshift=8cm]
+ \scalingpanel{100}
+ \scalingcurve{master}{circle}{-0.055/1.06410/1.03433/1.09391,0.945/1.18887/1.12785/1.25918,1.945/1.20347/1.16665/1.24049,2.945/1.27236/1.23747/1.30479}{(-0.055,1.06410) (0.945,1.18887) (1.945,1.20347) (2.945,1.27236)}
+ \scalingcurve{particle}{rectangle}{0.055/1.04800/1.00528/1.09463,1.055/1.19311/1.15259/1.23355,2.055/1.23548/1.19630/1.27529,3.055/1.28433/1.25491/1.31305}{(0.055,1.04800) (1.055,1.19311) (2.055,1.23548) (3.055,1.28433)}
+\end{scope}
+\node[rotate=90] at (-0.86,1.11) {$T_{a,4}/T_{a,8}$};
+\node at (3.83,0.755) {Passi RK4 per valutazione};
+\draw[master] (1.50,0.680) -- (1.86,0.680);
+\node[draw,master,circle,fill=white,inner sep=0pt,minimum size=3.5pt] at (1.68,0.680) {};
+\node[anchor=west] at (1.91,0.680) {Master--slave};
+\draw[particle] (4.05,0.680) -- (4.41,0.680);
+\node[draw,particle,rectangle,fill=white,inner sep=0pt,minimum size=3.5pt] at (4.23,0.680) {};
+\node[anchor=west] at (4.46,0.680) {Particle-parallel};
+\end{tikzpicture}
+\caption{Confronto fra quattro e otto worker sulla diffusione inversa a $8\,192$ FE, topologia Global. I punti sono medie geometriche appaiate di $T_{a,4}/T_{a,8}$. Le barre indicano intervalli bootstrap puntuali al 95\%. Valori sopra la linea tratteggiata indicano un tempo minore con otto worker. La discretizzazione RK4 resta identica entro ciascun confronto.}
+\label{fig:confirmed-workers}
+\end{figure*}

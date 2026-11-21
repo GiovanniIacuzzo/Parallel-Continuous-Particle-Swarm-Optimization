@@ -1,0 +1,18 @@
+\begin{table*}[!t]
+\centering\small
+\caption{Accelerazione rispetto alla seriale sulla diffusione inversa con 512 passi RK4, topologia Global e $32\,768$ FE. I tempi nativi $T$ sono mediane delle esecuzioni nelle due sessioni, in secondi. $A_a(p)$ è la media geometrica dei rapporti appaiati $T_s/T_{a,p}$, con intervalli bootstrap puntuali al 95\% per seme.}
+\label{tab:inverse-serial-speedup}
+\begin{tabular}{@{}r l r rr rr@{}}
+\toprule
+ & & Seriale & \multicolumn{2}{c}{4 worker} & \multicolumn{2}{c}{8 worker} \\
+\cmidrule(lr){3-3}\cmidrule(lr){4-5}\cmidrule(l){6-7}
+$D$ & Backend & $T_s$ (s) & $T_4$ (s) & $A_a(4)$ [IC] & $T_8$ (s) & $A_a(8)$ [IC] \\
+\midrule
+30 & Master--slave & 2.85 & 1.03 & 2.75 [2.67, 2.84] & 0.81 & 3.42 [3.33, 3.50] \\
+30 & Particle-parallel & 2.85 & 1.06 & 2.79 [2.71, 2.87] & 0.80 & 3.49 [3.39, 3.60] \\
+\addlinespace
+100 & Master--slave & 8.16 & 2.75 & 2.91 [2.84, 2.98] & 2.20 & 3.60 [3.50, 3.69] \\
+100 & Particle-parallel & 8.16 & 2.86 & 2.84 [2.76, 2.91] & 2.20 & 3.62 [3.52, 3.72] \\
+\bottomrule
+\end{tabular}
+\end{table*}
