@@ -16,6 +16,23 @@ import numpy as np
 
 
 Objective = Callable[[Sequence[float]], float]
+BatchObjective = Callable[[np.ndarray], np.ndarray]
+
+
+def _evaluate_population(objective, batch_objective, points, fe=0):
+    if batch_objective is None:
+        values = np.empty(len(points), dtype=float)
+        for i, point in enumerate(points):
+            value = float(objective(tuple(float(v) for v in point)))
+            if not math.isfinite(value):
+                raise ValueError(f"Objective returned a non-finite value at FE={fe + i + 1}")
+            values[i] = value
+        return values
+    values = np.asarray(batch_objective(points), dtype=float)
+    if values.shape != (len(points),) or not np.all(np.isfinite(values)):
+        raise ValueError(f"Invalid objective batch starting at FE={fe + 1}")
+    return values
+
 
 
 @dataclass(frozen=True)
@@ -39,6 +56,7 @@ class PSOConfig:
     cso_phi: float = 0.1
     dms_subswarm_size: int = 3
     dms_regroup_interval: int = 5
+    schedule_iterations: int | None = None
 
     @property
     def dimension(self) -> int:
@@ -65,6 +83,10 @@ class PSOConfig:
         ):
             if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
                 raise ValueError(f"{name} must be an integer >= {minimum}")
+        if self.schedule_iterations is not None and (
+            type(self.schedule_iterations) is not int or self.schedule_iterations < 2
+        ):
+            raise ValueError("schedule_iterations must be an integer >= 2")
         if self.max_evaluations < self.population_size:
             raise ValueError("max_evaluations must be >= population_size")
         if isinstance(self.seed, bool) or not isinstance(self.seed, int) or not 0 <= self.seed < 2**64:
@@ -313,7 +335,8 @@ def _select_clpso_exemplars(
 
 
 def _minimize_clpso(
-    objective: Objective, config: PSOConfig, parameters: dict[str, float | int | str | None]
+    objective: Objective, config: PSOConfig, parameters: dict[str, float | int | str | None],
+    batch_objective: BatchObjective | None,
 ) -> PSOResult:
     """Run CLPSO with per-coordinate exemplars and generation snapshots.
 
@@ -339,12 +362,7 @@ def _minimize_clpso(
         -initial_velocity_range, initial_velocity_range,
         size=(config.population_size, config.dimension),
     )
-    values = np.empty(config.population_size, dtype=float)
-    for i in range(config.population_size):
-        value = float(objective(tuple(float(v) for v in positions[i])))
-        if not math.isfinite(value):
-            raise ValueError(f"Objective returned a non-finite value during initialization of particle {i}")
-        values[i] = value
+    values = _evaluate_population(objective, batch_objective, positions)
 
     personal_best_positions = positions.copy()
     personal_best_values = values.copy()
@@ -366,7 +384,7 @@ def _minimize_clpso(
         for i in range(config.population_size)
     ])
 
-    total_update_batches = max(1, math.ceil(
+    total_update_batches = config.schedule_iterations or max(1, math.ceil(
         (config.max_evaluations - config.population_size) / config.population_size
     ))
     iterations_completed = 0
@@ -407,12 +425,9 @@ def _minimize_clpso(
             proposals[i] = next_position
             proposed_velocities[i] = next_velocity
 
-        next_values = np.empty(active_count, dtype=float)
-        for i in range(active_count):
-            value = float(objective(tuple(float(v) for v in proposals[i])))
-            if not math.isfinite(value):
-                raise ValueError(f"Objective returned a non-finite value at FE={function_evaluations + i + 1}")
-            next_values[i] = value
+        next_values = _evaluate_population(
+            objective, batch_objective, proposals, function_evaluations
+        )
 
         positions[:active_count] = proposals
         velocities[:active_count] = proposed_velocities
@@ -448,7 +463,8 @@ def _minimize_clpso(
     )
 
 def _minimize_slpso(
-    objective: Objective, config: PSOConfig, parameters: dict[str, float | int | str | None]
+    objective: Objective, config: PSOConfig, parameters: dict[str, float | int | str | None],
+    batch_objective: BatchObjective | None,
 ) -> PSOResult:
     """Run the dimension-aware social-learning PSO of Cheng & Jin (2015).
 
@@ -466,12 +482,7 @@ def _minimize_slpso(
     positions = rng.uniform(lower, upper, size=(config.population_size, config.dimension))
     # SL-PSO has no canonical PSO velocity initialization; Delta X(0)=0.
     velocities = np.zeros_like(positions)
-    values = np.empty(config.population_size, dtype=float)
-    for i in range(config.population_size):
-        value = float(objective(tuple(float(v) for v in positions[i])))
-        if not math.isfinite(value):
-            raise ValueError(f"Objective returned a non-finite value during initialization of particle {i}")
-        values[i] = value
+    values = _evaluate_population(objective, batch_objective, positions)
 
     best_index = int(np.argmin(values))
     best_value = float(values[best_index])
@@ -529,13 +540,9 @@ def _minimize_slpso(
         # The FE order is deterministic (swarm order), but all coordinates in
         # each proposal came from the same frozen state.
         evaluated_particles = order[:active_count]
-        next_values = np.empty(active_count, dtype=float)
-        for index, particle_value in enumerate(evaluated_particles):
-            particle = int(particle_value)
-            value = float(objective(tuple(float(v) for v in proposals[particle])))
-            if not math.isfinite(value):
-                raise ValueError(f"Objective returned a non-finite value at FE={function_evaluations + index + 1}")
-            next_values[index] = value
+        next_values = _evaluate_population(
+            objective, batch_objective, proposals[evaluated_particles], function_evaluations
+        )
 
         for index, particle_value in enumerate(evaluated_particles):
             particle = int(particle_value)
@@ -569,6 +576,7 @@ def minimize_pso(
     config: PSOConfig,
     *,
     method: str = "inertia_gbest",
+    batch_objective: BatchObjective | None = None,
 ) -> PSOResult:
     """Minimize a deterministic scalar black-box function under an exact FE budget.
 
@@ -576,18 +584,20 @@ def minimize_pso(
     contain fewer than `population_size` particle updates to consume a budget
     that is not divisible by the swarm size. For the standard COCO/CEC campaign
     configurations, budgets are chosen to be exact multiples of the population.
+    When supplied, batch_objective evaluates the same ordered proposals
+    in a single call. Each returned value still costs one FE.
     """
     config.validate()
     if not callable(objective):
         raise TypeError("objective must be callable")
     parameters = pso_method_metadata(method, config)
     if method == "clpso":
-        return _minimize_clpso(objective, config, parameters)
+        return _minimize_clpso(objective, config, parameters, batch_objective)
     if method == "slpso":
-        return _minimize_slpso(objective, config, parameters)
+        return _minimize_slpso(objective, config, parameters, batch_objective)
     if method in {"spso2011", "fips_ring", "cso", "dms_pso"}:
         from .pso_advanced import minimize_advanced_pso
-        return minimize_advanced_pso(objective, config, method=method, parameters=parameters)
+        return minimize_advanced_pso(objective, config, method=method, parameters=parameters, batch_objective=batch_objective)
     if method == "inertia_lbest_ring" and 2 * config.ring_radius + 1 > config.population_size:
         raise ValueError("ring_radius is too large for the selected population")
 
@@ -606,12 +616,7 @@ def minimize_pso(
         config.initial_velocity_fraction * width,
         size=(config.population_size, config.dimension),
     )
-    values = np.empty(config.population_size, dtype=float)
-    for i in range(config.population_size):
-        value = float(objective(tuple(float(v) for v in positions[i])))
-        if not math.isfinite(value):
-            raise ValueError(f"Objective returned a non-finite value during initialization of particle {i}")
-        values[i] = value
+    values = _evaluate_population(objective, batch_objective, positions)
 
     personal_best_positions = positions.copy()
     personal_best_values = values.copy()
@@ -628,7 +633,7 @@ def minimize_pso(
     chi = float(parameters["constriction_factor"])
     w_max = float(parameters["inertia_max"])
     w_min = float(parameters["inertia_min"])
-    total_update_batches = max(1, math.ceil(
+    total_update_batches = config.schedule_iterations or max(1, math.ceil(
         (config.max_evaluations - config.population_size) / config.population_size
     ))
 
@@ -669,13 +674,10 @@ def minimize_pso(
         positions[:active_count] = next_positions
         velocities[:active_count] = next_velocities
 
-        for i in range(active_count):
-            value = float(objective(tuple(float(v) for v in positions[i])))
-            if not math.isfinite(value):
-                raise ValueError(
-                    f"Objective returned a non-finite value at FE={function_evaluations + 1}"
-                )
-            function_evaluations += 1
+        batch_values = _evaluate_population(
+            objective, batch_objective, next_positions, function_evaluations
+        )
+        for i, value in enumerate(batch_values):
             if value < personal_best_values[i]:
                 personal_best_values[i] = value
                 personal_best_positions[i] = positions[i]
@@ -683,6 +685,7 @@ def minimize_pso(
                 global_best_value = value
                 global_best_position = positions[i].copy()
 
+        function_evaluations += active_count
         iterations_completed += 1
         best_history.append(global_best_value)
         history_evaluations.append(function_evaluations)

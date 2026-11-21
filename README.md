@@ -54,6 +54,10 @@ Ripetere i sei comandi aggiungendo `--profile paper` a ciascuno, iniziando da `p
 
 Per COCO e CEC il profilo paper è deliberatamente **a budget ridotto** per il portatile. In particolare CEC caratterizza soltanto le prime 4.000 FE, molto prima delle 3 milioni del protocollo completo. Le configurazioni di riferimento integrali sono conservate in `configs/benchmarks/*_confirmatory.json`. I parametri effettivi, compreso dt, vengono scritti per ciascun esperimento in `results/`. Le dieci baseline sono PSO classico gbest, inerziale gbest, a costrizione gbest, inerziale lbest ring, CLPSO, SL-PSO, SPSO-2011, FIPS, CSO e DMS.
 
+## Studio III sincrono
+
+Il runner `study3.py` esegue lo screening delle ricette, l'ablazione adattiva e i confronti a FE o tempo fissati. Le istruzioni di compilazione e i comandi per smoke, pilot e conferma sono in [docs/STUDIO_III.md](docs/STUDIO_III.md).
+
 ## Lettura dei risultati
 
 | Percorso relativo a results/pilot oppure results/paper | Uso |

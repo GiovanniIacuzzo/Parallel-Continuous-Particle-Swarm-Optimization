@@ -15,17 +15,12 @@ import numpy as np
 
 from .pso_baselines import (
     Objective,
+    BatchObjective,
     PSOConfig,
     PSOResult,
     _apply_clamped_restitution,
+    _evaluate_population,
 )
-
-
-def _evaluate(objective: Objective, point: np.ndarray, *, fe: int) -> float:
-    value = float(objective(tuple(float(v) for v in point)))
-    if not math.isfinite(value):
-        raise ValueError(f"Objective returned a non-finite value at FE={fe}")
-    return value
 
 
 def _result(
@@ -74,6 +69,7 @@ def _minimize_spso2011(
     objective: Objective,
     config: PSOConfig,
     parameters: dict[str, float | int | str | None],
+    batch_objective: BatchObjective | None,
 ) -> PSOResult:
     """Run the standard SPSO-2011 geometric update in a normalized box.
 
@@ -102,9 +98,7 @@ def _minimize_spso2011(
     # SPSO-2011 recommends hypercube normalization when bounds are anisotropic.
     x = rng.random((n, d))
     v = rng.uniform(-x, 1.0 - x)
-    values = np.empty(n, dtype=float)
-    for i in range(n):
-        values[i] = _evaluate(objective, lower + width * x[i], fe=i + 1)
+    values = _evaluate_population(objective, batch_objective, lower + width * x)
 
     pbest_x = x.copy()
     pbest_f = values.copy()
@@ -157,11 +151,7 @@ def _minimize_spso2011(
             proposals[i] = next_position
             proposed_v[i] = next_velocity
 
-        next_values = np.empty(active, dtype=float)
-        for i in range(active):
-            next_values[i] = _evaluate(
-                objective, lower + width * proposals[i], fe=fe + i + 1
-            )
+        next_values = _evaluate_population(objective, batch_objective, lower + width * proposals, fe)
 
         x[:active] = proposals
         v[:active] = proposed_v
@@ -193,6 +183,7 @@ def _minimize_fips(
     objective: Objective,
     config: PSOConfig,
     parameters: dict[str, float | int | str | None],
+    batch_objective: BatchObjective | None,
 ) -> PSOResult:
     """Fully informed PSO with a degree-two periodic ring neighborhood."""
     if config.population_size < 3:
@@ -211,9 +202,7 @@ def _minimize_fips(
         config.initial_velocity_fraction * width,
         size=(n, config.dimension),
     )
-    values = np.empty(n, dtype=float)
-    for i in range(n):
-        values[i] = _evaluate(objective, x[i], fe=i + 1)
+    values = _evaluate_population(objective, batch_objective, x)
     pbest_x = x.copy()
     pbest_f = values.copy()
     best_index = int(np.argmin(pbest_f))
@@ -244,9 +233,7 @@ def _minimize_fips(
             next_x[i] = position
             next_v[i] = velocity
 
-        next_values = np.empty(active, dtype=float)
-        for i in range(active):
-            next_values[i] = _evaluate(objective, next_x[i], fe=fe + i + 1)
+        next_values = _evaluate_population(objective, batch_objective, next_x, fe)
         x[:active] = next_x
         v[:active] = next_v
         improved = next_values < pbest_f[:active]
@@ -271,6 +258,7 @@ def _minimize_cso(
     objective: Objective,
     config: PSOConfig,
     parameters: dict[str, float | int | str | None],
+    batch_objective: BatchObjective | None,
 ) -> PSOResult:
     """Competitive Swarm Optimizer (pairwise winner/loser learning)."""
     n = config.population_size
@@ -285,9 +273,7 @@ def _minimize_cso(
 
     x = rng.uniform(lower, upper, size=(n, config.dimension))
     v = np.zeros_like(x)
-    values = np.empty(n, dtype=float)
-    for i in range(n):
-        values[i] = _evaluate(objective, x[i], fe=i + 1)
+    values = _evaluate_population(objective, batch_objective, x)
     best_index = int(np.argmin(values))
     best_value = float(values[best_index])
     best_position = x[best_index].copy()
@@ -305,6 +291,7 @@ def _minimize_cso(
         remaining = config.max_evaluations - fe
         active_pairs = min(n // 2, remaining)
 
+        losers = []
         for pair in range(active_pairs):
             first = int(pair_order[2 * pair])
             second = int(pair_order[2 * pair + 1])
@@ -325,13 +312,16 @@ def _minimize_cso(
                 x[loser] + velocity, velocity, lower, upper,
                 config.boundary_restitution,
             )
-            value = _evaluate(objective, position, fe=fe + pair + 1)
+            losers.append(loser)
             next_x[loser] = position
             next_v[loser] = velocity
-            next_values[loser] = value
+
+        loser_values = _evaluate_population(objective, batch_objective, next_x[losers], fe)
+        next_values[losers] = loser_values
+        for loser, value in zip(losers, loser_values):
             if value < best_value:
-                best_value = value
-                best_position = position.copy()
+                best_value = float(value)
+                best_position = next_x[loser].copy()
 
         x, v, values = next_x, next_v, next_values
         fe += active_pairs
@@ -364,6 +354,7 @@ def _minimize_dms_pso(
     objective: Objective,
     config: PSOConfig,
     parameters: dict[str, float | int | str | None],
+    batch_objective: BatchObjective | None,
 ) -> PSOResult:
     """Dynamic multi-swarm PSO with periodic random regrouping (no local search)."""
     if config.population_size < 4:
@@ -384,9 +375,7 @@ def _minimize_dms_pso(
         config.initial_velocity_fraction * width,
         size=(n, config.dimension),
     )
-    values = np.empty(n, dtype=float)
-    for i in range(n):
-        values[i] = _evaluate(objective, x[i], fe=i + 1)
+    values = _evaluate_population(objective, batch_objective, x)
     pbest_x = x.copy()
     pbest_f = values.copy()
     best_index = int(np.argmin(pbest_f))
@@ -397,7 +386,7 @@ def _minimize_dms_pso(
     history_evaluations = [fe]
 
     groups = _dynamic_groups(n, config.dms_subswarm_size, rng)
-    total_generations = max(1, math.ceil((config.max_evaluations - n) / n))
+    total_generations = config.schedule_iterations or max(1, math.ceil((config.max_evaluations - n) / n))
     generation = 0
     while fe < config.max_evaluations:
         active = min(n, config.max_evaluations - fe)
@@ -423,9 +412,7 @@ def _minimize_dms_pso(
             x0[:active] + velocity, velocity, lower, upper,
             config.boundary_restitution,
         )
-        next_values = np.empty(active, dtype=float)
-        for i in range(active):
-            next_values[i] = _evaluate(objective, positions[i], fe=fe + i + 1)
+        next_values = _evaluate_population(objective, batch_objective, positions, fe)
 
         x[:active] = positions
         v[:active] = velocity
@@ -457,6 +444,7 @@ def minimize_advanced_pso(
     *,
     method: str,
     parameters: dict[str, float | int | str | None],
+    batch_objective: BatchObjective | None,
 ) -> PSOResult:
     """Dispatch advanced PSO variants under the common result contract."""
     dispatch: dict[str, Callable[..., PSOResult]] = {
@@ -469,7 +457,7 @@ def minimize_advanced_pso(
         implementation = dispatch[method]
     except KeyError as exc:
         raise ValueError(f"Unknown advanced PSO method {method!r}") from exc
-    return implementation(objective, config, parameters)
+    return implementation(objective, config, parameters, batch_objective)
 
 
 __all__ = ["minimize_advanced_pso"]

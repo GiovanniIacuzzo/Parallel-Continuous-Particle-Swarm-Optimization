@@ -185,6 +185,32 @@ CPSO_API int cpso_run_research(
     CpsoCResult*, double*, double*, uint64_t*, size_t,
     char*, size_t);
 
+// Batch timestamps align with the synchronous history. Options and diagnostics
+// belong to the caller and are valid for the duration of a single run.
+typedef struct {
+    double seconds;                  // 0 means FE budget only
+    size_t schedule_iterations;      // 0 uses the planned FE budget
+    int adapt_step;
+    int recovery;
+    uint64_t discarded_evaluations;
+    uint64_t triggers;
+    uint64_t recovered_particles;
+    uint64_t recovery_improvements;
+    double mean_trigger_dispersion;
+} CpsoSynchronousStudy;
+
+CPSO_API int cpso_run_synchronous_study(
+    const CpsoCConfig*, const CpsoCExecutionConfig*, int flags, uint64_t graph_seed,
+    CpsoObjectiveCallback, CpsoSynchronousStudy*, CpsoCResult*, double*,
+    double*, uint64_t*, double* batch_seconds, size_t, char*, size_t);
+
+// Persistent pool for baseline objective batches, with the same native
+// evaluator used by the synchronous CPSO. Input is row-major.
+CPSO_API void* cpso_create_batch_evaluator(int benchmark, uint64_t work, size_t workers, char*, size_t);
+CPSO_API int cpso_evaluate_batch(void*, const double*, size_t rows, size_t dimension,
+                                double*, char*, size_t);
+CPSO_API void cpso_destroy_batch_evaluator(void*);
+
 // Additive research entry point; existing ABI structures are unchanged.
 // flags: bit 0 discrete, bit 1 coordinate randomness, bit 2 separate graph seed,
 // bit 3 disable boundary map (unconstrained geometric diagnostics only).

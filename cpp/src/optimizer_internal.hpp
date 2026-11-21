@@ -32,11 +32,13 @@ inline double uniform01(std::mt19937_64& engine) {
 }
 
 inline double inertia_at(const Config& config, const std::size_t iteration) {
-    if (config.iterations <= 1U) {
+    const auto horizon = config.study != nullptr && config.study->schedule_iterations > 0U
+        ? config.study->schedule_iterations : config.iterations;
+    if (horizon <= 1U) {
         return config.mu_max;
     }
-    const double fraction = static_cast<double>(iteration)
-        / static_cast<double>(config.iterations - 1U);
+    const double fraction = static_cast<double>(std::min(iteration, horizon - 1U))
+        / static_cast<double>(horizon - 1U);
     return config.mu_max - (config.mu_max - config.mu_min) * fraction;
 }
 

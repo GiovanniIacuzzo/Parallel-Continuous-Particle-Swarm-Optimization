@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 import ctypes
 import os
 import math
@@ -46,6 +47,20 @@ _ObjectiveCallback = ctypes.CFUNCTYPE(
     ctypes.c_size_t,
     ctypes.c_void_p,
 )
+
+
+class _CSynchronousStudy(ctypes.Structure):
+    _fields_ = [
+        ("seconds", ctypes.c_double),
+        ("schedule_iterations", ctypes.c_size_t),
+        ("adapt_step", ctypes.c_int),
+        ("recovery", ctypes.c_int),
+        ("discarded_evaluations", ctypes.c_uint64),
+        ("triggers", ctypes.c_uint64),
+        ("recovered_particles", ctypes.c_uint64),
+        ("recovery_improvements", ctypes.c_uint64),
+        ("mean_trigger_dispersion", ctypes.c_double),
+    ]
 
 
 class _CConfig(ctypes.Structure):
@@ -183,9 +198,10 @@ def _run(
     custom_objective: Optional[Callable[[Sequence[float]], float]] = None,
     experiment: tuple[int, int] | None = None,
     research: tuple[int, float] | None = None,
+    synchronous_study: tuple[_CSynchronousStudy, dict] | None = None,
 ) -> CpsoResult:
     config.validate()
-    if custom_objective is not None and architecture != "serial":
+    if custom_objective is not None and architecture != "serial" and synchronous_study is None:
         raise ValueError("Custom objectives are supported only by the serial architecture")
     if custom_objective is None and benchmark not in _BENCHMARK_IDS:
         raise ValueError(f"Unsupported benchmark {benchmark!r}; choose from {sorted(_BENCHMARK_IDS)}")
@@ -306,7 +322,30 @@ def _run(
         callback = _ObjectiveCallback(evaluate_custom)
     else:
         callback = None
-    if research is not None:
+    if synchronous_study is not None:
+        options, details = synchronous_study
+        flags, graph_seed = experiment
+        batch_seconds = (ctypes.c_double * history_capacity)()
+        function = library.cpso_run_synchronous_study
+        function.argtypes = [
+            ctypes.POINTER(_CConfig), ctypes.POINTER(_CExecutionConfig),
+            ctypes.c_int, ctypes.c_uint64, _ObjectiveCallback, ctypes.POINTER(_CSynchronousStudy),
+            ctypes.POINTER(_CResult), ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_uint64),
+            ctypes.POINTER(ctypes.c_double), ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t,
+        ]
+        function.restype = ctypes.c_int
+        status = function(
+            ctypes.byref(c_config), ctypes.byref(execution), flags, graph_seed,
+            callback if callback is not None else _ObjectiveCallback(), ctypes.byref(options),
+            ctypes.byref(c_result), best_position, history, history_evaluations,
+            batch_seconds, history_capacity, error, len(error),
+        )
+        if status == 0:
+            details["batch_seconds"] = batch_seconds[:c_result.history_size]
+            for field, _ in _CSynchronousStudy._fields_[4:]:
+                details[field] = getattr(options, field)
+    elif research is not None:
         function = library.cpso_run_research
         function.argtypes = [ctypes.POINTER(_CConfig), ctypes.POINTER(_CExecutionConfig),
             ctypes.c_int, ctypes.c_double, ctypes.POINTER(_CResult),
@@ -556,3 +595,65 @@ def run_research(config: CpsoConfig, benchmark: str, *, adaptive: bool = False,
     return _run(config, benchmark, architecture="asynchronous", workers=workers,
                 work_iterations=work_iterations,
                 research=(16 if adaptive else 0, float(seconds)))
+
+
+
+def run_synchronous_study(
+    config: CpsoConfig, benchmark: str, *, workers: int, graph_seed: int,
+    coordinate: bool = False, discrete: bool = False, adapt_step: bool = False,
+    recovery: bool = False, seconds: float = 0.0, schedule_iterations: int = 0,
+    work_iterations: int = 0, objective: Callable | None = None,
+) -> tuple[CpsoResult, dict]:
+    """Run the synchronous competition and retain completed-batch timestamps."""
+    if not math.isfinite(seconds) or seconds < 0.0 or schedule_iterations < 0:
+        raise ValueError("Invalid deadline or schedule")
+    if not 0 <= graph_seed < 2**64:
+        raise ValueError("Invalid graph seed")
+    flags = 4 | (int(coordinate) << 1) | int(discrete)
+    options = _CSynchronousStudy(seconds, schedule_iterations, adapt_step, recovery)
+    details = {}
+    result = _run(
+        config, benchmark, architecture="particle_parallel",
+        workers=workers, work_iterations=work_iterations, custom_objective=objective,
+        experiment=(flags, graph_seed), synchronous_study=(options, details),
+    )
+    return result, details
+
+
+@contextmanager
+def native_batch_evaluator(benchmark: str, workers: int, work_iterations: int = 0):
+    """Reuse the native benchmark and a persistent evaluation pool."""
+    import numpy as np
+
+    library = _load_library()
+    create = library.cpso_create_batch_evaluator
+    evaluate = library.cpso_evaluate_batch
+    destroy = library.cpso_destroy_batch_evaluator
+    pointer = ctypes.POINTER(ctypes.c_double)
+    create.argtypes = [ctypes.c_int, ctypes.c_uint64, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t]
+    create.restype = ctypes.c_void_p
+    evaluate.argtypes = [ctypes.c_void_p, pointer, ctypes.c_size_t, ctypes.c_size_t, pointer,
+                         ctypes.c_char_p, ctypes.c_size_t]
+    evaluate.restype = ctypes.c_int
+    destroy.argtypes = [ctypes.c_void_p]
+    destroy.restype = None
+
+    error = ctypes.create_string_buffer(2048)
+    handle = create(_BENCHMARK_IDS[benchmark], work_iterations, workers, error, len(error))
+    if not handle:
+        raise RuntimeError(error.value.decode("utf-8", errors="replace"))
+
+    def evaluate_points(points):
+        points = np.ascontiguousarray(points, dtype=np.float64)
+        rows, dimension = points.shape
+        values = np.empty(rows, dtype=np.float64)
+        status = evaluate(handle, points.ctypes.data_as(pointer), rows, dimension,
+                          values.ctypes.data_as(pointer), error, len(error))
+        if status != 0:
+            raise RuntimeError(error.value.decode("utf-8", errors="replace"))
+        return values
+
+    try:
+        yield evaluate_points
+    finally:
+        destroy(handle)

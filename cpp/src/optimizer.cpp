@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <numeric>
 #include <stdexcept>
 #include <vector>
 
@@ -62,7 +63,14 @@ template <typename BatchEvaluator>
         throw std::invalid_argument("Objective function must be callable");
     }
 
-    const auto start = Clock::now();
+    auto* study = config.study;
+    const auto start = study == nullptr ? Clock::now() : study->start;
+    const auto elapsed = [&] {
+        return std::chrono::duration<double>(Clock::now() - start).count();
+    };
+    const auto expired = [&](const double seconds) {
+        return study != nullptr && study->seconds > 0.0 && seconds >= study->seconds;
+    };
     const std::size_t dimension = config.lower_bounds.size();
     const std::size_t population_size = config.population_size;
     std::vector<Particle> particles(population_size);
@@ -102,8 +110,25 @@ template <typename BatchEvaluator>
         std::chrono::duration<double>(Clock::now() - initialization_start).count();
 
     EvaluationTimings evaluation_timings;
-    evaluate_batch(pending_positions, pending_values, evaluation_timings);
-    result.function_evaluations += static_cast<std::uint64_t>(population_size);
+    result.best_value = std::numeric_limits<double>::infinity();
+    const auto accept_batch = [&] {
+        if (study != nullptr && expired(elapsed())) return false;
+        evaluate_batch(pending_positions, pending_values, evaluation_timings);
+        if (study != nullptr) {
+            const double seconds = elapsed();
+            if (expired(seconds)) {
+                study->discarded_evaluations = population_size;
+                return false;
+            }
+            study->batch_seconds.push_back(seconds);
+        }
+        result.function_evaluations += population_size;
+        return true;
+    };
+    if (!accept_batch()) {
+        result.elapsed_seconds = elapsed();
+        return result;
+    }
 
     // Stable tie-breaking is by particle index.
     for (std::size_t i = 0; i < population_size; ++i) {
@@ -120,7 +145,52 @@ template <typename BatchEvaluator>
     result.history_evaluations.push_back(result.function_evaluations);
 
     std::size_t best_index = global_best_index(particles);
+    const bool adapting = study != nullptr && (study->adaptive_step || study->recovery);
+    std::optional<Config> step_config;
+    if (adapting) step_config = config;
+    std::size_t stagnant_generations = 0;
+    std::vector<unsigned char> restart(study != nullptr && study->recovery ? population_size : 0, 0);
+    std::vector<double> radius(adapting ? dimension : 0, 0.0);
     for (std::size_t iteration = 0; iteration < config.iterations; ++iteration) {
+        if (study != nullptr && expired(elapsed())) break;
+        std::size_t restart_count = 0;
+        if (adapting && stagnant_generations >= 12U) {
+            stagnant_generations = 0;
+            ++study->triggers;
+            if (study->adaptive_step) {
+                step_config->dt = std::min(3.0 * config.dt, 1.25 * step_config->dt);
+            }
+            double dispersion = 0.0;
+            for (std::size_t j = 0; j < dimension; ++j) {
+                const double lower = config.lower_bounds[j];
+                const double width = config.upper_bounds[j] - lower;
+                double mean = 0.0;
+                for (const auto& particle : particles) mean += (particle.position[j] - lower) / width;
+                mean /= static_cast<double>(population_size);
+                double variance = 0.0;
+                for (const auto& particle : particles) {
+                    const double deviation = (particle.position[j] - lower) / width - mean;
+                    variance += deviation * deviation;
+                }
+                const double sigma = std::sqrt(variance / static_cast<double>(population_size));
+                dispersion += sigma / static_cast<double>(dimension);
+                radius[j] = width * std::clamp(2.0 * sigma, 0.01, 0.20);
+            }
+            study->mean_trigger_dispersion += (dispersion - study->mean_trigger_dispersion)
+                / static_cast<double>(study->triggers);
+            if (study->recovery && population_size > 1U) {
+                std::vector<std::size_t> order(population_size);
+                std::iota(order.begin(), order.end(), 0U);
+                std::stable_sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) {
+                    return particles[a].personal_best_value > particles[b].personal_best_value;
+                });
+                for (const auto i : order) {
+                    if (i == best_index) continue;
+                    restart[i] = 1;
+                    if (++restart_count == std::max<std::size_t>(1U, population_size / 5U)) break;
+                }
+            }
+        }
         std::vector<double> global_best_snapshot;
         std::vector<std::vector<double>> local_snapshot;
         const auto social_start = Clock::now();
@@ -138,9 +208,19 @@ template <typename BatchEvaluator>
             const auto task_start = Clock::now();
             const std::vector<double>& attractor = config.topology == TopologyKind::GlobalBest
                 ? global_best_snapshot : local_snapshot[i];
-            propagate_particle(
-                particles[i], attractor, config, iteration,
-                pending_positions[i], pending_velocities[i]);
+            if (restart_count != 0U && restart[i] != 0U) {
+                auto& engine = particles[i].random_engine;
+                for (std::size_t j = 0; j < dimension; ++j) {
+                    const double offset = (2.0 * uniform01(engine) - 1.0) * radius[j];
+                    pending_positions[i][j] = std::clamp(attractor[j] + offset,
+                        config.lower_bounds[j], config.upper_bounds[j]);
+                    pending_velocities[i][j] = 0.0;
+                }
+            } else {
+                propagate_particle(
+                    particles[i], attractor, adapting ? *step_config : config, iteration,
+                    pending_positions[i], pending_velocities[i]);
+            }
             propagation_task_seconds[i] =
                 std::chrono::duration<double>(Clock::now() - task_start).count();
         };
@@ -157,21 +237,34 @@ template <typename BatchEvaluator>
             result.propagation_worker_seconds += seconds;
         }
 
-        evaluate_batch(pending_positions, pending_values, evaluation_timings);
-        result.function_evaluations += static_cast<std::uint64_t>(population_size);
+        if (!accept_batch()) break;
+        const double previous_best = result.best_value;
+        if (restart_count != 0U) study->recovered_particles += restart_count;
 
         for (std::size_t i = 0; i < population_size; ++i) {
             Particle& particle = particles[i];
             particle.position = pending_positions[i];
             particle.velocity = pending_velocities[i];
             particle.current_value = pending_values[i];
-            if (particle.current_value < particle.personal_best_value) {
+            if (restart_count != 0U && restart[i] != 0U && particle.current_value < previous_best) {
+                ++study->recovery_improvements;
+            }
+            if ((restart_count != 0U && restart[i] != 0U) || particle.current_value < particle.personal_best_value) {
                 particle.personal_best = particle.position;
                 particle.personal_best_value = particle.current_value;
             }
             if (particle.personal_best_value < result.best_value) {
                 result.best_value = particle.personal_best_value;
                 result.best_position = particle.personal_best;
+            }
+        }
+        if (restart_count != 0U) std::fill(restart.begin(), restart.end(), 0U);
+        if (adapting) {
+            if (result.best_value < previous_best) {
+                stagnant_generations = 0;
+                if (study->adaptive_step) step_config->dt = std::max(config.dt, 0.85 * step_config->dt);
+            } else {
+                ++stagnant_generations;
             }
         }
         best_index = global_best_index(particles);
@@ -345,11 +438,15 @@ Result minimize_particle_parallel(
     Result result;
     {
         ThreadPool pool(worker_count);
-        const auto parallel_evaluator = [&objective, &pool](
+        const auto parallel_evaluator = [&objective, &pool, &config](
             const std::vector<std::vector<double>>& positions,
             std::vector<double>& values,
             EvaluationTimings& timings) {
-            evaluate_parallel_batch(pool, objective, positions, values, timings);
+            if (config.study != nullptr && config.study->serial_objective) {
+                evaluate_serial_batch(objective, positions, values, timings);
+            } else {
+                evaluate_parallel_batch(pool, objective, positions, values, timings);
+            }
         };
         result = minimize_synchronous_impl(config, objective, parallel_evaluator, worker_count, &pool, graph_seed);
     }

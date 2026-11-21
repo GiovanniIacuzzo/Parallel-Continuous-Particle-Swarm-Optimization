@@ -5,7 +5,7 @@ Le baseline sono algoritmi PSO discreti in spazio decisionale continuo e sono im
 
 \subsection{Parametri e adattamenti comuni}
 
-La popolazione esterna è fissata a $N=64$ per tutte le configurazioni del confronto esterno e la valutazione è limitata da un budget FE identico per problema e algoritmo. Il seed deriva da un hash stabile dell'identificatore del problema e del seme di campagna; generatori diversi e implementazioni indipendenti implicano che il pairing del seed non garantisce inizializzazione coordinata identica. La velocità iniziale è in generale campionata in $[-0.1w_j,0.1w_j]$, dove $w_j=u_j-\ell_j$; SL-PSO e Competitive Swarm Optimizer iniziano con velocità nulla, mentre SPSO-2011 usa la propria inizializzazione nel box normalizzato.
+Nello Studio III la popolazione è fissata a $N=100$. Le campagne a FE fissate assegnano lo stesso budget per problema e metodo. La campagna temporale assegna la stessa durata. Per ogni blocco appaiato viene usato lo stesso identificatore di seme, con inizializzazioni e generatori propri di ogni metodo. La velocità iniziale è in generale campionata in $[-0.1w_j,0.1w_j]$, dove $w_j=u_j-\ell_j$; SL-PSO e Competitive Swarm Optimizer iniziano con velocità nulla, mentre SPSO-2011 usa la propria inizializzazione nel box normalizzato.
 
 \begin{table}[H]
 \centering
@@ -21,7 +21,7 @@ Inertia global-best & $c_1=c_2=2.05$, $w:0.9\to0.4$ & $0.2w_j$ & $U[-0.1w_j,0.1w
 Constriction global-best & $c_1=c_2=2.05$, $\chi$ di Clerc--Kennedy & Nessuno & $U[-0.1w_j,0.1w_j]$ & Nessun limite di velocità nella configurazione corrente. \\
 Inertia local-best ring & $c_1=c_2=2.05$, $w:0.9\to0.4$, raggio 1 & $0.2w_j$ & $U[-0.1w_j,0.1w_j]$ & Snapshot sincrono con vicinato periodico. \\
 CLPSO & $c=1.49445$, $w:0.9\to0.4$, refresh 7 & $0.2w_j$ & $U[-0.1w_j,0.1w_j]$ & Esemplari per coordinata e probabilità di apprendimento dipendente dall'indice. \\
-SL-PSO & $M=100$, $\alpha=0.5$, $\beta=0.01$ & Nessuno & $0$ & Formula di apprendimento conforme; popolazione fissata a 64 per parità FE. \\
+SL-PSO & $M=100$, $\alpha=0.5$, $\beta=0.01$ & Nessuno & $0$ & Formula di apprendimento conforme; popolazione fissata a 100 nello Studio III. \\
 SPSO-2011 & $K_{\mathrm{informant}}=3$, $c=0.5+\ln2$, $\omega=(2\ln2)^{-1}$ & Nessuno & Box normalizzato & Direzioni uniformi e raggio uniforme; regola di confinamento SPSO-2011. \\
 FIPS ring & $\phi=4.1$, due vicini, $\chi$ di costrizione & Nessuno & $U[-0.1w_j,0.1w_j]$ & Coefficienti casuali per coordinata, ring escluso il self. \\
 Competitive Swarm Optimizer & $\varphi=0.1$, matching casuale & Nessuno & $0$ & Soli perdenti aggiornati; $N/2$ FE per generazione se $N$ è pari. \\
@@ -69,7 +69,7 @@ con $M=100$, $\alpha=0.5$, $\beta=0.01$. Nella notazione originale, che usa il r
  +r_3\gamma(\bar x_j^t-x_{i,j}^t),
  \label{eq:app-slpso-update}
 \end{equation}
-con $r_1,r_2,r_3\sim U(0,1)$ e un dimostratore selezionato indipendentemente per coordinata fra le particelle migliori. La configurazione mantiene $N=64$ per la parità FE; la fonte primaria \citep{ChengJin2015SLPSO} raccomanda invece $m=M+\lfloor D/10\rfloor$ con $M=100$. I risultati SL-PSO si riferiscono pertanto alla configurazione con popolazione fissata a 64.
+con $r_1,r_2,r_3\sim U(0,1)$ e un dimostratore selezionato indipendentemente per coordinata fra le particelle migliori. La configurazione dello Studio III mantiene $N=100$ a parità di budget; la fonte primaria \citep{ChengJin2015SLPSO} raccomanda invece $m=M+\lfloor D/10\rfloor$ con $M=100$. I risultati dello Studio III per SL-PSO si riferiscono alla popolazione comune di 100 particelle.
 \subsection{SPSO-2011}
 
 La baseline SPSO-2011 costruisce un grafo diretto casuale di informant con $K=3$ informant più il self. Sia $p_i$ il personal best e $l_i$ il miglior personal best nell'insieme di informant. Il centro di gravità è

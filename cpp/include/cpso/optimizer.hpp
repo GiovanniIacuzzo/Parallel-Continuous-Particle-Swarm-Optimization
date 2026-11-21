@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -20,7 +21,24 @@ enum class MigrationTopology : int {
     FullyConnected = 1,
 };
 
+// Per-run controls and measurements for the synchronous competition.
+struct SynchronousStudy {
+    std::chrono::steady_clock::time_point start;
+    double seconds{};
+    std::size_t schedule_iterations{};
+    bool adaptive_step{};
+    bool recovery{};
+    bool serial_objective{};
+    std::vector<double> batch_seconds;
+    std::uint64_t discarded_evaluations{};
+    std::uint64_t triggers{};
+    std::uint64_t recovered_particles{};
+    std::uint64_t recovery_improvements{};
+    double mean_trigger_dispersion{};
+};
+
 struct Config {
+    SynchronousStudy* study{};
     // Controlled ablations; legacy defaults preserve the original trajectory.
     bool apply_boundaries{true};
     bool discrete_dynamics{false};

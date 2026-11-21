@@ -1,42 +1,53 @@
-\section{Confronti PSO e controllo esterno BBOB}\label{app:external-ranks}
-\subsection{Controllo BBOB nella pipeline attuale}
-La Figura~\ref{fig:new-bbob-ecdf} presenta il controllo esterno seriale della qualità su COCO BBOB. Il campione pilot considera 24 funzioni, tre istanze per funzione, $D=5,20$ e 21 target in intervallo $[10^{-8},10^2]$. Il riferimento CPSO utilizza la stessa configurazione algoritmica trasferibile attraverso la callback, ma l'esecuzione seriale non riproduce la semantica asincrona del framework selezionato nella competizione nativa. Le ECDF sono pertanto presentate come prova esterna della ricerca seriale e non come curva di scaling o validazione temporale del CPSO parallelo.
-\begin{figure}[H]\centering
-\includegraphics[width=0.8\textwidth]{03_comparison/bbob/fig_bbob_ecdf_serial_control.pdf}
-\caption{ECDF di raggiungimento dei target su COCO BBOB, 24 funzioni, $D=5,20$, tre istanze pilot e checkpoint fino a $512D$ FE. Le sei colonne logiche separano tre famiglie di aggiornamento PSO e due dimensioni; le curve sono raggruppate per leggibilità, con CPSO seriale ripetuto come riferimento. Ogni ECDF mantiene nel denominatore tutte le coppie problema--target, inclusi gli insuccessi. I tempi e le FE appartengono alla callback seriale e non misurano la variante asincrona.}\label{fig:new-bbob-ecdf}
+\section{Figure complementari dello Studio III}\label{app:external-ranks}
+Le curve di convergenza e le ECDF completano i confronti in Sezione~\ref{subsec:res-scope}. Le ECDF seguono la definizione della Sezione~\ref{subsec:exp-pso}. Nelle figure a tempo fissato compaiono entrambe le configurazioni CPSO, a uno e quattro worker.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.90\textwidth]{03_comparison/figures_fe/convergence_fe_d20.pdf}
+  \caption{Confronto nativo a $D=20$. Gap mediano best-so-far su 20 semi, campagna a $500\,000$ FE. Sono mostrate la configurazione CPSO selezionata e quattro baseline rappresentative.}
+  \label{fig:study3-native-d20}
 \end{figure}
 
-\subsection{Confronto nativo: budget intermedio e dimensione cinque}
-\begin{figure*}[tbp]
-    \centering
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{03_comparison/native/fig_rank_k15.pdf}
-        \caption{Ranghi medi del confronto nativo al budget completo di $1\,024$ FE ($K=15$), $D=5,20,100$; la configurazione CPSO è quella congelata nella selezione del framework.}
-        \label{fig:new-family-ranks-early}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{03_comparison/native/fig_rank_k63.pdf}
-        \caption{Ranghi medi finali dei dieci concorrenti PSO e del CPSO selected nel confronto nativo pilot, a $4\,096$ FE ($K=63$) e $D=5,20,100$. La configurazione CPSO è congelata prima di eseguire questa campagna.}
-        \label{fig:new-family-ranks-mid}
-    \end{minipage}
-\end{figure*}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.76\textwidth]{03_comparison/figures_fe/target_ecdf_fe_d20.pdf}
+  \caption{Confronto nativo a $D=20$. ECDF dei target aggregata sulle sei funzioni e 20 semi, campagna a $500\,000$ FE.}
+  \label{fig:study3-native-ecdf-d20}
+\end{figure}
 
-\begin{figure*}[tbp]
-    \centering
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{03_comparison/native/fig_completed_run_tradeoff_d5.pdf}
-        \caption{Ranghi finali e tempi wall-clock mediani delle run completate a $D=5$ per i tre budget pilot. I tempi confrontano le implementazioni native C++ e Python/NumPy; i ranghi esprimono la qualità a FE fissate. Nessuna curva rappresenta il tempo al primo raggiungimento di un target.}
-        \label{fig:new-tradeoff-d5}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{03_comparison/native/fig_completed_run_tradeoff_d100.pdf}
-        \caption{Ranghi finali e tempi delle run completate a $D=100$, confronto nativo pilot ai tre budget. Lato qualità a FE fissate e lato costi di implementazione sono mantenuti distinti.}
-        \label{fig:new-tradeoff-d100}
-    \end{minipage}
-\end{figure*}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.76\textwidth]{03_comparison/figures_fe/target_ecdf_fe_d100.pdf}
+  \caption{Confronto nativo a $D=100$. ECDF dei target aggregata sulle sei funzioni e 20 semi, campagna a $500\,000$ FE.}
+  \label{fig:study3-native-ecdf-d100}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.76\textwidth]{03_comparison/figures_fe_bbob/target_ecdf_fe_d20.pdf}
+  \caption{Verifica BBOB a $D=20$. ECDF dei target aggregata su 14 funzioni e cinque istanze, campagna a $50\,000$ FE.}
+  \label{fig:study3-bbob-d20}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.90\textwidth]{03_comparison/figures_time/convergence_seconds_d20.pdf}
+  \caption{Confronto temporale a $D=20$. Gap mediano best-so-far su 20 semi lungo la campagna da 60 s.}
+  \label{fig:study3-time-d20}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.76\textwidth]{03_comparison/figures_time/target_ecdf_seconds_d20.pdf}
+  \caption{Confronto temporale a $D=20$. ECDF dei target aggregata sui due problemi e 20 semi, campagna da 60 s.}
+  \label{fig:study3-time-ecdf-d20}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.76\textwidth]{03_comparison/figures_time/target_ecdf_seconds_d100.pdf}
+  \caption{Confronto temporale a $D=100$. ECDF dei target aggregata sui due problemi e 20 semi, campagna da 60 s.}
+  \label{fig:study3-time-ecdf-d100}
+\end{figure}
+
+\FloatBarrier

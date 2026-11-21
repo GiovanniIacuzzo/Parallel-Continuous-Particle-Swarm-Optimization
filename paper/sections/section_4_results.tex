@@ -91,5 +91,38 @@ Sulla diffusione inversa a $D=30$, topologia Global e otto worker, la differenza
 
 In contrasto, su Rastrigin a $D=30$ con otto worker il rapporto temporale è $0.804$ (IC 95\%: $[0.776,0.831]$), a svantaggio dell'asincrono, e la differenza di qualità $\Delta z=-0.043$ ha un intervallo che comprende zero. Inoltre, ciascuna delle configurazioni esaminate mostra variabilità di qualità fra ripetizioni con il medesimo seme, coerentemente con una dipendenza dallo scheduling. Questi risultati motivano l'impiego del particle-parallel sincrono come \emph{riferimento principale} per l'analisi dell'accelerazione, mantenendo l'asincrono quale variante della dinamica di ricerca da discutere separatamente.
 
-\subsection{Ambito dei risultati e confronto PSO}\label{subsec:res-scope}
-La conferma quantitativa qui disponibile riguarda due obiettivi e una sola piattaforma multicore, con configurazioni e budget predefiniti. La selezione esplorativa fra architetture e vicinati resta utile a motivare i controlli, ma non è combinata con i nuovi campioni per ottenere intervalli artificiosamente più stretti. Analogamente, i ranghi PSO e le ECDF BBOB della campagna pilota, conservati in Appendice~\ref{app:external-ranks}, non rappresentano ancora un confronto definitivo del CPSO parallelo su benchmark trasformati a budget elevati. Per tale ragione non si ricavano da essi affermazioni di superiorità generale rispetto alla famiglia PSO. Il completamento dello Studio III è necessario prima di formulare la conclusione competitiva del manoscritto.
+\subsection{Studio III: qualità a budget fisso e a tempo fissato}\label{subsec:res-scope}
+\paragraph{Esito dello sviluppo e completamento.}
+Nello screening, Random-8 con casualità per coordinata occupa i primi due posti a entrambi i budget. Il passo $h=1$ ottiene il rango medio complessivo più basso ($1.84$ contro $1.91$ per $h=0.38125$), mentre $h=0.38125$ ha il rango migliore a $500\,000$ FE aggregando le due dimensioni di sviluppo. Nell'ablazione, il miglioramento medio maggiore è ottenuto dal solo passo adattivo ($0.025$ unità di log-gap), al di sotto della soglia di $0.05$. La ricetta fissa passa alla conferma. Sono state completate tutte le $10\,840$ esecuzioni previste: $6\,240$ a FE fissate sui benchmark nativi, $3\,640$ su BBOB e $960$ a tempo fissato.
+
+\paragraph{Qualità sui benchmark nativi.}
+Il CPSO selezionato si colloca fra il quarto e il quinto posto su 13 metodi (Tabella~\ref{tab:study3-ranks}). Migliora il confronto con la configurazione CPSO di riferimento su tutte le sei funzioni in ciascuno dei quattro strati di dimensione e budget. Contro la migliore PSO di letteratura per funzione, registra due parità pratiche e 22 sconfitte nelle 24 combinazioni. CSO guida a $50\,000$ FE in entrambe le dimensioni e a $500\,000$ FE in $D=100$. In $D=20$ al budget maggiore prevale SPSO-2011. Alla stessa dimensione e budget, i due propagatori abbinati ottengono due vittorie ciascuno e due parità. Le curve a $500\,000$ FE illustrano dove si aprono le differenze durante la ricerca (Figura~\ref{fig:study3-native-d100} e Appendice~\ref{app:external-ranks}).
+
+\paragraph{Verifica esterna su BBOB.}
+Il CPSO si colloca al terzo posto a $10\,000$ FE in entrambe le dimensioni. A $50\,000$ FE si colloca al terzo posto in $D=20$ e al quarto in $D=40$. Al budget maggiore batte il controllo discreto abbinato su 12 funzioni su 14 in ciascuna dimensione (test dei segni bilaterale con $p$ corretto di Holm pari a $0.336$ in entrambi i casi). Contro CSO il bilancio è rispettivamente di 3 vittorie, 10 sconfitte e una parità in $D=20$, e di 2 vittorie, 11 sconfitte e una parità in $D=40$. Rispetto alla migliore baseline per funzione si osservano rispettivamente una e zero vittorie. Le ECDF al budget di $50\,000$ FE riportano l'intero profilo di raggiungimento dei target (Figura~\ref{fig:study3-bbob-d40} e Appendice~\ref{app:external-ranks}).
+\input{tables/study3_ranks.tex}
+
+\begin{figure*}[tbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{03_comparison/figures_fe/convergence_fe_d100.pdf}
+  \caption{Studio III, confronto nativo a $D=100$. Gap mediano del miglior valore osservato su 20 semi lungo la campagna a $500\,000$ FE. Sono mostrate la configurazione CPSO selezionata e quattro baseline rappresentative. La graduatoria in Tabella~\ref{tab:study3-ranks} considera tutti i 13 metodi.}
+  \label{fig:study3-native-d100}
+\end{figure*}
+
+\begin{figure*}[tbp]
+  \centering
+  \includegraphics[width=0.78\textwidth]{03_comparison/figures_fe_bbob/target_ecdf_fe_d40.pdf}
+  \caption{Studio III, verifica BBOB a $D=40$, budget di $50\,000$ FE. La frazione di coppie esecuzione--target raggiunte è calcolata su 14 funzioni, cinque istanze e otto target per metodo.}
+  \label{fig:study3-bbob-d40}
+\end{figure*}
+
+\paragraph{Tempo fissato e contributo del multicore.}
+Tutti i 160 confronti appaiati del CPSO a uno e quattro worker hanno la stessa traccia del miglior valore sul prefisso comune di FE. A 60 s, le mediane dei rapporti appaiati $\mathrm{FE}_4/\mathrm{FE}_1$ sono $1.60$ e $2.29$ su Rastrigin, e $2.82$ e $2.91$ sulla diffusione inversa, rispettivamente in $D=20$ e $D=100$. Il gap finale aggregato rimane entro la soglia di parità pratica fra uno e quattro worker in ciascuna combinazione di funzione, dimensione e durata.
+
+Nella diffusione inversa a $D=20$, il target $10^{-8}$ è raggiunto da tutte le 20 esecuzioni CPSO di ciascuna configurazione e richiede una mediana di $1.16$ s con un worker e $0.32$ s con quattro nella campagna da 60 s. CSO e SL-PSO raggiungono lo stesso target in una mediana di $0.33$ e $0.26$ s, rispettivamente. Su Rastrigin a $D=100$ (Figura~\ref{fig:study3-time-d100}), il CPSO a quattro worker completa circa $36.0$ milioni di FE mediane e si ferma a un gap mediano di $239.4$, mentre CSO arriva a $53.2$ con circa $5.1$ milioni di FE. Il risultato finale della CPSO su questa funzione varia poco fra 15 e 60 s. Nelle otto combinazioni temporali, contro la migliore baseline per funzione il CPSO a quattro worker totalizza zero vittorie, due parità sulla diffusione inversa a $D=20$ e sei sconfitte.
+\begin{figure*}[tbp]
+  \centering
+  \includegraphics[width=0.94\textwidth]{03_comparison/figures_time/convergence_seconds_d100.pdf}
+  \caption{Studio III, confronto a tempo fissato a $D=100$. Gap mediano best-so-far su 20 semi, con orizzonte di 60 s. L'analisi separa i due problemi e include il controllo CPSO a un worker.}
+  \label{fig:study3-time-d100}
+\end{figure*}

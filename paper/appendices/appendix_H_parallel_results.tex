@@ -4,16 +4,8 @@
 Le metriche $A_a(p)$, $S_a(p)$ ed $E_a(p)$ sono definite dall'Eq.~\eqref{eq:speedup-efficiency}. Nel caso dei backend sincroni le misure si riferiscono a una stessa traiettoria, verificata mediante i campi registrati per seme e lavoro. Le architetture asincrona e a isole modificano invece il processo stocastico: il confronto temporale rispetto alla seriale ha significato di \emph{runtime ratio} fra run complete. La selezione del framework usa il wall-clock, mentre il timer nativo distingue il costo del solver da quello dell'invocazione.
 
 \subsection{Curve complementari dei backend sincroni}
-Le Figure~\ref{fig:new-sync-serial-rastrigin} e~\ref{fig:new-sync-serial-diffusion} riportano i rapporti rispetto alla seriale nel campione di selezione pilot; le Figure~\ref{fig:new-sync-ext-rast} e~\ref{fig:new-sync-ext-diff} completano le curve di strong scaling ed efficienza presenti nel testo. Obiettivi e dimensioni non sono aggregati perché hanno granularità di lavoro differente.
+Le Figure~\ref{fig:new-sync-serial-diffusion} riportano i rapporti rispetto alla seriale nel campione di selezione pilot; le Figure~\ref{fig:new-sync-ext-diff} completano le curve di strong scaling ed efficienza presenti nel testo. Obiettivi e dimensioni non sono aggregati perché hanno granularità di lavoro differente.
 
-\begin{figure}[H]\centering
-\includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_serial_speedup_rastrigin_d30.pdf}
-\caption{Risultati dei backend sincroni nel pilot: accelerazione rispetto alla seriale su Rastrigin a $D=30$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-serial-rastrigin}
-\end{figure}
-\begin{figure}[H]\centering
-\includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_serial_speedup_rastrigin_d100.pdf}
-\caption{Risultati dei backend sincroni nel pilot: accelerazione rispetto alla seriale su Rastrigin a $D=100$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-serial-rastrigin-extra}
-\end{figure}
 \begin{figure}[H]\centering
 \includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_serial_speedup_inverse_diffusion_d30.pdf}
 \caption{Risultati dei backend sincroni nel pilot: accelerazione rispetto alla seriale su diffusione inversa a $D=30$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-serial-diffusion}
@@ -22,14 +14,7 @@ Le Figure~\ref{fig:new-sync-serial-rastrigin} e~\ref{fig:new-sync-serial-diffusi
 \includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_serial_speedup_inverse_diffusion_d100.pdf}
 \caption{Risultati dei backend sincroni nel pilot: accelerazione rispetto alla seriale su diffusione inversa a $D=100$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-serial-diffusion-extra}
 \end{figure}
-\begin{figure}[H]\centering
-\includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_strong_speedup_rastrigin_d100.pdf}
-\caption{Risultati dei backend sincroni nel pilot: strong scaling su Rastrigin a $D=100$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-ext-rast}
-\end{figure}
-\begin{figure}[H]\centering
-\includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_efficiency_rastrigin_d100.pdf}
-\caption{Risultati dei backend sincroni nel pilot: efficienza interna su Rastrigin a $D=100$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-ext-rast-extra}
-\end{figure}
+
 \begin{figure}[H]\centering
 \includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_strong_speedup_inverse_diffusion_d30.pdf}
 \caption{Risultati dei backend sincroni nel pilot: strong scaling su diffusione inversa a $D=30$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-ext-diff}

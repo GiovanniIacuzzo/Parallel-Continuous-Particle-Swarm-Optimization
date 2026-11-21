@@ -4,6 +4,7 @@
 #include "cpso/objectives.hpp"
 #include "cpso/inverse_diffusion_benchmark.hpp"
 #include "cpso/optimizer.hpp"
+#include "cpso/thread_pool.hpp"
 #include "optimizer_internal.hpp"
 
 #include <algorithm>
@@ -12,6 +13,7 @@
 #include <cstring>
 #include <exception>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -56,6 +58,33 @@ cpso::Benchmark to_benchmark(const int id) {
         default: throw std::invalid_argument("Unknown benchmark_id");
     }
 }
+
+cpso::Objective make_objective(const int id, const std::uint64_t work) {
+    if (id == CPSO_SPHERE_WORK) {
+        return [work](const std::vector<double>& point) {
+            return cpso::evaluate_synthetic_sphere_work(point, work);
+        };
+    }
+    if (id == CPSO_INVERSE_DIFFUSION) {
+        return [work](const std::vector<double>& point) {
+            return cpso::evaluate_inverse_diffusion_benchmark(point, work);
+        };
+    }
+    if (work != 0U) {
+        throw std::invalid_argument(
+            "objective_work_iterations is only valid for sphere_work/inverse_diffusion");
+    }
+    const auto benchmark = to_benchmark(id);
+    return [benchmark](const std::vector<double>& point) {
+        return cpso::evaluate_benchmark(benchmark, point);
+    };
+}
+
+struct BatchEvaluator {
+    cpso::Objective objective;
+    std::unique_ptr<cpso::ThreadPool> pool;
+    std::vector<std::vector<double>> points;
+};
 
 cpso::MigrationTopology to_migration_topology(const int id) {
     switch (id) {
@@ -116,7 +145,8 @@ int run_impl(
     const CpsoObjectiveCallback custom_objective = nullptr,
     void* custom_objective_context = nullptr,
     const int experiment_flags = 0, const std::uint64_t graph_seed = 0,
-    const double research_wall_seconds = 0.0, const bool research_summary = false) {
+    const double research_wall_seconds = 0.0, const bool research_summary = false,
+    cpso::SynchronousStudy* study = nullptr) {
     try {
         if (config == nullptr || execution == nullptr || c_result == nullptr
             || best_position_out == nullptr || history_out == nullptr) {
@@ -169,6 +199,7 @@ int run_impl(
             throw std::invalid_argument("Invalid experiment flags");
         }
         cpso::Config cpp_config;
+        cpp_config.study = study;
         cpp_config.apply_boundaries = (experiment_flags & 8) == 0;
         cpp_config.adaptive_recovery = (experiment_flags & 16) != 0;
         if (research_wall_seconds < 0.0 || !std::isfinite(research_wall_seconds))
@@ -199,7 +230,7 @@ int run_impl(
 
         cpso::Objective objective;
         if (custom_objective != nullptr) {
-            if (execution->algorithm_id != CPSO_ALGORITHM_SERIAL) {
+            if (study == nullptr && execution->algorithm_id != CPSO_ALGORITHM_SERIAL) {
                 throw std::invalid_argument(
                     "Custom objective callbacks are supported only in serial mode");
             }
@@ -212,27 +243,8 @@ int run_impl(
                 return custom_objective(
                     position.data(), position.size(), custom_objective_context);
             };
-        } else if (config->benchmark_id == CPSO_SPHERE_WORK) {
-            objective = [work_iterations = config->objective_work_iterations](
-                const std::vector<double>& position) {
-                return cpso::evaluate_synthetic_sphere_work(position, work_iterations);
-            };
-        } else if (config->benchmark_id == CPSO_INVERSE_DIFFUSION) {
-            // The integration step count controls an actual numerical solve,
-            // not a busy wait. All architectures use the identical function.
-            objective = [steps = config->objective_work_iterations](
-                const std::vector<double>& position) {
-                return cpso::evaluate_inverse_diffusion_benchmark(position, steps);
-            };
         } else {
-            if (config->objective_work_iterations != 0U) {
-                throw std::invalid_argument(
-                    "objective_work_iterations is only valid for sphere_work/inverse_diffusion");
-            }
-            const cpso::Benchmark benchmark = to_benchmark(config->benchmark_id);
-            objective = [benchmark](const std::vector<double>& position) {
-                return cpso::evaluate_benchmark(benchmark, position);
-            };
+            objective = make_objective(config->benchmark_id, config->objective_work_iterations);
         }
 
         cpso::Result result;
@@ -427,6 +439,94 @@ extern "C" CPSO_API int cpso_run_research(
     return run_impl(config, execution, result, position, history, fe, capacity,
                     error, error_capacity, nullptr, nullptr, flags, 0,
                     time_limit_seconds, true);
+}
+
+extern "C" CPSO_API int cpso_run_synchronous_study(
+    const CpsoCConfig* config, const CpsoCExecutionConfig* execution,
+    int flags, std::uint64_t graph_seed, CpsoObjectiveCallback callback,
+    CpsoSynchronousStudy* options, CpsoCResult* result, double* position,
+    double* history, std::uint64_t* fe, double* batch_seconds, std::size_t capacity,
+    char* error, std::size_t error_capacity) {
+    const auto start = cpso::detail::Clock::now();
+    if (execution == nullptr || options == nullptr || batch_seconds == nullptr
+        || (execution->algorithm_id != CPSO_ALGORITHM_SERIAL
+            && execution->algorithm_id != CPSO_ALGORITHM_PARTICLE_PARALLEL)
+        || flags < 0 || flags > 7 || !std::isfinite(options->seconds) || options->seconds < 0.0
+        || (options->seconds > 0.0 && options->schedule_iterations == 0U)
+        || (callback != nullptr && options->seconds > 0.0)
+        || ((flags & 1) != 0 && options->adapt_step != 0)) {
+        write_error(error, error_capacity, "Invalid synchronous study options");
+        return -1;
+    }
+    cpso::SynchronousStudy study{};
+    study.start = start;
+    study.seconds = options->seconds;
+    study.schedule_iterations = options->schedule_iterations;
+    study.adaptive_step = options->adapt_step != 0;
+    study.recovery = options->recovery != 0;
+    study.serial_objective = callback != nullptr;
+    const auto status = run_impl(config, execution, result, position, history, fe, capacity,
+                                 error, error_capacity, callback, nullptr, flags, graph_seed,
+                                 0.0, false, &study);
+    if (status == 0) {
+        std::copy(study.batch_seconds.begin(), study.batch_seconds.end(), batch_seconds);
+        options->discarded_evaluations = study.discarded_evaluations;
+        options->triggers = study.triggers;
+        options->recovered_particles = study.recovered_particles;
+        options->recovery_improvements = study.recovery_improvements;
+        options->mean_trigger_dispersion = study.mean_trigger_dispersion;
+        result->elapsed_seconds =
+            std::chrono::duration<double>(cpso::detail::Clock::now() - start).count();
+    }
+    return status;
+}
+
+extern "C" CPSO_API void* cpso_create_batch_evaluator(
+    int benchmark, std::uint64_t work, std::size_t workers, char* error, std::size_t error_capacity) {
+    try {
+        if (workers == 0U || workers > 4096U || work > 100'000'000ULL) {
+            throw std::invalid_argument("Invalid batch worker count or objective work");
+        }
+        auto evaluator = std::make_unique<BatchEvaluator>();
+        evaluator->objective = make_objective(benchmark, work);
+        if (workers > 1U) evaluator->pool = std::make_unique<cpso::ThreadPool>(workers);
+        return evaluator.release();
+    } catch (const std::exception& e) {
+        write_error(error, error_capacity, e.what());
+        return nullptr;
+    }
+}
+
+extern "C" CPSO_API int cpso_evaluate_batch(
+    void* handle, const double* positions, std::size_t rows, std::size_t dimension,
+    double* values, char* error, std::size_t error_capacity) {
+    try {
+        if (handle == nullptr || positions == nullptr || values == nullptr || dimension == 0U
+            || rows > std::numeric_limits<std::size_t>::max() / dimension) {
+            throw std::invalid_argument("Invalid batch input");
+        }
+        auto& evaluator = *static_cast<BatchEvaluator*>(handle);
+        if (evaluator.points.size() < rows) evaluator.points.resize(rows);
+        const auto evaluate = [&](std::size_t i) {
+            const double* first = positions + i * dimension;
+            auto& point = evaluator.points[i];
+            point.assign(first, first + dimension);
+            values[i] = cpso::detail::checked_evaluate(evaluator.objective, point);
+        };
+        if (evaluator.pool) {
+            evaluator.pool->parallel_for(rows, evaluate);
+        } else {
+            for (std::size_t i = 0; i < rows; ++i) evaluate(i);
+        }
+        return 0;
+    } catch (const std::exception& e) {
+        write_error(error, error_capacity, e.what());
+        return -1;
+    }
+}
+
+extern "C" CPSO_API void cpso_destroy_batch_evaluator(void* handle) {
+    delete static_cast<BatchEvaluator*>(handle);
 }
 
 extern "C" CPSO_API int cpso_experiment_graph(
