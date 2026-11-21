@@ -1,101 +1,129 @@
 \section{Modello CPSO e semantiche di esecuzione}
 \label{sec:model}
 
-
 \subsection{Formulazione}
-Si considera la minimizzazione di un obiettivo $J$ in uno spazio di dimensione $n$. Riprendiamo la notazione del lavoro originale \citep{orlando2020analytic}: $N_p$ è il numero delle particelle, $p_i^\lambda$ la posizione della particella $i$, $v_i^\lambda$ la velocità, $p_{ib}$ il migliore personale e $p_{gb}$ il migliore globale. Le Eqq.~(1)--(3) della fonte sono
+\label{subsec:cpso-original-formulation}
+
+Il Continuous Particle Swarm Optimization (CPSO) introduce una descrizione continua del moto delle particelle a partire dal modello discreto del Particle Swarm Optimization (PSO)~\citep{orlando2020analytic}. Si consideri uno sciame composto da $N_p$ particelle in uno spazio di ricerca di dimensione $n$. La posizione e la velocit\`a della particella $i$ al passo $\lambda$ sono indicate rispettivamente con $p_i^\lambda$ e $v_i^\lambda$, mentre $p_{ib}$ e $p_{gb}$ rappresentano la migliore posizione individuale e quella globale. L'aggiornamento discreto \`e definito da
 \begin{equation}
- p_i^{\lambda+1}=p_i^\lambda+v_i^{\lambda+1},\label{eq:or-discrete-position}
+ p_i^{\lambda+1}=p_i^\lambda+v_i^{\lambda+1},
+ \label{eq:or-discrete-position}
 \end{equation}
 \begin{equation}
- v_i^{\lambda+1}=\mu v_i^\lambda+c_c r_1(p_{ib}-p_i^\lambda)
- +c_s r_2(p_{gb}-p_i^\lambda),\label{eq:or-discrete-velocity}
+ v_i^{\lambda+1}=\mu v_i^\lambda
+ +c_c r_1(p_{ib}-p_i^\lambda)
+ +c_s r_2(p_{gb}-p_i^\lambda),
+ \label{eq:or-discrete-velocity}
 \end{equation}
+dove $c_c$ e $c_s$ sono i coefficienti cognitivo e sociale, $r_1,r_2\in[0,1]$ sono variabili casuali e $\mu$ \`e il peso d'inerzia, che varia linearmente secondo
 \begin{equation}
  \mu=\mu_{\max}-\frac{\mu_{\max}-\mu_{\min}}{\lambda_{\max}}\lambda.
  \label{eq:or-inertia}
 \end{equation}
-Qui $r_1,r_2\in[0,1]$. La differenza fra velocità consecutive, Eq.~(4) della fonte, è
+Sottraendo $v_i^\lambda$ ai due membri dell'equazione della velocit\`a si ottiene
 \begin{equation}
 \begin{aligned}
- v_i^{\lambda+1}-v_i^\lambda={}&(\mu-1)v_i^\lambda+c_c r_1(p_{ib}-p_i^\lambda)\\
+ v_i^{\lambda+1}-v_i^\lambda
+ ={}&(\mu-1)v_i^\lambda+c_c r_1(p_{ib}-p_i^\lambda)\\
  &+c_s r_2(p_{gb}-p_i^\lambda).
-\end{aligned}\label{eq:or-velocity-difference}
+\end{aligned}
+\label{eq:or-velocity-difference}
 \end{equation}
-Nel passaggio continuo gli autori omettono l'indice della particella e pongono $p(t)=[x_1(t),\ldots,x_n(t)]$. Il problema di Cauchy della loro Eq.~(5) è
+
+Interpretando l'incremento temporale unitario della formulazione discreta come un intervallo infinitesimo $\delta t$ e considerando il limite $\delta t\to0$, il quoziente incrementale della velocit\`a conduce a un'equazione differenziale del secondo ordine. Omettendo l'indice della particella, si introduce il vettore posizione $p(t)=[x_1(t),\ldots,x_n(t)]$. Il corrispondente problema di Cauchy \`e
 \begin{equation}
 \begin{cases}
-\begin{aligned}\ddot p(t)&+(1-\mu(t))\dot p(t)\\
- &+(c_c r_1(t)+c_s r_2(t))p(t)=f(t),\end{aligned}\\
-p(0)=p_0,\\\dot p(0)=\dot p_0,
-\end{cases}\label{eq:or-cauchy}
+ \ddot p(t)+(1-\mu(t))\dot p(t)
+ +(c_c r_1(t)+c_s r_2(t))p(t)=f(t),\\
+ p(0)=p_0,\\
+ \dot p(0)=\dot p_0,
+\end{cases}
+\label{eq:or-cauchy}
 \end{equation}
-con il termine forzante definito nella fonte come
+con termine forzante
 \begin{equation}
  f(t)=c_c r_1(t)p_{ib}(t)+c_s r_2(t)p_{gb}(t).
  \label{eq:or-force-time}
 \end{equation}
-Il simbolo $f(t)$ indica qui il forzante, mentre $J$ indica l'obiettivo da minimizzare. Le definizioni dell'Eq.~(6) originale sono
+La funzione obiettivo da minimizzare sar\`a indicata con $J$, riservando il simbolo $f$ al termine forzante dell'equazione differenziale.
+
+Introducendo la pulsazione naturale $\omega:[0,T]\to[0,+\infty)$ e il rapporto di smorzamento $\zeta:[0,T]\to[0,1]$ mediante
 \begin{equation}
 \begin{cases}
  2\zeta(t)\omega(t)=1-\mu(t),\\
- \omega^2(t)=c_c r_1(t)+c_s r_2(t).
-\end{cases}\label{eq:or-oscillator-parameters}
+ \omega^2(t)=c_c r_1(t)+c_s r_2(t),
+\end{cases}
+\label{eq:or-oscillator-parameters}
 \end{equation}
-Si ottiene quindi il problema della loro Eq.~(7):
+il problema assume la forma di un oscillatore armonico smorzato:
 \begin{equation}
 \begin{cases}
- \ddot p(t)+2\zeta(t)\omega(t)\dot p(t)+\omega^2(t)p(t)=f(t),\\
- p(0)=p_0,\qquad\dot p(0)=\dot p_0.
-\end{cases}\label{eq:or-oscillator}
+ \ddot p(t)+2\zeta(t)\omega(t)\dot p(t)
+ +\omega^2(t)p(t)=f(t),\\
+ p(0)=p_0,\\
+ \dot p(0)=\dot p_0.
+\end{cases}
+\label{eq:or-oscillator}
 \end{equation}
-La fonte suddivide $[0,T]$ in $N$ intervalli di ampiezza $dt=T/N$ e assume, per $k=0,\ldots,N-1$,
+
+Per ricavare la soluzione analitica, l'intervallo di integrazione $[0,T]$ viene suddiviso in $N$ sottointervalli di ampiezza $dt=T/N$. In ciascuno di essi si assumono costanti la pulsazione e il rapporto di smorzamento:
 \begin{equation}
-\begin{cases}\omega(t)=\omega_k,\\\zeta(t)=\zeta_k,\end{cases}
-\qquad t\in[kdt,(k+1)dt].\label{eq:or-piecewise}
+\begin{cases}
+ \omega(t)=\omega_k,\\
+ \zeta(t)=\zeta_k,
+\end{cases}
+\qquad t\in[kdt,(k+1)dt],\quad k=0,\ldots,N-1.
+\label{eq:or-piecewise}
 \end{equation}
-Il corrispondente problema locale, Eq.~(9) del PDF, è
+Si ottiene cos\`i, su ogni sottointervallo, il problema lineare a coefficienti costanti
 \begin{equation}
 \begin{cases}
  \ddot p(t)+2\zeta_k\omega_k\dot p(t)+\omega_k^2p(t)=f_k,\\
- p(kdt)=p_k,\\\dot p(kdt)=\dot p_k,
-\end{cases}\label{eq:or-local}
+ p(kdt)=p_k,\\
+ \dot p(kdt)=\dot p_k,
+\end{cases}
+\label{eq:or-local}
 \end{equation}
-con la definizione stampata subito dopo tale equazione:
+con
 \begin{equation}
  f_k=c_c p_{ib}(kdt)+c_s p_{gb}(kdt).
  \label{eq:or-force-printed}
 \end{equation}
-La soluzione sull'intervallo è denotata $p_{[kdt,(k+1)dt]}(t)$. Le condizioni di raccordo delle Eqq.~(11)--(12) originali sono
+La soluzione sul $k$-esimo sottointervallo \`e indicata con $p_{[kdt,(k+1)dt]}(t)$. Le condizioni iniziali del sottointervallo successivo sono assegnate mediante il raccordo
 \begin{equation}
 \begin{cases}
  p_k=p_{[(k-1)dt,kdt]}(kdt),\\
  \dot p_k=\dot p_{[(k-1)dt,kdt]}(kdt),
-\end{cases}\label{eq:or-matching}
+\end{cases}
+\qquad k=1,\ldots,N-1,
+\label{eq:or-matching}
 \end{equation}
+in modo da costruire la soluzione a tratti sull'intero intervallo di integrazione:
 \begin{equation}
  p(t)=\bigcup_{k=0}^{N-1}p_{[kdt,(k+1)dt]}(t).
  \label{eq:or-piecewise-solution}
 \end{equation}
-L'Appendice~\ref{app:dynamics} riporta radici e coefficienti nella forma del PDF, distinguendo radici semplici e coincidenti.
+La propagazione di posizione e velocit\`a deriva pertanto dalla soluzione analitica di ciascun problema locale e dall'applicazione successiva delle condizioni di raccordo~\citep{orlando2020analytic}.
 
-\subsection{Corrispondenza con l'implementazione valutata}
-Il PDF usa i fattori casuali nel forzante dell'Eq.~(5), ma li omette nella definizione di $f_k$ dopo l'Eq.~(9). Le Eqq.~\eqref{eq:or-force-time} e~\eqref{eq:or-force-printed} riproducono entrambe le espressioni della fonte, mantenendone visibile la differenza. Il codice dei risultati disponibili congela il forzante dell'Eq.~(5): questa scelta implementativa è specificata qui per rendere identificabile il modello effettivamente misurato.
+\subsection{Notazione per l'estensione parallela}
+\label{subsec:cpso-implementation}
 
-Da questo punto usiamo $N=N_p$ per la popolazione, $D=n$ per la dimensione e $K$ per gli aggiornamenti; l'intervallo è $h=\Delta t=dt$. La posizione è $\bm x_i^k$, il personal best $\bm p_i^k$ e il leader sociale $\bm s_i^k$. Si estrae una coppia scalare per particella e intervallo e si pone
+Per descrivere le estensioni considerate nel seguito, si utilizzeranno $N_p$ per la cardinalit\`a dello sciame, $D=n$ per la dimensione dello spazio di ricerca, $K$ per il numero di aggiornamenti e $h=\Delta t=dt$ per l'ampiezza del sottointervallo temporale. La posizione e la velocit\`a della particella $i$ all'inizio del sottointervallo $k$ sono indicate con $\bm x_i^k$ e $\bm v_i^k$. Si introducono inoltre il migliore individuale $\bm p_i^k$ e il leader sociale $\bm s_i^k$, coincidente con il migliore globale nel caso di comunicazione globale e con il migliore del vicinato nelle estensioni topologiche.
+
+Ponendo
 \begin{equation}
- a_i^k=c_c r_{1,i}^k,\quad b_i^k=c_s r_{2,i}^k,\quad q_i^k=a_i^k+b_i^k.
+ a_i^k=c_c r_{1,i}^k,\qquad
+ b_i^k=c_s r_{2,i}^k,\qquad
+ q_i^k=a_i^k+b_i^k,
  \label{eq:cpso-weights}
 \end{equation}
-La dinamica eseguita è il congelamento dell'Eq.~\eqref{eq:or-cauchy}:
+la corrispondente dinamica continua su un sottointervallo assume la forma
 \begin{equation}
- \ddot{\bm x}_i+(1-\mu_k)\dot{\bm x}_i+q_i^k\bm x_i
- =a_i^k\bm p_i^k+b_i^k\bm s_i^k.
+ \ddot{\bm x}_i+(1-\mu_k)\dot{\bm x}_i
+ +q_i^k\bm x_i=a_i^k\bm p_i^k+b_i^k\bm s_i^k.
  \label{eq:cpso-model}
 \end{equation}
-Per $q_i^k>0$ l'equilibrio locale è $(a_i^k\bm p_i^k+b_i^k\bm s_i^k)/q_i^k$. Nel caso Global, $\bm s_i^k$ corrisponde a $p_{gb}$; le altre topologie sostituiscono il leader globale con quello del vicinato, come estensione sperimentale. Anche la casualità per coordinata appartiene alle ablazioni di questo lavoro.
-
-La schedule del codice è un'istanza dell'Eq.~\eqref{eq:or-inertia} con $\lambda=k$ e $\lambda_{\max}=K-1$, per $K>1$; nel caso $K=1$ il codice usa $\mu_0=\mu_{\max}$. Le posizioni iniziali sono uniformi nel box e le velocità sono simmetriche con scala proporzionale alla sua ampiezza. Dopo la propagazione analitica si applicano clipping e restituzione della velocità uscente. Queste operazioni, il campionamento per particella e la specifica dei generatori descrivono le convenzioni del codice e sono distinte dalla formulazione originale appena trascritta. I risultati numerici conservano le configurazioni con cui sono stati ottenuti.
+Tale notazione consente di descrivere una stessa dinamica con diverse strutture d'interazione tra particelle, mantenendo distinto il modello continuo di base dalle scelte proprie della sua estensione parallela.
 
 \subsection{Semantica sincrona ed equivalenza osservabile}
 La valutazione temporale confronta tre esecutori sincroni (Tabella~\ref{tab:execution-modes}). In seriale, master--slave e particle-parallel si forma all'inizio della generazione uno snapshot dei migliori personali e dei leader. Le $N$ proposte usano questo stato immutabile; le valutazioni vengono registrate in slot indicizzati e i migliori sono aggiornati nell'ordine deterministico delle particelle. Tale disegno esclude che il completamento anticipato di una valutazione alteri il leader usato dalle altre particelle della generazione.

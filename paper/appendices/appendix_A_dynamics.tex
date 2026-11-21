@@ -1,101 +1,75 @@
 \section{Propagatore analitico, grafi e dettagli dei backend}
 \label{app:dynamics}
 
+\subsection{Soluzione analitica}
 
-\subsection{Soluzione analitica nella notazione del PDF}
-Nella notazione originale, le radici dell'Eq.~(13) sono
+La dinamica locale descritta dall'Eq.~\eqref{eq:or-local} \`e un'equazione differenziale lineare del secondo ordine a coefficienti costanti. L'equazione caratteristica associata alla parte omogenea \`e
 \begin{equation}
- \lambda_1^k=-\omega_k\left[\zeta_k+\sqrt{\zeta_k^2-1}\right],\qquad
- \lambda_2^k=-\omega_k\left[\zeta_k-\sqrt{\zeta_k^2-1}\right].
+ \lambda^2+2\zeta_k\omega_k\lambda+\omega_k^2=0,
+\end{equation}
+le cui radici sono
+\begin{equation}
+ \lambda_1^k=-\omega_k\left[\zeta_k+
+ \sqrt{\zeta_k^2-1}\right],\qquad
+ \lambda_2^k=-\omega_k\left[\zeta_k-
+ \sqrt{\zeta_k^2-1}\right].
  \label{eq:or-roots}
 \end{equation}
-Per $\lambda_1^k\ne\lambda_2^k$, le Eqq.~(14)--(15) del PDF riportano
+Per $\omega_k>0$, posto $\Delta_k=\zeta_k^2-1$, si distinguono esclusivamente i casi $\Delta_k\neq0$ e $\Delta_k=0$, corrispondenti rispettivamente a radici distinte e coincidenti. Il primo caso include radici reali o complesse coniugate, senza richiedere ulteriori espressioni di aggiornamento.
+
+\paragraph{Radici distinte ($\Delta_k\neq0$).}
+Se $\lambda_1^k\neq\lambda_2^k$, la soluzione generale \`e
 \begin{equation}
  p_{[(k-1)dt,kdt]}(t)=c_1^k\exp(\lambda_1^k t)
  +c_2^k\exp(\lambda_2^k t)+\frac{f_k}{\omega_k^2},
  \label{eq:or-distinct-solution}
 \end{equation}
+con coefficienti
 \begin{equation}
- c_1^k=\frac{\left(p_k-\dfrac{f_k}{\omega_k^2}\right)\lambda_2^k-\dot p_k}
- {(\lambda_2^k-\lambda_1^k)\exp(\lambda_1^k kdt)},\qquad
- c_2^k=\frac{\dot p_k-\left(p_k-\dfrac{f_k}{\omega_k^2}\right)\lambda_1^k}
+\begin{aligned}
+ c_1^k&=\frac{\left(p_k-\dfrac{f_k}{\omega_k^2}\right)
+ \lambda_2^k-\dot p_k}
+ {(\lambda_2^k-\lambda_1^k)\exp(\lambda_1^k kdt)},\\[3pt]
+ c_2^k&=\frac{\dot p_k-
+ \left(p_k-\dfrac{f_k}{\omega_k^2}\right)\lambda_1^k}
  {(\lambda_2^k-\lambda_1^k)\exp(\lambda_2^k kdt)}.
- \label{eq:or-distinct-coefficients}
+\end{aligned}
+\label{eq:or-distinct-coefficients}
 \end{equation}
-Per $\lambda_1^k=\lambda_2^k=\overline\lambda^k$, le Eqq.~(16)--(18) originali sono
+
+\paragraph{Radici coincidenti ($\Delta_k=0$).}
+Se $\lambda_1^k=\lambda_2^k=\overline\lambda^k$, la soluzione assume la forma
 \begin{equation}
- p_{[(k-1)dt,kdt]}(t)=(c_1^k+c_2^k t)\exp(\overline\lambda^k t)
- +\frac{f_k}{\omega_k^2},\label{eq:or-critical-solution}
+ p_{[(k-1)dt,kdt]}(t)
+ =(c_1^k+c_2^k t)\exp(\overline\lambda^k t)
+ +\frac{f_k}{\omega_k^2},
+ \label{eq:or-critical-solution}
+\end{equation}
+dove
+\begin{equation}
+ c_1^k=\left[
+ \left(p_k-\frac{f_k}{\omega_k^2}\right)
+ (1+\overline\lambda^k kdt)
+ -\dot p_k\,kdt\right]
+ \exp(-\overline\lambda^k kdt),
+ \label{eq:or-critical-c1}
 \end{equation}
 \begin{equation}
- c_1^k=\left[\left(p_k-\frac{f_k}{\omega_k^2}\right)(1+\overline\lambda^k kdt)
- -\dot p_k kdt\right]\exp(-\overline\lambda^k kdt),\label{eq:or-critical-c1}
-\end{equation}
-\begin{equation}
- c_2^k=\dot p_k-\overline\lambda^k\left(p_k-\frac{f_k}{\omega_k^2}\right).
+ c_2^k=\dot p_k-\overline\lambda^k
+ \left(p_k-\frac{f_k}{\omega_k^2}\right).
  \label{eq:or-critical-c2-printed}
 \end{equation}
-Queste espressioni mantengono la forma stampata nel PDF, compreso l'indice dell'intervallo nelle Eqq.~(14) e~(16). L'Eq.~(10) della stessa fonte usa invece $[kdt,(k+1)dt]$. Inoltre, per una scrittura in tempo assoluto, imporre $p(kdt)=p_k$ e $\dot p(kdt)=\dot p_k$ richiede nel secondo coefficiente critico il fattore $\exp(-\overline\lambda^k kdt)$, assente nell'Eq.~(18) stampata. La trascrizione dell'Eq.~\eqref{eq:or-critical-c2-printed} conserva tale formula; la valutazione numerica sottostante usa il tempo locale $\tau=t-kdt$, con condizioni iniziali a $\tau=0$. Questa distinzione evita di assimilare una correzione matematica alla riproduzione testuale della fonte.
 
-Nella fonte $\omega$ è la pulsazione non smorzata e $\zeta$ il rapporto di smorzamento. Con $\alpha=\zeta\omega$, la pulsazione smorzata è $\nu=\omega\sqrt{1-\zeta^2}$ quando $\zeta<1$. Il testo seguente usa $q=\omega_k^2$ e $\alpha=\zeta_k\omega_k$ per le formule numeriche, mantenendo distinta $\nu$ da $\omega_k$.
+\subsection{Aggiornamento analitico delle particelle}
 
-\subsection{Valutazione numerica in tempo locale}
-Si consideri una singola coordinata della dinamica~\eqref{eq:cpso-model}. Posto $a=c_c r_1$, $b=c_s r_2$, $q=a+b$, $\alpha=(1-\mu_k)/2$ e $F=ap+bs$, il problema locale \`e $x''+2\alpha x'+qx=F$. Per $q>0$ si definiscono $x_{\rm eq}=F/q$ e $y=x-x_{\rm eq}$; allora
+Per ogni sottointervallo $[kdt,(k+1)dt]$, la soluzione corrispondente al caso di radici distinte o coincidenti determina la traiettoria della particella. La posizione e la velocit\`a all'estremo destro si ricavano valutando rispettivamente la soluzione e la sua derivata temporale in $t=(k+1)dt$:
 \begin{equation}
- y''+2\alpha y'+qy=0,\quad y(0)=x^k-x_{\rm eq},\quad y'(0)=v^k.
- \label{eq:app-frozen}
+ \begin{cases}
+ p_{k+1}=p_{[kdt,(k+1)dt]}((k+1)dt),\\
+ \dot p_{k+1}=\dot p_{[kdt,(k+1)dt]}((k+1)dt).
+ \end{cases}
 \end{equation}
-Con $h=\Delta t$ e $\Delta=\alpha^2-q$, il propagatore C++ distingue i tre casi seguenti.
-
-\paragraph{Sottosmorzamento ($\Delta<0$).}
-Definiti $\nu=\sqrt{-\Delta}$, $C=(v^k+\alpha y_0)/\nu$, $G=y_0\cos(\nu h)+C\sin(\nu h)$, si ha
-\begin{equation}
- y(h)=e^{-\alpha h}G,\quad
- v(h)=e^{-\alpha h}\big[-\nu y_0\sin(\nu h)+\nu C\cos(\nu h)-\alpha G\big].
-\end{equation}
-
-\paragraph{Sovrasmorzamento ($\Delta>0$).}
-Siano $\lambda_{1,2}=-\alpha\pm\sqrt{\Delta}$ e
-\begin{equation}
- C_1=\frac{v^k-\lambda_2y_0}{\lambda_1-\lambda_2},\qquad
- C_2=\frac{\lambda_1y_0-v^k}{\lambda_1-\lambda_2}.
-\end{equation}
-Allora $y(h)=C_1e^{\lambda_1h}+C_2e^{\lambda_2h}$ e
-$v(h)=\lambda_1C_1e^{\lambda_1h}+\lambda_2C_2e^{\lambda_2h}$.
-
-\paragraph{Smorzamento critico ($\Delta=0$).}
-Posto $C_2=v^k+\alpha y_0$,
-\begin{equation}
- y(h)=e^{-\alpha h}(y_0+C_2h),\qquad
- v(h)=e^{-\alpha h}(v^k-\alpha C_2h).
-\end{equation}
-La posizione finale \`e $x^{k+1}=x_{\rm eq}+y(h)$; le formule restituiscono contemporaneamente la velocit\`a $v^{k+1}=v(h)$. L'implementazione definisce il caso numericamente critico mediante $|\Delta|\le 64\epsilon_{\rm mach}\max\{1,\alpha^2,q\}$. Il criterio \`e una tolleranza di floating point, non un quarto regime fisico.
-
-Se $q=0$, i coefficienti non negativi implicano $a=b=F=0$. La formula generale del propagatore, chiamato con equilibrio pari a zero, risolve il sistema omogeneo con una radice nulla e una radice $-2\alpha$; per $\alpha>0$ coincide con
-\begin{equation}
- v(h)=v^k e^{-2\alpha h},\qquad
- x(h)=x^k+\frac{1-e^{-2\alpha h}}{2\alpha}v^k,
-\end{equation}
-mentre per $\alpha=0$ si ha $x(h)=x^k+hv^k$, $v(h)=v^k$. La scelta $q=0$ ha probabilit\`a nulla sotto coefficienti casuali uniformi non degeneri, ma viene comunque gestita in modo consistente.
-
-L'inerzia \`e calcolata con il contatore $k$ dei $K$ aggiornamenti programmati:
-\begin{equation}
-\mu_k=\mu_{\max}-\frac{k}{K-1}(\mu_{\max}-\mu_{\min}),
-\quad k=0,\dots,K-1\quad (K>1),
-\label{eq:code-inertia-schedule}
-\end{equation}
-e $\mu_0=\mu_{\max}$ se $K=1$. L'estrazione $r_1,r_2$ avviene una volta per particella e intervallo ed \`e condivisa fra coordinate. La mappa di confinamento applica
-\begin{equation}
-(x_j,v_j)\mapsto
-\begin{cases}
-(\ell_j,-ev_j),&x_j<\ell_j,\ v_j<0,\\
-(\ell_j,v_j),&x_j<\ell_j,\ v_j\ge0,\\
-(u_j,-ev_j),&x_j>u_j,\ v_j>0,\\
-(u_j,v_j),&x_j>u_j,\ v_j\le0,\\
-(x_j,v_j),&\text{altrimenti};
-\end{cases}
-\end{equation}
-la valutazione segue la correzione. La propagazione analitica locale e il clipping costituiscono due trasformazioni algoritmiche distinte.
+Questi valori costituiscono le condizioni iniziali del successivo problema di Cauchy, secondo le condizioni di raccordo \eqref{eq:or-matching}. L'evoluzione dello sciame \`e quindi costruita applicando, a ogni intervallo, una delle due forme della soluzione analitica e aggiornando i migliori individuali e globale attraverso la valutazione della funzione obiettivo.
 
 \subsection{Costruzione esatta dei vicinati}
 Le reti non orientate sono statiche all'interno di una run; la lista dei vicini include sempre il nodo stesso, viene ordinata e non contiene duplicati. Per il caso global-best il leader \`e l'incumbent globale, con conservazione dell'indice in caso di parit\`a; per gli altri grafi gli ex aequo selezionano l'indice minimo. La Tabella~\ref{tab:app-graphs} identifica le otto configurazioni usate dai runner di scaling e topologia.
