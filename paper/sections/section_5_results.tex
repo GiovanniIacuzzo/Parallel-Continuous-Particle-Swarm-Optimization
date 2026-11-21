@@ -18,20 +18,39 @@ Il profilo del log-residuo varia in modo non monotono con il passo. La regione f
 \end{figure}
 
 \subsection{Scalabilità sincrona e granularità del carico}\label{subsec:res-sync}
-Le esecuzioni sincrone riproducono il risultato e la traccia del miglior valore della seriale a parità di FE. Nella diffusione inversa con 512 passi RK4 per valutazione, a $8\,192$ FE lo strong speedup del particle-parallel con otto worker è $3.83$ a $D=30$ (IC 95\%: $3.71$--$3.94$) e $3.96$ a $D=100$ (IC 95\%: $3.88$--$4.05$), con vicinato Global. A $D=30$, quattro worker raggiungono uno strong speedup di $3.23$. L'efficienza scende quindi da circa $0.81$ a $0.48$ passando da quattro a otto worker (Figura~\ref{fig:confirmed-sync}).
+Il confronto fra vicinati usa il CPSO \emph{particle-parallel} sincrono sulla diffusione inversa, con $D=30,100$ e $p=1,2,4,8$ worker. A parità di grafo e di dimensione, il budget e la traiettoria di ricerca restano invariati al variare del numero di worker. Ogni curva usa come riferimento il tempo a un worker dello stesso grafo. Il pannello \emph{Wheel} corrisponde alla topologia a stella della Tabella~\ref{tab:app-graphs}.
+
+Nelle misure esplorative, lo strong speedup cresce fino a otto worker per tutti i vicinati. Le stime puntuali passano da circa $2.7$--$3.2$ a quattro worker a $3.5$--$4.0$ a otto, considerando entrambe le dimensioni (Figura~\ref{fig:topology-strong-speedup}). L'efficienza scende da circa $68$--$79\%$ a $44$--$50\%$ (Figura~\ref{fig:topology-efficiency}). Le differenze fra vicinati sono contenute rispetto a questa perdita di efficienza. Poiché i rapporti usano un riferimento distinto per ciascun grafo, descrivono la scalabilità del singolo vicinato.
+
+\begin{figure*}[!htbp]
+ \centering
+ \includegraphics[width=\textwidth]{paper/fig03_parallel_strong_speedup.pdf}
+ \caption{Strong speedup $S_g(p)=T_{g,1}/T_{g,p}$ del CPSO sincrono per gli otto vicinati sulla diffusione inversa. Il riferimento per il grafo $g$ è lo stesso esecutore a un worker. Le curve distinguono $D=30$ e $D=100$. Le barre indicano gli intervalli bootstrap al 95\% e la linea tratteggiata il riferimento ideale $S_g(p)=p$.}
+ \label{fig:topology-strong-speedup}
+\end{figure*}
+
+\begin{figure*}[!htbp]
+ \centering
+ \includegraphics[width=\textwidth]{paper/fig04_parallel_strong_efficiency.pdf}
+ \caption{Efficienza $E_g(p)=S_g(p)/p$ per gli otto vicinati, calcolata sulle misure della Figura~\ref{fig:topology-strong-speedup}. Gli estremi degli intervalli sono divisi per $p$. La linea tratteggiata indica il riferimento ideale $E_g(p)=1$.}
+ \label{fig:topology-efficiency}
+\end{figure*}
+\FloatBarrier
+
+Nella verifica indipendente, le esecuzioni sincrone riproducono il risultato e la traccia del miglior valore della seriale a parità di FE. Nella diffusione inversa con 512 passi RK4 per valutazione, a $8\,192$ FE lo strong speedup del particle-parallel con otto worker è $3.83$ a $D=30$ (IC 95\%: $3.71$--$3.94$) e $3.96$ a $D=100$ (IC 95\%: $3.88$--$4.05$), con vicinato Global. A $D=30$, quattro worker raggiungono uno strong speedup di $3.23$. L'efficienza scende quindi da circa $0.81$ a $0.48$ passando da quattro a otto worker (Figura~\ref{fig:confirmed-sync}).
 
 \begin{figure}[H]
  \centering
- \includegraphics[width=0.9\columnwidth]{paper/fig03_main_sync_inverse.pdf}
+ \includegraphics[width=0.9\columnwidth]{paper/fig05_main_sync_inverse.pdf}
  \caption{Strong scaling del CPSO particle-parallel su diffusione inversa con 512 passi RK4 per FE, a $8\,192$ FE e con vicinato Global. Il riferimento è lo stesso esecutore a un worker. Gli intervalli bootstrap al 95\% sono calcolati sulle 30 repliche dopo l'aggregazione delle due sessioni.}
  \label{fig:confirmed-sync}
 \end{figure}
 
-La Figura~\ref{fig:confirmed-workers} mostra come cambia il rapporto $T_4/T_8$ al variare del costo per valutazione. Nella diffusione inversa a $8\,192$ FE, passando da 16 a 512 passi RK4 il rapporto passa da $0.93$ a $1.19$ a $D=30$ e da $1.05$ a $1.28$ a $D=100$. A $32\,768$ FE, otto worker riducono il tempo della diffusione inversa con 512 passi del $20.0\%$ e $21.6\%$ rispetto a quattro, nelle due dimensioni. Su Rastrigin, invece, il tempo aumenta del $39.9\%$ e $14.7\%$. La diffusione inversa a $D=30$ conferma il vantaggio di otto worker anche con Random-8 ($T_4/T_8=1.220$).
+Per valutare quando conviene passare da quattro a otto worker, la Figura~\ref{fig:confirmed-workers} mostra come cambia il rapporto $T_4/T_8$ al variare del costo per valutazione. Nella diffusione inversa a $8\,192$ FE, passando da 16 a 512 passi RK4 il rapporto passa da $0.93$ a $1.19$ a $D=30$ e da $1.05$ a $1.28$ a $D=100$. A $32\,768$ FE, otto worker riducono il tempo della diffusione inversa con 512 passi del $20.0\%$ e $21.6\%$ rispetto a quattro, nelle due dimensioni. Su Rastrigin, invece, il tempo aumenta del $39.9\%$ e $14.7\%$. La diffusione inversa a $D=30$ conferma il vantaggio di otto worker anche con Random-8 ($T_4/T_8=1.220$).
 
 \begin{figure}[H]
  \centering
- \includegraphics[width=0.9\columnwidth]{paper/fig04_main_4v8_forest.pdf}
+ \includegraphics[width=0.9\columnwidth]{paper/fig06_main_4v8_forest.pdf}
  \caption{Confronto fra quattro e otto worker con topologia Global. A sinistra, rapporto dei tempi sulla diffusione inversa in funzione dei passi RK4, a $8\,192$ FE. A destra, variazione percentuale $100(1-T_8/T_4)$ a $32\,768$ FE. Valori positivi indicano un risparmio con otto worker.}
  \label{fig:confirmed-workers}
 \end{figure}
@@ -40,21 +59,49 @@ La Figura~\ref{fig:confirmed-workers} mostra come cambia il rapporto $T_4/T_8$ a
 Sulla diffusione inversa a $D=30$, con topologia Global e otto worker, l'asincronia riduce il log-residuo di $0.253$ rispetto al particle-parallel (IC 95\% della differenza: $[-0.323,-0.176]$), mentre il rapporto dei tempi $T_{\rm sync}/T_{\rm async}=1.022$ ha intervallo $[0.991,1.054]$. Con Random-8 il contrasto di qualità è $-0.110$ (IC 95\%: $[-0.150,-0.067]$) e il rapporto temporale è $1.171$ (IC 95\%: $[1.132,1.214]$). Su Rastrigin a $D=30$ con otto worker l'asincrono impiega più tempo ($T_{\rm sync}/T_{\rm async}=0.804$, IC 95\%: $[0.776,0.831]$). La differenza di qualità è $-0.043$ e il suo intervallo comprende zero.
 
 \subsection{Qualità a parità di valutazioni}\label{subsec:res-scope}
-Su BBOB, il CPSO si colloca al terzo posto su 13 metodi a $10\,000$ FE in entrambe le dimensioni. A $50\,000$ FE è terzo a $D=20$ e quarto a $D=40$ (Tabella~\ref{tab:study3-ranks}). A tale budget ottiene un log-gap inferiore al controllo discreto abbinato su 12 funzioni su 14 in entrambe le dimensioni ($p_{\mathrm{Holm}}=0.336$ per entrambi i contrasti). Il bilancio contro CSO è di 3 vittorie, una parità e 10 sconfitte a $D=20$, e di 2 vittorie, una parità e 11 sconfitte a $D=40$. La Figura~\ref{fig:study3-bbob-d40} mostra la frazione di target raggiunti al variare del numero di valutazioni.
+La Tabella~\ref{tab:study3-ranks} riporta il rango medio dei 13 metodi per suite, dimensione e budget. Su BBOB, il CPSO si colloca al terzo posto su 13 metodi a $10\,000$ FE in entrambe le dimensioni. A $50\,000$ FE è terzo a $D=20$ e quarto a $D=40$. A tale budget ottiene un log-gap inferiore al controllo discreto abbinato su 12 funzioni su 14 in entrambe le dimensioni ($p_{\mathrm{Holm}}=0.336$ per entrambi i contrasti). Il bilancio contro CSO è di 3 vittorie, una parità e 10 sconfitte a $D=20$, e di 2 vittorie, una parità e 11 sconfitte a $D=40$. Rispetto al miglior riferimento di letteratura scelto separatamente per funzione, registra 3 vittorie, 3 parità e 50 sconfitte nelle quattro combinazioni di budget e dimensione. La Figura~\ref{fig:study3-bbob-d40} mostra la frazione di target raggiunti al variare del numero di valutazioni.
 
 Sulle sei funzioni standard, il CPSO è quarto o quinto nelle quattro combinazioni di budget e dimensione. Migliora il proprio riferimento Global su tutte le funzioni in ciascuna combinazione. Contro la migliore PSO di letteratura per funzione, registra due parità e 22 sconfitte. A $500\,000$ FE e $D=20$, i due propagatori abbinati ottengono due vittorie ciascuno e due parità. Le curve a $D=100$ mostrano come si sviluppano i divari durante la ricerca (Figura~\ref{fig:study3-native-d100}).
-\input{tables/study3_ranks.tex}
+\begin{table*}[!t]
+\centering\small
+\caption{Ranghi medi dei 13 metodi a parità di valutazioni della funzione obiettivo. I ranghi sono calcolati entro ciascun blocco appaiato e mediati assegnando lo stesso peso a ogni funzione. Valori più bassi indicano risultati migliori. In grassetto il rango medio minimo di ciascuna colonna.}
+\label{tab:study3-ranks}
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+ & \multicolumn{4}{c}{Suite nativa (6 funzioni)} & \multicolumn{4}{c}{COCO BBOB (14 funzioni)} \\
+\cmidrule(lr){2-5}\cmidrule(l){6-9}
+Budget (FE) & \multicolumn{2}{c}{$50\,000$} & \multicolumn{2}{c}{$500\,000$} & \multicolumn{2}{c}{$10\,000$} & \multicolumn{2}{c}{$50\,000$} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(l){8-9}
+Metodo & $D=20$ & $D=100$ & $D=20$ & $D=100$ & $D=20$ & $D=40$ & $D=20$ & $D=40$ \\
+\midrule
+CPSO Random-8 & 4.04 & 4.37 & 6.35 & 4.98 & 3.67 & 3.66 & 4.81 & 4.66 \\
+CPSO Global & 8.36 & 7.59 & 11.49 & 11.19 & 7.74 & 7.99 & 8.97 & 9.56 \\
+PSO discreta abbinata & 10.24 & 12.86 & 6.42 & 11.03 & 10.34 & 11.03 & 9.12 & 10.77 \\
+\midrule
+Classic gbest & 13.00 & 11.03 & 13.00 & 12.93 & 9.53 & 9.41 & 11.59 & 11.10 \\
+Inertia gbest & 5.42 & 5.90 & 6.57 & 5.41 & 5.63 & 5.49 & 4.95 & 5.06 \\
+Inertia lbest ring & 8.01 & 8.50 & 7.62 & 7.82 & 7.37 & 7.79 & 6.60 & 7.01 \\
+Constriction gbest & 3.80 & 4.54 & 6.60 & 5.63 & 5.67 & 5.84 & 4.93 & 4.69 \\
+CLPSO & 10.92 & 9.97 & 5.31 & 4.48 & 12.61 & 12.33 & 11.14 & 11.57 \\
+FIPS ring & 10.72 & 12.11 & 6.99 & 10.40 & 11.23 & 11.74 & 9.71 & 9.67 \\
+SPSO-2011 & 3.75 & 2.46 & \textbf{4.33} & 2.34 & 5.04 & 4.99 & 4.91 & 4.55 \\
+SL-PSO & 2.81 & 2.69 & 5.33 & 4.44 & \textbf{2.89} & \textbf{2.19} & 4.78 & 3.56 \\
+CSO & \textbf{2.31} & \textbf{1.36} & 4.60 & \textbf{2.14} & 3.00 & 2.61 & \textbf{2.93} & \textbf{2.51} \\
+DMS-PSO & 7.62 & 7.62 & 6.39 & 8.22 & 6.27 & 5.94 & 6.56 & 6.29 \\
+\bottomrule
+\end{tabular}
+\end{table*}
 
 \begin{figure}[H]
  \centering
- \includegraphics[width=0.9\columnwidth]{paper/fig05_target_ecdf_fe_d40.pdf}
+ \includegraphics[width=0.9\columnwidth]{paper/fig07_target_ecdf_fe_d40.pdf}
  \caption{Raggiungimento dei target su COCO BBOB a $D=40$ entro $50\,000$ FE. Ogni curva aggrega otto target per ciascuna delle 14 funzioni e cinque istanze.}
  \label{fig:study3-bbob-d40}
 \end{figure}
 
-\begin{figure*}[!t]
+\begin{figure*}[!htbp]
  \centering
- \includegraphics[width=\textwidth]{paper/fig06_convergence_fe_d100.pdf}
+ \includegraphics[width=0.85\textwidth]{paper/fig08_convergence_fe_d100.pdf}
  \caption{Confronto nativo a $D=100$. Gap mediano del miglior valore osservato su 20 repliche durante le esecuzioni da $500\,000$ FE. Sono mostrati il CPSO e le quattro varianti PSO incluse anche nella campagna temporale.}
  \label{fig:study3-native-d100}
 \end{figure*}
@@ -65,10 +112,12 @@ Le curve complementari a $D=20$ e le ECDF dei target sono in Appendice~\ref{app:
 Nei 160 confronti appaiati a uno e quattro worker, la traccia del migliore valore del CPSO coincide sul prefisso comune di FE. A 60 s, le mediane dei rapporti appaiati $\mathrm{FE}_4/\mathrm{FE}_1$ sono $1.60$ e $2.29$ su Rastrigin e $2.82$ e $2.91$ sulla diffusione inversa, rispettivamente a $D=20$ e $D=100$. La differenza di gap fra uno e quattro worker resta entro la soglia di parità pratica in tutte le combinazioni di problema, dimensione e durata.
 
 Nella diffusione inversa a $D=20$, tutte le 20 repliche CPSO delle due configurazioni raggiungono il target $10^{-8}$ entro 60 s. Il tempo mediano è $1.16$ s a un worker e $0.32$ s a quattro worker, a fronte di $0.33$ s per CSO e $0.26$ s per SL-PSO. Su Rastrigin a $D=100$ (Figura~\ref{fig:study3-time-d100}), a 60 s il CPSO raggiunge un gap mediano di $239.4$ con $36.0$ milioni di FE mediane. CSO ottiene $53.2$ con $5.1$ milioni di FE. Il gap del CPSO cambia poco fra 15 e 60 s. Rispetto alla migliore variante di letteratura in ciascuna delle otto combinazioni a tempo fissato, il CPSO a quattro worker ottiene due parità sulla diffusione inversa a $D=20$ e sei sconfitte.
-\begin{figure*}[!t]
+
+\begin{figure}[H]
  \centering
- \includegraphics[width=0.90\textwidth]{paper/fig07_convergence_seconds_d100.pdf}
+ \includegraphics[width=0.85\columnwidth]{paper/fig09_convergence_seconds_d100.pdf}
  \caption{Gap mediano del miglior valore osservato a $D=100$ durante le esecuzioni da 60 s. Il confronto affianca al CPSO a quattro worker il controllo a un worker e quattro varianti PSO.}
  \label{fig:study3-time-d100}
-\end{figure*}
+\end{figure}
+
 \FloatBarrier
