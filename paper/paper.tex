@@ -19,11 +19,7 @@
 \usepackage[colorlinks=true,linkcolor=blue!40!black,citecolor=blue!40!black,urlcolor=blue!40!black]{hyperref}
 \usepackage[nameinlink,noabbrev]{cleveref}
 \hypersetup{pdftitle={Continuous Particle Swarm Optimization multicore: sensibilità, architetture e confronto PSO},pdfauthor={Giovanni Giuseppe Iacuzzo}}
-\newtheorem{proposition}{Proposizione}[section]
-\newtheorem{theorem}[proposition]{Teorema}
-\newtheorem{lemma}[proposition]{Lemma}
 \newcommand{\R}{\mathbb{R}}
-\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
 \emergencystretch=1.5em
 \allowdisplaybreaks[1]
 \setlength{\tabcolsep}{4pt}
@@ -52,24 +48,24 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-La Continuous Particle Swarm Optimization (CPSO) aggiorna le particelle mediante la soluzione analitica locale di un problema dinamico. Su Apple M2 studiamo la sensibilità al passo, l'effetto dell'organizzazione multicore e la qualità della ricerca rispetto a dieci varianti PSO. L'analisi del passo individua una regione favorevole di valori subunitari per la configurazione di riferimento. Le misure di scaling distinguono il guadagno a traiettoria invariata dagli effetti dell'asincronia sulla ricerca. Nel confronto confermativo, il CPSO sincrono Random-8 con coefficienti casuali per coordinata e passo fisso $h=1$ si colloca fra il terzo e il quarto posto su 13 metodi nel campione COCO BBOB. A $50\,000$ valutazioni ottiene un gap migliore del controllo discreto abbinato su 12 delle 14 funzioni in ciascuna dimensione, con evidenza descrittiva dopo correzione multipla. A 60 secondi, quattro worker eseguono da $1.60$ a $2.91$ volte le valutazioni di un worker nelle quattro combinazioni di funzione e dimensione. Nella diffusione inversa a $D=20$, il tempo mediano al target $10^{-8}$ scende da $1.16$ a $0.32$ secondi. Su Rastrigin il maggiore throughput si accompagna a un gap finale pressoché invariato rispetto a un worker e superiore a quello delle baseline più efficaci.
+La Continuous Particle Swarm Optimization (CPSO) aggiorna la posizione e la velocità delle particelle risolvendo analiticamente un problema dinamico su ciascun intervallo temporale. Il passo del propagatore regola il moto dello sciame, mentre l'esecuzione multicore determina quante valutazioni della funzione obiettivo si possono completare entro una scadenza. Studiamo come questi due aspetti incidano sulla qualità della soluzione e sul tempo necessario a raggiungere un'accuratezza assegnata.
+
+Il primo studio misura la sensibilità al passo su sei funzioni, due dimensioni e tre budget di valutazione, con una verifica su repliche indipendenti. Il secondo confronta le modalità di esecuzione su Apple M2 e misura gli effetti del costo della funzione obiettivo e della sincronizzazione. Il terzo confronta il CPSO con un controllo discreto abbinato e con dieci varianti PSO a parità di valutazioni, su funzioni standard e su un campione COCO BBOB. Un confronto a tempo fissato misura inoltre il progresso della ricerca entro 15 e 60 secondi.
+
+La configurazione di riferimento mostra una regione favorevole per passi compresi approssimativamente tra $0.2$ e $0.7$. Nella diffusione inversa a dimensione $100$, l'esecuzione sincrona con otto worker conserva la traiettoria e raggiunge uno strong speedup di $3.96$. Su BBOB, a $50\,000$ valutazioni, il CPSO si colloca al terzo e al quarto posto su 13 metodi a dimensione $20$ e $40$, rispettivamente. Il gap finale è inferiore a quello del controllo discreto su 12 delle 14 funzioni in ciascuna dimensione. Nella diffusione inversa a dimensione $20$, quattro worker riducono da $1.16$ a $0.32$ secondi il tempo mediano per raggiungere un gap di $10^{-8}$. Su Rastrigin il maggior numero di valutazioni lascia il gap finale pressoché invariato. Il beneficio del parallelismo dipende quindi sia dal costo della valutazione sia dal progresso che la dinamica consente con le valutazioni aggiuntive.
 \end{abstract}
-\noindent\textbf{Parole chiave:} Continuous Particle Swarm Optimization; parallelismo multicore; sensibilità del passo; modelli asincroni e a isole; speedup; benchmark PSO.
+\noindent\textbf{Parole chiave.} Continuous Particle Swarm Optimization, parallelismo multicore, propagatore analitico, tempo al target, COCO BBOB.
 
 \input{sections/section_1_introduction.tex}
-\FloatBarrier
 \input{sections/section_2_related_work.tex}
-\FloatBarrier
-\input{sections/section_2_model_and_semantics.tex}
-\FloatBarrier
-\input{sections/section_3_experimental_protocol.tex}
-\FloatBarrier
-\input{sections/section_4_results.tex}
-\input{sections/section_5_discussion.tex}
-\input{sections/section_6_conclusions.tex}
+\input{sections/section_3_model_and_semantics.tex}
+\input{sections/section_4_experimental_protocol.tex}
+\input{sections/section_5_results.tex}
+\input{sections/section_6_discussion.tex}
+\input{sections/section_7_conclusions.tex}
 
-\paragraph{Disponibilità del codice.}
-Il motore di ottimizzazione, le configurazioni e gli script di analisi sono disponibili nella \href{https://github.com/GiovanniIacuzzo/Parallel-Continuous-Particle-Swarm-Optimization}{repository pubblica}. Il protocollo e le campagne a cui si riferiscono le figure sono identificati nelle appendici.
+\renewcommand{\bibfont}{\small}
+\setlength{\bibsep}{1pt}
 \bibliographystyle{unsrtnat}
 \bibliography{references}
 \clearpage\onecolumn\appendix
@@ -81,12 +77,6 @@ Il motore di ottimizzazione, le configurazioni e gli script di analisi sono disp
 \FloatBarrier
 \input{appendices/appendix_B_baselines.tex}
 \FloatBarrier
-\input{appendices/appendix_C_scalar_randomness.tex}
+\input{appendices/appendix_C_final_comparisons.tex}
 \FloatBarrier
-\input{appendices/appendix_D_campaigns.tex}
-\input{appendices/appendix_E_extended_results.tex}
-\input{appendices/appendix_F_cec_values.tex}
-\input{appendices/appendix_G_controlled_results.tex}
-\input{appendices/appendix_H_parallel_results.tex}
-\clearpage
 \end{document}

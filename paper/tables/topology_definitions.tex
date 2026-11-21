@@ -1,0 +1,19 @@
+\begin{table*}[!tbp]
+\centering\small
+\caption{Regole di costruzione degli otto vicinati sociali. Il parametro $k$ dei grafi R4 e R8 controlla la densità di campionamento.}
+\label{tab:app-graphs}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Vicinato & Collegamenti tra particelle \\
+\midrule
+Global & Ogni particella ha accesso al migliore dell'intero sciame. \\
+Ring & Ogni nodo è collegato ai due adiacenti nell'anello. \\
+Von Neumann & Quattro adiacenze ortogonali su una griglia toroidale. Con $N_p=64$ la griglia è $8\times 8$. \\
+Stella & Un hub scelto casualmente è collegato a tutti gli altri nodi. \\
+Random-4 (R4) & Archi Bernoulli con probabilità $4/(N_p-1)$. Eventuali componenti vengono unite mediante ponti. \\
+Random-8 (R8) & Archi Bernoulli con probabilità $8/(N_p-1)$ e stessa regola di connessione. \\
+Small-world & Anello di grado quattro con probabilità di ricollegamento $0.15$ per arco. \\
+Scale-free & Attaccamento preferenziale con due archi per nuovo nodo, a partire da tre nodi interamente connessi. \\
+\bottomrule
+\end{tabularx}
+\end{table*}

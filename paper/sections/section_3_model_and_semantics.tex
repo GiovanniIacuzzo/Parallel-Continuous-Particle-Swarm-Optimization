@@ -1,0 +1,157 @@
+\section{Modello CPSO e semantiche di esecuzione}
+\label{sec:model}
+
+\subsection{Formulazione}
+\label{subsec:cpso-original-formulation}
+
+Il Continuous Particle Swarm Optimization (CPSO) introduce una descrizione continua del moto delle particelle a partire dal modello discreto del Particle Swarm Optimization (PSO)~\citep{orlando2020analytic}. Si consideri uno sciame composto da $N_p$ particelle in uno spazio di ricerca di dimensione $n$. La posizione e la velocit\`a della particella $i$ al passo $\lambda$ sono indicate rispettivamente con $p_i^\lambda$ e $v_i^\lambda$, mentre $p_{ib}$ e $p_{gb}$ rappresentano la migliore posizione individuale e quella globale. L'aggiornamento discreto \`e definito da
+\begin{equation}
+ p_i^{\lambda+1}=p_i^\lambda+v_i^{\lambda+1},
+ \label{eq:or-discrete-position}
+\end{equation}
+\begin{equation}
+ v_i^{\lambda+1}=\mu v_i^\lambda
+ +c_c r_1(p_{ib}-p_i^\lambda)
+ +c_s r_2(p_{gb}-p_i^\lambda),
+ \label{eq:or-discrete-velocity}
+\end{equation}
+dove $c_c$ e $c_s$ sono i coefficienti cognitivo e sociale, $r_1,r_2\in[0,1]$ sono variabili casuali e $\mu$ \`e il peso d'inerzia, che varia linearmente secondo
+\begin{equation}
+ \mu=\mu_{\max}-\frac{\mu_{\max}-\mu_{\min}}{\lambda_{\max}}\lambda.
+ \label{eq:or-inertia}
+\end{equation}
+Sottraendo $v_i^\lambda$ ai due membri dell'equazione della velocit\`a si ottiene
+\begin{equation}
+\begin{aligned}
+ v_i^{\lambda+1}-v_i^\lambda
+ ={}&(\mu-1)v_i^\lambda+c_c r_1(p_{ib}-p_i^\lambda)\\
+ &+c_s r_2(p_{gb}-p_i^\lambda).
+\end{aligned}
+\label{eq:or-velocity-difference}
+\end{equation}
+
+Interpretando l'incremento temporale unitario della formulazione discreta come un intervallo infinitesimo $\delta t$ e considerando il limite $\delta t\to0$, il quoziente incrementale della velocit\`a conduce a un'equazione differenziale del secondo ordine. Omettendo l'indice della particella, si introduce il vettore posizione $p(t)=[x_1(t),\ldots,x_n(t)]$. Il corrispondente problema di Cauchy \`e
+\begin{equation}
+\begin{cases}
+ \ddot p(t)+(1-\mu(t))\dot p(t)
+ +(c_c r_1(t)+c_s r_2(t))p(t)=f(t),\\
+ p(0)=p_0,\\
+ \dot p(0)=\dot p_0,
+\end{cases}
+\label{eq:or-cauchy}
+\end{equation}
+con termine forzante
+\begin{equation}
+ f(t)=c_c r_1(t)p_{ib}(t)+c_s r_2(t)p_{gb}(t).
+ \label{eq:or-force-time}
+\end{equation}
+La funzione obiettivo da minimizzare sar\`a indicata con $J$, riservando il simbolo $f$ al termine forzante dell'equazione differenziale.
+
+Introducendo la pulsazione naturale $\omega:[0,T]\to[0,+\infty)$ e il rapporto di smorzamento $\zeta:[0,T]\to[0,1]$ mediante
+\begin{equation}
+\begin{cases}
+ 2\zeta(t)\omega(t)=1-\mu(t),\\
+ \omega^2(t)=c_c r_1(t)+c_s r_2(t),
+\end{cases}
+\label{eq:or-oscillator-parameters}
+\end{equation}
+il problema assume la forma di un oscillatore armonico smorzato:
+\begin{equation}
+\begin{cases}
+ \ddot p(t)+2\zeta(t)\omega(t)\dot p(t)
+ +\omega^2(t)p(t)=f(t),\\
+ p(0)=p_0,\\
+ \dot p(0)=\dot p_0.
+\end{cases}
+\label{eq:or-oscillator}
+\end{equation}
+
+Per ricavare la soluzione analitica, l'intervallo di integrazione $[0,T]$ viene suddiviso in $N$ sottointervalli di ampiezza $dt=T/N$. In ciascuno di essi si assumono costanti la pulsazione e il rapporto di smorzamento:
+\begin{equation}
+\begin{cases}
+ \omega(t)=\omega_k,\\
+ \zeta(t)=\zeta_k,
+\end{cases}
+\qquad t\in[kdt,(k+1)dt],\quad k=0,\ldots,N-1.
+\label{eq:or-piecewise}
+\end{equation}
+Si ottiene cos\`i, su ogni sottointervallo, il problema lineare a coefficienti costanti
+\begin{equation}
+\begin{cases}
+ \ddot p(t)+2\zeta_k\omega_k\dot p(t)+\omega_k^2p(t)=f_k,\\
+ p(kdt)=p_k,\\
+ \dot p(kdt)=\dot p_k,
+\end{cases}
+\label{eq:or-local}
+\end{equation}
+con
+\begin{equation}
+ f_k=c_c p_{ib}(kdt)+c_s p_{gb}(kdt).
+ \label{eq:or-force-printed}
+\end{equation}
+La soluzione sul $k$-esimo sottointervallo \`e indicata con $p_{[kdt,(k+1)dt]}(t)$. Le condizioni iniziali del sottointervallo successivo sono assegnate mediante il raccordo
+\begin{equation}
+\begin{cases}
+ p_k=p_{[(k-1)dt,kdt]}(kdt),\\
+ \dot p_k=\dot p_{[(k-1)dt,kdt]}(kdt),
+\end{cases}
+\qquad k=1,\ldots,N-1,
+\label{eq:or-matching}
+\end{equation}
+in modo da costruire la soluzione a tratti sull'intero intervallo di integrazione:
+\begin{equation}
+ p(t)=\bigcup_{k=0}^{N-1}p_{[kdt,(k+1)dt]}(t).
+ \label{eq:or-piecewise-solution}
+\end{equation}
+La propagazione di posizione e velocit\`a deriva pertanto dalla soluzione analitica di ciascun problema locale e dall'applicazione successiva delle condizioni di raccordo~\citep{orlando2020analytic}.
+
+\subsection{Notazione per l'estensione parallela}
+\label{subsec:cpso-implementation}
+
+Per l'estensione parallela si usano $N_p$ per la cardinalit\`a dello sciame, $D=n$ per la dimensione dello spazio di ricerca, $K$ per il numero di aggiornamenti e $h=\Delta t=dt$ per l'ampiezza del sottointervallo temporale. La posizione e la velocit\`a della particella $i$ all'inizio del sottointervallo $k$ sono indicate con $\bm x_i^k$ e $\bm v_i^k$. Si introducono inoltre il migliore individuale $\bm p_i^k$ e il leader sociale $\bm s_i^k$, coincidente con il migliore globale nel caso di comunicazione globale e con il migliore del vicinato nelle estensioni topologiche.
+
+Ponendo
+\begin{equation}
+ a_i^k=c_c r_{1,i}^k,\qquad
+ b_i^k=c_s r_{2,i}^k,\qquad
+ q_i^k=a_i^k+b_i^k,
+ \label{eq:cpso-weights}
+\end{equation}
+la corrispondente dinamica continua su un sottointervallo assume la forma
+\begin{equation}
+ \ddot{\bm x}_i+(1-\mu_k)\dot{\bm x}_i
+ +q_i^k\bm x_i=a_i^k\bm p_i^k+b_i^k\bm s_i^k.
+ \label{eq:cpso-model}
+\end{equation}
+Tale notazione consente di descrivere una stessa dinamica con diverse strutture d'interazione tra particelle, mantenendo distinto il modello continuo di base dalle scelte proprie della sua estensione parallela. La soluzione locale dell'Eq.~\eqref{eq:cpso-model} è riportata in Appendice~\ref{app:dynamics}.
+
+\subsection{Modalità di esecuzione}
+La Tabella~\ref{tab:execution-modes} distingue le tre modalità sincrone. A inizio generazione, ciascuna modalità fissa i migliori individuali e i leader sociali da cui partono tutte le proposte. I valori obiettivo sono raccolti prima di aggiornare i migliori in ordine di particella. Con un obiettivo deterministico e condizioni iniziali, coefficienti casuali e aritmetica comuni, due esecuzioni che partono dallo stesso stato calcolano le stesse proposte e raggiungono lo stesso stato alla generazione successiva. Nella modalità asincrona, l'informazione resa disponibile al completamento delle singole valutazioni può influenzare gli aggiornamenti successivi.
+
+\begin{table*}[!tbp]
+\centering\small
+\caption{Modalità sincrone del CPSO e ripartizione del lavoro in ciascuna generazione.}
+\label{tab:execution-modes}
+\begin{tabularx}{\textwidth}{@{}p{2.7cm}X X p{3.25cm}@{}}
+\toprule
+Modalità & Distribuzione del lavoro & Disponibilità del leader & Ruolo nel confronto \\
+\midrule
+Seriale & Inizializzazione, propagazione e valutazioni su un solo thread. & Fissato a inizio generazione. & Riferimento seriale. \\
+Master--slave & Valutazioni distribuite. Propagazione e aggiornamento dei migliori seriali. & Fissato a inizio generazione. & Parallelismo delle valutazioni. \\
+Particle-parallel & Inizializzazione, propagazione e valutazioni distribuite. Aggiornamento ordinato dei migliori. & Fissato a inizio generazione. & Parallelismo per particella. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+La valutazione della popolazione iniziale e $K$ aggiornamenti completi per particella richiedono
+\begin{equation}
+ B_{\mathrm{FE}}=N_p(K+1)
+ \label{eq:fe-budget}
+\end{equation}
+valutazioni della funzione obiettivo (FE). Nei confronti con le varianti PSO si contabilizzano le valutazioni effettive, poiché alcuni metodi rivalutano solo una parte dello sciame a ciascuna iterazione.
+
+\subsection{Topologie sociali}
+Il grafo sociale definisce l'insieme di particelle da cui ciascuna può apprendere. I grafi sono non orientati e restano fissi durante l'esecuzione. Il vicinato comprende la particella stessa e il suo leader è il migliore tra i punti personali dei vicini. Le otto configurazioni corrispondono a sette famiglie, con due livelli di densità per il grafo casuale. La Figura~\ref{fig:topology-schematics} illustra i collegamenti e la Tabella~\ref{tab:app-graphs} ne specifica la costruzione. Global e Random-8 sono i vicinati impiegati nelle campagne finali di cui alla Sezione~\ref{sec:exp}.
+
+\input{sections/figure_topologies_tikz.tex}
+\input{tables/topology_definitions.tex}

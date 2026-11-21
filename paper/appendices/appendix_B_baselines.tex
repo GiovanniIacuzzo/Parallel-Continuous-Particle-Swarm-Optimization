@@ -1,11 +1,11 @@
 \section{Formulazioni e configurazioni delle baseline PSO}
 \label{app:baselines}
 
-Le baseline sono algoritmi PSO discreti in spazio decisionale continuo e sono implementate in moduli NumPy distinti dal nucleo CPSO C++. Le formule seguenti specificano le configurazioni descritte nel protocollo, inclusi gli adattamenti di popolazione, dominio e budget. 
+Le baseline sono algoritmi PSO discreti in spazio decisionale continuo. Le formule seguenti specificano le configurazioni dello Studio III, inclusi gli adattamenti di popolazione, dominio e budget.
 
 \subsection{Parametri e adattamenti comuni}
 
-Nello Studio III la popolazione è fissata a $N=100$. Le campagne a FE fissate assegnano lo stesso budget per problema e metodo. La campagna temporale assegna la stessa durata. Per ogni blocco appaiato viene usato lo stesso identificatore di seme, con inizializzazioni e generatori propri di ogni metodo. La velocità iniziale è in generale campionata in $[-0.1w_j,0.1w_j]$, dove $w_j=u_j-\ell_j$; SL-PSO e Competitive Swarm Optimizer iniziano con velocità nulla, mentre SPSO-2011 usa la propria inizializzazione nel box normalizzato.
+Nello Studio III la popolazione è fissata a $N=100$. Le campagne a FE fissate assegnano lo stesso budget per problema e metodo. La campagna temporale assegna la stessa durata. Le misure sono appaiate per blocco sperimentale. La velocità iniziale è in generale campionata in $[-0.1w_j,0.1w_j]$, dove $w_j=u_j-\ell_j$; SL-PSO e Competitive Swarm Optimizer iniziano con velocità nulla, mentre SPSO-2011 usa la propria inizializzazione nel box normalizzato.
 
 \begin{table}[H]
 \centering
@@ -30,7 +30,7 @@ DMS-PSO & $c_1=c_2=2$, $w:0.9\to0.2$, gruppo obiettivo 3, regroup 5 & $0.2w_j$ &
 \end{tabularx}
 \end{table}
 
-Per i metodi con limite di velocità, $V_{\max}=0.2(u_j-\ell_j)$ per coordinata. Le baseline che non lo usano non ricevono un limite implicito. La mappa clamp--restitution è comune per i metodi che non prescrivono una regola di confinamento propria; SPSO-2011 mantiene il proprio clipping e inversione della componente uscente. Le iterazioni sono sincrone rispetto a snapshot congelati; l'ordine delle valutazioni non crea un aggiornamento asincrono accidentale.
+Per i metodi con limite di velocità, $V_{\max}=0.2(u_j-\ell_j)$ per coordinata. La mappa clamp--restitution è comune per i metodi che non prescrivono una regola di confinamento propria; SPSO-2011 mantiene il proprio clipping e inversione della componente uscente. Nelle iterazioni sincrone gli attrattori restano fissati fino al completamento del lotto.
 
 \subsection{Fattore di costrizione}
 
@@ -53,23 +53,23 @@ La baseline con inerzia utilizza $w_t$ decrescente linearmente da $0.9$ a $0.4$,
 \end{equation}
 con esemplari selezionati per coordinata, $c=1.49445$ e refresh gap pari a sette generazioni. La baseline usa lo snapshot congelato e il limite di velocità $0.2$ volte la larghezza del dominio.
 
-\subsection{SL-PSO: formula implementata e adattamento della popolazione}
+\subsection{SL-PSO e dimensione della popolazione}
 
-SL-PSO ordina la popolazione dal peggiore al migliore; ogni particella non migliore può apprendere da dimostratori con fitness superiore. La versione presente nel codice usa la stessa legge di probabilità di Cheng e Jin \citep{ChengJin2015SLPSO}, espressa con un rango zero-based $r=0,\ldots,N-2$:
+SL-PSO ordina la popolazione dal peggiore al migliore. Ogni particella può apprendere da dimostratori che hanno un valore obiettivo inferiore al suo. La legge di probabilità di apprendimento \citep{ChengJin2015SLPSO} è espressa mediante il rango $r=0,\ldots,N-2$:
 \begin{equation}
  \gamma=\beta\frac{D}{M},\qquad
  P_r=\left(1-\frac{r}{N}\right)^\eta,
  \qquad \eta=\alpha\log\!\left(\max\left\{1,\left\lceil\frac{D}{M}\right\rceil\right\}\right),
  \label{eq:app-slpso-impl}
 \end{equation}
-con $M=100$, $\alpha=0.5$, $\beta=0.01$. Nella notazione originale, che usa il rango one-based $i=1,\ldots,m-1$, la probabilità è $P_i^L=(1-(i-1)/m)^{\alpha\log\lceil D/M\rceil}$; ponendo $r=i-1$ e $N=m$ si ottiene esattamente la forma implementata. Il fattore $\max\{1,\cdot\}$ non altera la formula, poiché $D,M$ sono positivi e $\lceil D/M\rceil\geq1$. Se l'apprendimento viene attivato, per ogni coordinata è selezionato un dimostratore migliore e lo spostamento è
+con $M=100$, $\alpha=0.5$, $\beta=0.01$. Nella notazione originale, che usa il rango one-based $i=1,\ldots,m-1$, la probabilità è $P_i^L=(1-(i-1)/m)^{\alpha\log\lceil D/M\rceil}$; ponendo $r=i-1$ e $N=m$ si ottiene la forma precedente. Per $D,M>0$ si ha $\lceil D/M\rceil\geq1$. Se l'apprendimento viene attivato, per ogni coordinata è selezionato un dimostratore migliore e lo spostamento è
 \begin{equation}
  \Delta x_{i,j}^{t+1}=r_1v_{i,j}^t
  +r_2(x_{k(i,j),j}^t-x_{i,j}^t)
  +r_3\gamma(\bar x_j^t-x_{i,j}^t),
  \label{eq:app-slpso-update}
 \end{equation}
-con $r_1,r_2,r_3\sim U(0,1)$ e un dimostratore selezionato indipendentemente per coordinata fra le particelle migliori. La configurazione dello Studio III mantiene $N=100$ a parità di budget; la fonte primaria \citep{ChengJin2015SLPSO} raccomanda invece $m=M+\lfloor D/10\rfloor$ con $M=100$. I risultati dello Studio III per SL-PSO si riferiscono alla popolazione comune di 100 particelle.
+con $r_1,r_2,r_3\sim U(0,1)$ e un dimostratore selezionato indipendentemente per coordinata fra le particelle migliori. La popolazione comune di $N=100$ particelle sostituisce qui la regola dimensionale $m=M+\lfloor D/10\rfloor$ con $M=100$.
 \subsection{SPSO-2011}
 
 La baseline SPSO-2011 costruisce un grafo diretto casuale di informant con $K=3$ informant più il self. Sia $p_i$ il personal best e $l_i$ il miglior personal best nell'insieme di informant. Il centro di gravità è
@@ -85,18 +85,18 @@ con il centro a due punti $G_i=x_i+c(p_i-x_i)/2$ nel caso $p_i=l_i$. Il campione
  \qquad \omega=(2\ln2)^{-1}.
  \label{eq:app-spso-update}
 \end{equation}
-Le coordinate sono normalizzate nel box unitario per la costruzione geometrica e riportate al dominio originale. Il grafo viene rigenerato dopo una generazione senza miglioramento del best globale; il confinamento è quello SPSO-2011, non la mappa comune.
+Le coordinate sono normalizzate nel box unitario per la costruzione geometrica e riportate al dominio originale. Il grafo viene rigenerato dopo una generazione senza miglioramento del migliore punto globale. Si applica la regola di confinamento SPSO-2011.
 
 \subsection{FIPS}
 
-La baseline FIPS usa il ring periodico a due vicini, escludendo la particella centrale. L'aggiornamento implementato è
+La baseline FIPS usa il ring periodico a due vicini, escludendo la particella centrale. L'aggiornamento è
 \begin{equation}
  v_i^{t+1}=\chi v_i^t+\frac{\chi}{|\mathcal N_i|}
  \sum_{j\in\mathcal N_i}R_{ij}\odot(p_j-x_i^t),
  \quad R_{ij,k}\sim U(0,\phi),\quad \phi=4.1,
  \label{eq:app-fips}
 \end{equation}
-con $\chi=2/(\phi-2+\sqrt{\phi^2-4\phi})$. Il sorgente campiona pesi casuali coordinata per coordinata; la topologia resta fissa per l'intera run. La variante implementata è quindi FIPS su ring di grado due, non la topologia square a quattro vicini spesso considerata nei confronti classici.
+con $\chi=2/(\phi-2+\sqrt{\phi^2-4\phi})$. I pesi casuali sono campionati per coordinata e l'anello di grado due resta fisso per tutta l'esecuzione.
 
 \subsection{Competitive Swarm Optimizer e DMS-PSO}
 
@@ -120,7 +120,5 @@ La baseline DMS-PSO usa sottosciami di dimensione obiettivo tre, riorganizzati c
 \end{aligned}
 \label{eq:app-dms}
 \end{equation}
-con inerzia lineare da $0.9$ a $0.2$. La variante di progetto non include ricerca locale quasi-Newton; il resto della partizione è aggiunto all'ultimo sottosciame.
+con inerzia lineare da $0.9$ a $0.2$. Si usa la variante base. Le particelle rimaste dopo la partizione sono assegnate all'ultimo sottosciame.
 
-\subsection{Controllo discreto delle ablazioni}
-La PSO discreta nativa delle ablazioni condivide inizializzazione, stream per particella, attrattori, coefficienti, schedule e restituzione con la CPSO. Essa usa la formula~\eqref{eq:controlled-discrete} senza limite di velocità. La baseline Inertia gbest della comparazione esterna mantiene invece il proprio limite $0.2w_j$ e l'implementazione NumPy. Il confronto controllato analitico--discreto identifica la sostituzione del propagatore entro una ricetta comune; il confronto con la baseline valuta le ricette complete.

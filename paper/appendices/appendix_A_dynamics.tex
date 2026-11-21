@@ -1,139 +1,31 @@
-\section{Propagatore analitico, grafi e dettagli dei backend}
+\section{Soluzione locale e funzioni obiettivo}
 \label{app:dynamics}
 
-\subsection{Soluzione analitica}
-
-La dinamica locale descritta dall'Eq.~\eqref{eq:or-local} \`e un'equazione differenziale lineare del secondo ordine a coefficienti costanti. L'equazione caratteristica associata alla parte omogenea \`e
-\begin{equation}
- \lambda^2+2\zeta_k\omega_k\lambda+\omega_k^2=0,
-\end{equation}
-le cui radici sono
-\begin{equation}
- \lambda_1^k=-\omega_k\left[\zeta_k+
- \sqrt{\zeta_k^2-1}\right],\qquad
- \lambda_2^k=-\omega_k\left[\zeta_k-
- \sqrt{\zeta_k^2-1}\right].
- \label{eq:or-roots}
-\end{equation}
-Per $\omega_k>0$, posto $\Delta_k=\zeta_k^2-1$, si distinguono esclusivamente i casi $\Delta_k\neq0$ e $\Delta_k=0$, corrispondenti rispettivamente a radici distinte e coincidenti. Il primo caso include radici reali o complesse coniugate, senza richiedere ulteriori espressioni di aggiornamento.
-
-\paragraph{Radici distinte ($\Delta_k\neq0$).}
-Se $\lambda_1^k\neq\lambda_2^k$, la soluzione generale \`e
-\begin{equation}
- p_{[(k-1)dt,kdt]}(t)=c_1^k\exp(\lambda_1^k t)
- +c_2^k\exp(\lambda_2^k t)+\frac{f_k}{\omega_k^2},
- \label{eq:or-distinct-solution}
-\end{equation}
-con coefficienti
-\begin{equation}
-\begin{aligned}
- c_1^k&=\frac{\left(p_k-\dfrac{f_k}{\omega_k^2}\right)
- \lambda_2^k-\dot p_k}
- {(\lambda_2^k-\lambda_1^k)\exp(\lambda_1^k kdt)},\\[3pt]
- c_2^k&=\frac{\dot p_k-
- \left(p_k-\dfrac{f_k}{\omega_k^2}\right)\lambda_1^k}
- {(\lambda_2^k-\lambda_1^k)\exp(\lambda_2^k kdt)}.
-\end{aligned}
-\label{eq:or-distinct-coefficients}
-\end{equation}
-
-\paragraph{Radici coincidenti ($\Delta_k=0$).}
-Se $\lambda_1^k=\lambda_2^k=\overline\lambda^k$, la soluzione assume la forma
-\begin{equation}
- p_{[(k-1)dt,kdt]}(t)
- =(c_1^k+c_2^k t)\exp(\overline\lambda^k t)
- +\frac{f_k}{\omega_k^2},
- \label{eq:or-critical-solution}
-\end{equation}
-dove
-\begin{equation}
- c_1^k=\left[
- \left(p_k-\frac{f_k}{\omega_k^2}\right)
- (1+\overline\lambda^k kdt)
- -\dot p_k\,kdt\right]
- \exp(-\overline\lambda^k kdt),
- \label{eq:or-critical-c1}
-\end{equation}
-\begin{equation}
- c_2^k=\dot p_k-\overline\lambda^k
- \left(p_k-\frac{f_k}{\omega_k^2}\right).
- \label{eq:or-critical-c2-printed}
-\end{equation}
-
-\subsection{Aggiornamento analitico delle particelle}
-
-Per ogni sottointervallo $[kdt,(k+1)dt]$, la soluzione corrispondente al caso di radici distinte o coincidenti determina la traiettoria della particella. La posizione e la velocit\`a all'estremo destro si ricavano valutando rispettivamente la soluzione e la sua derivata temporale in $t=(k+1)dt$:
-\begin{equation}
- \begin{cases}
- p_{k+1}=p_{[kdt,(k+1)dt]}((k+1)dt),\\
- \dot p_{k+1}=\dot p_{[kdt,(k+1)dt]}((k+1)dt).
- \end{cases}
-\end{equation}
-Questi valori costituiscono le condizioni iniziali del successivo problema di Cauchy, secondo le condizioni di raccordo \eqref{eq:or-matching}. L'evoluzione dello sciame \`e quindi costruita applicando, a ogni intervallo, una delle due forme della soluzione analitica e aggiornando i migliori individuali e globale attraverso la valutazione della funzione obiettivo.
-
-\subsection{Costruzione esatta dei vicinati}
-Le reti non orientate sono statiche all'interno di una run; la lista dei vicini include sempre il nodo stesso, viene ordinata e non contiene duplicati. Per il caso global-best il leader \`e l'incumbent globale, con conservazione dell'indice in caso di parit\`a; per gli altri grafi gli ex aequo selezionano l'indice minimo. La Tabella~\ref{tab:app-graphs} identifica le otto configurazioni usate dai runner di scaling e topologia.
-
-\begin{table}[H]
-\centering\small
-\caption{Le otto configurazioni di vicinato corrispondenti a sette famiglie di grafo. I gradi delle reti random sono parametri di campionamento, non gradi realizzati imposti a ogni vertice.}
-\label{tab:app-graphs}
-\begin{tabularx}{\textwidth}{@{}p{3.0cm}X@{}}
-\toprule
-Configurazione & Costruzione nel codice \\
-\midrule
-Global-best & Leader scelto tra i personal best di tutte le particelle.\\
-Ring & Due vicini periodici ($i-1,i+1$), pi\`u self.\\
-Von Neumann & Griglia toroidale con quattro adiacenze ortogonali; per $N=64$ la forma \`e $8\times8$.\\
-Star (stella) & Stella con un hub e archi hub--periferia; hub assegnato a un indice casuale. Nessun arco fra periferici.\\
-Random $k=4$ & Campionamento Bernoulli con $p=4/(N-1)$ e connessione delle componenti residue con ponti.\\
-Random $k=8$ & Stessa costruzione con $p=8/(N-1)$; \`e la seconda impostazione di una stessa famiglia.\\
-Small-world $k=4$ & Anello iniziale di grado quattro, rewiring per arco con probabilit\`a $0.15$.\\
-Scale-free $k=4$ & Crescita per attaccamento preferenziale con $m=k/2=2$ archi per nuovo nodo; clique iniziale di tre nodi e permutazione finale degli indici.\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-L'algoritmo che collega le componenti del grafo Bernoulli mediante ponti \`e differente dalla generazione condizionata di $G(N,p)$ a connettivit\`a imposta. Le permutazioni di hub e nodi scale-free servono a non associare sistematicamente i ruoli strutturali agli indici che determinano gli stream casuali delle particelle.
-
-
-\subsection{Contabilizzazione delle generazioni}
-Una storia sincrona contiene un best iniziale e uno per generazione, agli ascissi $N,2N,\ldots,(K+1)N$. Gli esperimenti recenti confrontano storia e posizione mediante hash a parità di seme e lavoro, controllando separatamente il budget FE. Il pool C++ rimane attivo durante la run; i task acquisiscono dinamicamente indici da un contatore atomico e il thread chiamante attende la fine del lotto. Snapshot e commit avvengono ai confini delle generazioni.
-
-\subsection{Lettura spettrale del passo}
-Per il problema a equilibrio congelato, lo stato $(y,v)$ evolve mediante $e^{hL}$ con
+\subsection{Soluzione analitica del problema locale}
+Per risolvere l’Eq.~\eqref{eq:cpso-model}, consideriamo una coordinata e omettiamo gli indici di particella e intervallo. Siano $q=a+b$, $\alpha=(1-\mu)/2$ e $F=ap+bs$. Per $q>0$, introduciamo l'equilibrio $x_e=F/q$, il tempo locale $\tau=t-kh$ e $y=x-x_e$. Si ottengono
 \begin{equation}
  L=\begin{pmatrix}0&1\\-q&-2\alpha\end{pmatrix},\qquad
- \lambda_\pm=-\alpha\pm\sqrt{\alpha^2-q}.
+ \begin{pmatrix}y(\tau)\\ v(\tau)\end{pmatrix}
+ =\exp(\tau L)\begin{pmatrix}y_0\\v_0\end{pmatrix}.
 \end{equation}
-Nel regime sottosmorzato, il raggio spettrale del flusso è $e^{-\alpha h}$ e la fase è $h\sqrt{q-\alpha^2}$. Con $c_c=c_s=2.05$ e due uniformi indipendenti, $q$ varia fra 0 e 4.1, mentre $\alpha\in[0.05,0.30]$. Il regime sottosmorzato occupa quindi quasi tutto il dominio dei coefficienti. La Tabella~\ref{tab:local-envelope} riporta valori analitici dell'inviluppo.
-\begin{table}[H]\centering\small
-\caption{Fattore d'inviluppo $e^{-\alpha h}$ del flusso sottosmorzato a coefficienti congelati. I valori sono calcolati dalla formula, indipendentemente dalle run di ottimizzazione.}\label{tab:local-envelope}
-\begin{tabular}{@{}rrrrr@{}}\toprule
-$\mu$ & $\alpha$ & $h=0.38125$ & $h=1$ & $h=30$\\\midrule
-0.4 & 0.300 & 0.8919 & 0.7408 & 0.0001234\\
-0.65 & 0.175 & 0.9355 & 0.8395 & 0.005248\\
-0.9 & 0.050 & 0.9811 & 0.9512 & 0.223130\\\bottomrule
-\end{tabular}\end{table}
-
-La PSO discreta a passo unitario, con lo stesso equilibrio congelato, ha matrice
+Le radici caratteristiche sono $\lambda_\pm=-\alpha\pm\sqrt{\alpha^2-q}$. Se sono distinte, la soluzione è
 \begin{equation}
- M(q,\mu)=\begin{pmatrix}1-q&\mu\\-q&\mu\end{pmatrix},\qquad
- \det M=\mu,\quad \operatorname{tr}M=1-q+\mu.
+ y(\tau)=\frac{v_0-\lambda_-y_0}{\lambda_+-\lambda_-}e^{\lambda_+\tau}
+ +\frac{\lambda_+y_0-v_0}{\lambda_+-\lambda_-}e^{\lambda_-\tau}.
 \end{equation}
-Per $0<\mu<1$ le condizioni di Schur sono $0<q<2(1+\mu)$. In particolare alcuni valori possibili di $q$ oltrepassano tale soglia. Il fattore di costrizione $\chi\simeq0.7298$ sostituisce la matrice con $M(\chi q,\chi)$ e cambia quindi una diversa legge di aggiornamento. Una corrispondenza basata solo sull'inviluppo uguaglierebbe $e^{-\alpha h}$ a $\sqrt\chi$ nel regime di autovalori complessi: essa non uguaglia fase e attrattori. Queste relazioni descrivono la stabilità locale a coefficienti congelati; leader e coefficienti della ricerca cambiano dopo ciascuna FE.
+Se coincidono, $y(\tau)=e^{-\alpha\tau}[y_0+(v_0+\alpha y_0)\tau]$. La posizione finale è $x_e+y(h)$ e la velocità è $y'(h)$. Per $q=0$ anche $F=0$, quindi $v(\tau)=v_0 e^{-2\alpha\tau}$ e $x(\tau)=x_0+\int_0^\tau v(s)\,ds$. Nel caso sottosmorzato il raggio spettrale del flusso è $e^{-\alpha h}$ e la fase è $h\sqrt{q-\alpha^2}$.
 
-\subsection{Obiettivi interni e diffusione inversa}
-Le sei funzioni di screening sono le formulazioni standard non traslate: Sphere $\sum_jx_j^2$; Rastrigin $10D+\sum_j[x_j^2-10\cos(2\pi x_j)]$; Rosenbrock $\sum_{j=1}^{D-1}[100(x_{j+1}-x_j^2)^2+(1-x_j)^2]$; Ackley con parametri $20,0.2,2\pi$; Griewank $1+\sum_jx_j^2/4000-\prod_j\cos(x_j/\sqrt j)$; Salomon $1-\cos(2\pi\|x\|)+0.1\|x\|$. Gli ottimi sono nell'origine, tranne Rosenbrock in $\bm1$, tutti con minimo zero. I box di default del runner sono rispettivamente $[-100,100]$, $[-5.12,5.12]$, $[-5,10]$, $[-32.768,32.768]$, $[-600,600]$ e $[-100,100]$ per coordinata.
+\subsection{Funzioni obiettivo}
+Si usano le forme standard di Sphere, Rastrigin, Rosenbrock, Ackley, Griewank e Salomon, su intervalli rispettivamente pari a $[-100,100]$, $[-5.12,5.12]$, $[-5,10]$, $[-32.768,32.768]$, $[-600,600]$ e $[-100,100]$ per coordinata. Il minimo è zero per tutte e sei.
 
-L'obiettivo denominato diffusione inversa è un problema sintetico deterministico di identificazione della sorgente. Con $D$ variabili, il vettore di verità è $\theta_j^\dagger=0.4\sin(2\pi j/(D+1))$, $j=1,\ldots,D$. Si integra lo stato differenza $u(0)=0$:
+Il problema di diffusione inversa identifica una sorgente a partire dallo stato a quattro istanti. Con $D$ variabili, il vettore di verità è $\theta_j^\dagger=0.4\sin(2\pi j/(D+1))$, $j=1,\ldots,D$. Si integra lo stato differenza $u(0)=0$:
 \begin{equation}
  \dot u_j=-\lambda_ju_j+0.2(u_{j-1}-2u_j+u_{j+1})
  +[1+0.2\sin(2\pi t)]\,[\tanh\theta_j-\tanh\theta_j^\dagger],
 \end{equation}
-con $u_0=u_1$, $u_{D+1}=u_D$ e $\lambda_j=1.1+0.02((j-1)\bmod11)$. Il tempo finale è $2$. La differenza spaziale usa il coefficiente scritto, senza un fattore $\Delta x^{-2}$: il benchmark è il sistema semidiscreto così definito. Si usa RK4 e si osserva lo stato a quattro tempi equispaziati. La funzione obiettivo è
+con $u_0=u_1$, $u_{D+1}=u_D$ e $\lambda_j=1.1+0.02((j-1)\bmod11)$. Il tempo finale è $2$. Si usa RK4 e si osserva lo stato a quattro tempi equispaziati. La funzione obiettivo è
 \begin{equation}
- f(\theta)=\frac{1}{4D}\sum_{m=1}^4\sum_{j=1}^D u_j(m/2)^2
+ J(\theta)=\frac{1}{4D}\sum_{m=1}^4\sum_{j=1}^D u_j(m/2)^2
  +\frac{10^{-3}}D\sum_{j=1}^D(\theta_j-\theta_j^\dagger)^2.
 \end{equation}
-Il minimo noto è zero in $\theta^\dagger$. Nello studio topologico il numero di passi RK4 è 256 e il box del driver è $[-2,2]^D$. Il lavoro RK4 viene mantenuto identico fra backend entro ciascuna cella.
+Il minimo noto è zero in $\theta^\dagger$. Il dominio è $[-2,2]^D$.

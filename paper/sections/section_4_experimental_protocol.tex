@@ -1,0 +1,36 @@
+\section{Disegno sperimentale}\label{sec:exp}
+
+Il protocollo è articolato in tre studi. Lo Studio~I seleziona il passo per la configurazione di riferimento e lo verifica su repliche indipendenti. Lo Studio~II misura la scalabilità e confronta le modalità sincrona e asincrona. Lo Studio~III valuta la competitività del CPSO rispetto alle varianti PSO e al controllo discreto, con budget di valutazioni e durate prefissati. La qualità a budget di valutazioni fissato caratterizza la dinamica della ricerca. La qualità entro una scadenza include anche il costo di esecuzione.
+
+Le misure sono raccolte su un MacBook Air con Apple M2, dotato di quattro core ad alte prestazioni e quattro core ad alta efficienza \citep{AppleM2Specs,AppleM2Design}. Negli Studi I e II si usano $N=64$ particelle e coefficienti casuali scalari. Per il CPSO si fissano $c_c=c_s=2.05$ e inerzia lineare da $0.9$ a $0.4$. Le posizioni sono inizializzate uniformemente nel dominio e le velocità in $[-0.1w_j,0.1w_j]$ per coordinata, dove $w_j$ è l'ampiezza del dominio. Una particella che oltrepassa un limite è riportata sul bordo e la componente di velocità uscente è invertita e dimezzata. Le funzioni obiettivo sono definite in Appendice~\ref{app:dynamics}.
+
+\subsection{Sensibilità al passo}\label{subsec:exp-dt}
+Si confrontano 24 passi in $[0.01,50]$ sulle sei funzioni standard, a $D=30,100$. Ciascun budget, $2\,048$, $8\,192$ o $32\,768$ FE, corrisponde a un'esecuzione indipendente con il proprio profilo d'inerzia. Misuriamo la riduzione del residuo rispetto al migliore valore iniziale:
+\begin{equation}
+ z(h;B)=\log_{10}\!\left[\operatorname{clip}_{[10^{-16},1]}
+ \frac{\max\{J^{(B)}(h)-J^*,0\}}{J^{(0)}-J^*}\right].
+ \label{eq:dt-criterion}
+\end{equation}
+Il passo che minimizza la media di $z$ su funzioni, dimensioni e budget è scelto su 30 repliche appaiate. La verifica usa 30 repliche indipendenti e confronta il passo scelto con $h=0.35$, $0.5$ e $30$. Gli intervalli al 95\% sono ottenuti mediante bootstrap delle repliche appaiate. Ai contrasti multipli si applica la correzione di Holm.
+
+\subsection{Scalabilità e costo della valutazione}\label{subsec:exp-parallel}
+Il confronto a traiettoria invariata usa il passo selezionato nello Studio I, 30 repliche appaiate e due sessioni di misura. Con vicinato Global e $8\,192$ FE si confrontano seriale, master--slave e particle-parallel a $D=30,100$ e $p=1,2,4,8$ worker. Oltre a Rastrigin si considera la diffusione inversa con 16, 64, 256 o 512 passi RK4 per valutazione. La risoluzione resta fissa entro ciascun confronto temporale. A $32\,768$ FE si confrontano quattro e otto worker su Rastrigin e sulla diffusione inversa con 512 passi RK4. Su quest'ultima, a $D=30$, si considera anche Random-8.
+
+Per un esecutore sincrono $a$, accelerazione rispetto alla seriale, strong scaling ed efficienza sono
+\begin{equation}
+ A_a(p)=\frac{T_s}{T_{a,p}},\qquad
+ S_a(p)=\frac{T_{a,1}}{T_{a,p}},\qquad E_a(p)=\frac{S_a(p)}p.
+ \label{eq:speedup-efficiency}
+\end{equation}
+Il confronto fra quattro e otto worker usa $T_{a,4}/T_{a,8}$. L'equivalenza sincrona è verificata confrontando migliore posizione, valore e traccia del miglior valore a pari FE. Per le stime temporali si aggregano le sessioni prima di ricampionare le repliche appaiate.
+
+L'esecuzione asincrona è confrontata con il particle-parallel agli stessi $8\,192$ FE, con quattro e otto worker e gli stessi obiettivi e vicinati pertinenti. Si misurano il rapporto dei tempi $T_{\mathrm{sync}}/T_{\mathrm{async}}$ e la differenza di qualità $z_{\mathrm{async}}-z_{\mathrm{sync}}$. Le tre ripetizioni asincrone per replica e sessione sono aggregate prima del ricampionamento.
+
+\subsection{Confronto con varianti PSO}\label{subsec:exp-pso}
+Lo Studio III adotta il CPSO sincrono con Random-8, casualità per coordinata, $h=1$ fisso e quattro worker. Le configurazioni sono fissate prima dei confronti. Il riferimento CPSO Global con casualità scalare e $h=0.38125$ misura l'effetto congiunto delle scelte di ricerca. Il controllo discreto abbinato sostituisce la sola propagazione. Le dieci varianti PSO sono riportate in Appendice~\ref{app:baselines}.
+
+I confronti a FE fissate impiegano $N=100$ particelle per metodo. Le sei funzioni standard si valutano a $D=20,100$, con 20 repliche e budget indipendenti di $50\,000$ e $500\,000$ FE. La verifica esterna comprende le funzioni COCO BBOB $F_{2}$, $F_{4}$, $F_{5}$, $F_{7}$, $F_{9}$, $F_{11}$, $F_{13}$, $F_{14}$, $F_{17}$, $F_{18}$, $F_{19}$, $F_{20}$, $F_{22}$, $F_{24}$, con cinque istanze (11--15), a $D=20,40$ e budget di $10\,000$ e $50\,000$ FE \citep{Hansen2021,Hansen2016Procedure}.
+
+Il confronto a tempo fissato usa Rastrigin e diffusione inversa (512 passi RK4), a $D=20,100$ con 20 repliche. Si assegnano 15 o 60 s al CPSO a uno e quattro worker e a CSO, CLPSO, SL-PSO e SPSO-2011 a quattro worker. Tutti usano lo stesso valutatore e il risultato è il migliore valore disponibile al termine dell'ultimo lotto completato entro la scadenza. I profili d'inerzia dipendenti dal numero di iterazioni usano un orizzonte di $1\,000$ aggiornamenti. Il confronto interno al CPSO verifica che la traccia del migliore valore coincida sul prefisso comune di FE.
+
+La qualità finale è il gap $g=\max(J-J^*,10^{-12})$, dove $J^*$ è il valore ottimo noto per la funzione o l’istanza. I ranghi sono calcolati nei blocchi appaiati e aggregati dando uguale peso alle funzioni. Ogni contrasto per funzione è la differenza media appaiata di $\log_{10}(g)$ sulle repliche o sulle istanze. Valori entro $\pm0.01$ definiscono la parità pratica. Il confronto con la migliore variante di letteratura considera, per ciascuna funzione, il metodo con il log-gap medio più basso. I test bilaterali dei segni usano le funzioni come unità e la correzione di Holm entro ciascuna campagna. Le ECDF misurano la frazione di coppie esecuzione--target raggiunte per i livelli $10^2,1,10^{-2},10^{-3},10^{-4},10^{-5},10^{-6},10^{-8}$, mantenendo nel denominatore anche le coppie che non raggiungono il target.
