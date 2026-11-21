@@ -6,22 +6,42 @@ Le metriche $A_a(p)$, $S_a(p)$ ed $E_a(p)$ sono definite dall'Eq.~\eqref{eq:spee
 \subsection{Curve complementari dei backend sincroni}
 Le Figure~\ref{fig:new-sync-serial-diffusion} riportano i rapporti rispetto alla seriale nel campione di selezione pilot; le Figure~\ref{fig:new-sync-ext-diff} completano le curve di strong scaling ed efficienza presenti nel testo. Obiettivi e dimensioni non sono aggregati perché hanno granularità di lavoro differente.
 
-\begin{figure}[H]\centering
-\includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_serial_speedup_inverse_diffusion_d30.pdf}
-\caption{Risultati dei backend sincroni nel pilot: accelerazione rispetto alla seriale su diffusione inversa a $D=30$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-serial-diffusion}
-\end{figure}
-\begin{figure}[H]\centering
-\includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_serial_speedup_inverse_diffusion_d100.pdf}
-\caption{Risultati dei backend sincroni nel pilot: accelerazione rispetto alla seriale su diffusione inversa a $D=100$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-serial-diffusion-extra}
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_serial_speedup_inverse_diffusion_d30.pdf}
+    \caption{$D=30$}
+    \label{fig:new-sync-serial-diffusion}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_serial_speedup_inverse_diffusion_d100.pdf}
+    \caption{$D=100$}
+    \label{fig:new-sync-serial-diffusion-extra}
+  \end{subfigure}
+  \caption{Risultati dei backend sincroni nel pilot: accelerazione rispetto alla seriale su diffusione inversa. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}
+  \label{fig:new-sync-serial-diffusion-all}
 \end{figure}
 
-\begin{figure}[H]\centering
-\includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_strong_speedup_inverse_diffusion_d30.pdf}
-\caption{Risultati dei backend sincroni nel pilot: strong scaling su diffusione inversa a $D=30$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-ext-diff}
-\end{figure}
-\begin{figure}[H]\centering
-\includegraphics[width=0.93\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_efficiency_inverse_diffusion_d30.pdf}
-\caption{Risultati dei backend sincroni nel pilot: efficienza interna su diffusione inversa a $D=30$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}\label{fig:new-sync-ext-diff-extra}
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_strong_speedup_inverse_diffusion_d30.pdf}
+    \caption{Strong scaling}
+    \label{fig:new-sync-ext-diff}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{02_parallel/selection/fig_efficiency_inverse_diffusion_d30.pdf}
+    \caption{Efficienza interna}
+    \label{fig:new-sync-ext-diff-extra}
+  \end{subfigure}
+  \caption{Risultati dei backend sincroni nel pilot su diffusione inversa a $D=30$. Il riferimento temporale e la semantica delle traiettorie sono quelli definiti dall'Eq.~\eqref{eq:speedup-efficiency}.}
+  \label{fig:new-sync-ext-diff-all}
 \end{figure}
 
 \subsection{Studio precedente del costo sintetico}

@@ -24,22 +24,42 @@ Lo screening comprende 480 esecuzioni (semi da 830001 a 830005) e l'ablazione 24
 Le ECDF dello Studio III aggregano gli otto target $10^2,1,10^{-2},10^{-3},10^{-4},10^{-5},10^{-6},10^{-8}$. I grafici a FE fissate impiegano le tracce delle run al budget più alto di ciascuna suite e i grafici temporali quelle delle run da 60 s. Le graduatorie a tempo escludono il CPSO a un worker, che è riportato nelle figure temporali come controllo interno.
 
 \subsection{Ulteriori profili di sensibilità al passo}
-\begin{figure}[H]\centering
-\includegraphics[width=0.75\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/selection/fig_dt_profiles_d30.pdf}
-\caption{Profili del log-residuo del passo temporale nel campione selezione, $D=30$, con sei funzioni e tre budget di run complete da 1\,024, 4\,096 e 8\,192 FE. Intervalli riferiti ai semi appaiati.}\label{fig:new-dt-profiles}
-\end{figure}
-\begin{figure}[H]\centering
-\includegraphics[width=0.75\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/selection/fig_dt_profiles_d100.pdf}
-\caption{Profili del log-residuo del passo temporale nel campione selezione, $D=100$, con sei funzioni e tre budget di run complete da 1\,024, 4\,096 e 8\,192 FE. Intervalli riferiti ai semi appaiati.}\label{fig:new-dt-profiles-extra}
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/selection/fig_dt_profiles_d30.pdf}
+    \caption{$D=30$}
+    \label{fig:new-dt-profiles}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/selection/fig_dt_profiles_d100.pdf}
+    \caption{$D=100$}
+    \label{fig:new-dt-profiles-extra}
+  \end{subfigure}
+  \caption{Profili del log-residuo del passo temporale nel campione selezione con sei funzioni e tre budget di run complete da 1\,024, 4\,096 e 8\,192 FE. Intervalli riferiti ai semi appaiati.}
+  \label{fig:new-dt-profiles-selection-all}
 \end{figure}
 
-\begin{figure}[H]\centering
-\includegraphics[width=0.75\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/holdout/fig_dt_profiles_d30.pdf}
-\caption{Profili del log-residuo del passo temporale nel campione hold-out, $D=30$, con sei funzioni e tre budget di run complete da 1\,024, 4\,096 e 8\,192 FE. Intervalli riferiti ai semi appaiati.}\label{fig:new-dt-profiles-holdout}
-\end{figure}
-\begin{figure}[H]\centering
-\includegraphics[width=0.75\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/holdout/fig_dt_profiles_d100.pdf}
-\caption{Profili del log-residuo del passo temporale nel campione hold-out, $D=100$, con sei funzioni e tre budget di run complete da 1\,024, 4\,096 e 8\,192 FE. Intervalli riferiti ai semi appaiati.}\label{fig:new-dt-profiles-holdout-extra}
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/holdout/fig_dt_profiles_d30.pdf}
+    \caption{$D=30$}
+    \label{fig:new-dt-profiles-holdout}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{01_dt/holdout/fig_dt_profiles_d100.pdf}
+    \caption{$D=100$}
+    \label{fig:new-dt-profiles-holdout-extra}
+  \end{subfigure}
+  \caption{Profili del log-residuo del passo temporale nel campione hold-out con sei funzioni e tre budget di run complete da 1\,024, 4\,096 e 8\,192 FE. Intervalli riferiti ai semi appaiati.}
+  \label{fig:new-dt-profiles-holdout-all}
 \end{figure}
 
 \subsection{Unità di analisi e provenienza}

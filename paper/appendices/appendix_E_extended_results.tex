@@ -10,21 +10,26 @@ Le curve di convergenza e le ECDF completano i confronti in Sezione~\ref{subsec:
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.76\textwidth]{03_comparison/figures_fe/target_ecdf_fe_d20.pdf}
-  \caption{Confronto nativo a $D=20$. ECDF dei target aggregata sulle sei funzioni e 20 semi, campagna a $500\,000$ FE.}
-  \label{fig:study3-native-ecdf-d20}
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{03_comparison/figures_fe/target_ecdf_fe_d20.pdf}
+    \caption{$D=20$}
+    \label{fig:study3-native-ecdf-d20}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{03_comparison/figures_fe/target_ecdf_fe_d100.pdf}
+    \caption{$D=100$}
+    \label{fig:study3-native-ecdf-d100}
+  \end{subfigure}
+  \caption{Confronto nativo: ECDF dei target aggregata sulle sei funzioni e 20 semi, campagna a $500\,000$ FE.}
+  \label{fig:study3-native-ecdf-all}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.76\textwidth]{03_comparison/figures_fe/target_ecdf_fe_d100.pdf}
-  \caption{Confronto nativo a $D=100$. ECDF dei target aggregata sulle sei funzioni e 20 semi, campagna a $500\,000$ FE.}
-  \label{fig:study3-native-ecdf-d100}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.76\textwidth]{03_comparison/figures_fe_bbob/target_ecdf_fe_d20.pdf}
+  \includegraphics[width=0.65\textwidth]{03_comparison/figures_fe_bbob/target_ecdf_fe_d20.pdf}
   \caption{Verifica BBOB a $D=20$. ECDF dei target aggregata su 14 funzioni e cinque istanze, campagna a $50\,000$ FE.}
   \label{fig:study3-bbob-d20}
 \end{figure}
@@ -38,16 +43,21 @@ Le curve di convergenza e le ECDF completano i confronti in Sezione~\ref{subsec:
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.76\textwidth]{03_comparison/figures_time/target_ecdf_seconds_d20.pdf}
-  \caption{Confronto temporale a $D=20$. ECDF dei target aggregata sui due problemi e 20 semi, campagna da 60 s.}
-  \label{fig:study3-time-ecdf-d20}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.76\textwidth]{03_comparison/figures_time/target_ecdf_seconds_d100.pdf}
-  \caption{Confronto temporale a $D=100$. ECDF dei target aggregata sui due problemi e 20 semi, campagna da 60 s.}
-  \label{fig:study3-time-ecdf-d100}
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{03_comparison/figures_time/target_ecdf_seconds_d20.pdf}
+    \caption{$D=20$}
+    \label{fig:study3-time-ecdf-d20}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{03_comparison/figures_time/target_ecdf_seconds_d100.pdf}
+    \caption{$D=100$}
+    \label{fig:study3-time-ecdf-d100}
+  \end{subfigure}
+  \caption{Confronto temporale: ECDF dei target aggregata sui due problemi e 20 semi, campagna da 60 s.}
+  \label{fig:study3-time-ecdf-all}
 \end{figure}
 
 \FloatBarrier
