@@ -2,4 +2,7 @@
 
 Sulla diffusione inversa, master--slave e particle-parallel preservano la traiettoria del CPSO seriale. A $D=100$, con 512 passi RK4, entrambi accelerano di circa $3.6$ volte la stessa ricerca con otto worker. Alla risoluzione più elevata, il passaggio da quattro a otto worker riduce i tempi di circa il 19--22\% nelle configurazioni Global valutate. Il vantaggio in qualità entro una scadenza dipende anche dal progresso che lo sciame riesce ancora a compiere.
 
-Il confronto con il controllo discreto mostra un vantaggio descrittivo del CPSO su 12 delle 14 funzioni BBOB a $50\,000$ FE in entrambe le dimensioni, con $p_{\mathrm{Holm}}=0.336$. Nella diffusione inversa, quattro worker anticipano il target a $D=20$, mentre a $D=100$ il target rimane fuori dalla portata del CPSO entro 60~s. Il beneficio della parallelizzazione va quindi valutato congiuntamente alla probabilità di raggiungere l'accuratezza richiesta entro la scadenza.
+\begingroup\color{RevisionBlue}
+Nella campagna finale, il CPSO con ricerca locale, interpolazione quadratica e riavvio parziale raggiunge il target $10^{-8}$ in tutte le repliche della diffusione inversa entro 15~s. Tra gli undici metodi, il suo tempo mediano è il minore a $D=20$ e il secondo a $D=100$. A budget fissato il CPSO si colloca al quarto posto per rango medio nelle tre suite e ottiene il miglior risultato su quattro funzioni BBOB e una funzione CEC2013. Nel complesso, i risultati quantificano sia il guadagno ottenibile distribuendo il lavoro per particella sia la competitività della configurazione parallela quando il criterio di interesse è il tempo necessario a raggiungere una precisione assegnata.
+
+\endgroup

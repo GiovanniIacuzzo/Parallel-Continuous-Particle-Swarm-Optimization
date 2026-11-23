@@ -20,6 +20,8 @@
 \usepackage[nameinlink,noabbrev]{cleveref}
 \hypersetup{pdftitle={Continuous Particle Swarm Optimization multicore: sensibilità, architetture e confronto PSO},pdfauthor={Giovanni Giuseppe Iacuzzo}}
 \newcommand{\R}{\mathbb{R}}
+\definecolor{RevisionBlue}{RGB}{0,55,155}
+\DeclareRobustCommand{\rev}[1]{{\color{RevisionBlue}#1}}
 \emergencystretch=1.5em
 \allowdisplaybreaks[1]
 \setlength{\tabcolsep}{4pt}
@@ -44,15 +46,15 @@
   \small \textsuperscript{*}Autore corrispondente: \texttt{giovanni.iacuzzo@unikore.it}
 }
 \date{}
-\graphicspath{{images/}}
+\graphicspath{{images/}{images/paper/}{images/study3_paper/}}
 \begin{document}
 \maketitle
 \begin{abstract}
 La Continuous Particle Swarm Optimization (CPSO) aggiorna la posizione e la velocità delle particelle risolvendo analiticamente un problema dinamico su ciascun intervallo temporale. Il passo del propagatore regola il moto dello sciame, mentre l'esecuzione multicore determina quante valutazioni della funzione obiettivo si possono completare entro una scadenza. Studiamo come questi due aspetti incidano sulla qualità della soluzione e sul tempo necessario a raggiungere un'accuratezza assegnata.
 
-Il primo studio misura la sensibilità al passo su sei funzioni, due dimensioni e tre budget di valutazione, con una verifica su repliche indipendenti. Il secondo confronta le modalità di esecuzione su Apple M2 per un problema di diffusione inversa a diverse risoluzioni temporali. Il terzo confronta il CPSO con un controllo discreto abbinato e con dieci varianti PSO a parità di valutazioni, su funzioni standard e su un campione COCO BBOB. Un confronto a tempo fissato misura inoltre il progresso della ricerca entro 15 e 60 secondi.
+Il primo studio misura la sensibilità al passo su sei funzioni, due dimensioni e tre budget di valutazione, con una verifica su repliche indipendenti. Il secondo confronta le modalità di esecuzione su Apple M2 per un problema di diffusione inversa a diverse risoluzioni temporali. \rev{Il terzo confronta una configurazione CPSO a quattro worker, con ricerca locale, interpolazione quadratica e riavvio parziale, con dieci varianti PSO. La valutazione usa funzioni native, COCO BBOB e CEC2013 LSGO a budget fissato e la diffusione inversa a tempo fissato.}
 
-La configurazione di riferimento mostra una regione favorevole per passi compresi approssimativamente tra $0.2$ e $0.7$. Nella diffusione inversa a dimensione $100$, con 512 passi RK4 per valutazione, master--slave e particle-parallel conservano la traiettoria e ottengono accelerazioni di $3.60$ e $3.62$ rispetto alla seriale con otto worker. Su 14 funzioni BBOB, a $50\,000$ valutazioni il CPSO ottiene un log-gap medio appaiato inferiore al controllo discreto in 12 casi per dimensione ($p_{\mathrm{Holm}}=0.336$). Nella diffusione inversa a dimensione $20$, quattro worker riducono da $1.16$ a $0.32$ secondi il tempo mediano per raggiungere un gap di $10^{-8}$. Il beneficio del parallelismo dipende quindi sia dal costo della valutazione sia dal progresso che la dinamica consente con le valutazioni aggiuntive.
+La configurazione di riferimento mostra una regione favorevole per passi compresi approssimativamente tra $0.2$ e $0.7$. Nella diffusione inversa a dimensione $100$, con 512 passi RK4 per valutazione, master--slave e particle-parallel conservano la traiettoria e ottengono accelerazioni di $3.60$ e $3.62$ rispetto alla seriale con otto worker. \rev{Nella campagna comparativa, il CPSO raggiunge il target $10^{-8}$ in tutte le 20 repliche a entrambe le dimensioni. Il tempo mediano è $0.341$~s a dimensione $20$, il più basso fra gli undici metodi, e $6.40$~s a dimensione $100$, secondo a CSO. A budget di valutazioni fissato, il CPSO è quarto per rango medio in tutte e tre le suite e ottiene il miglior risultato su quattro delle 24 funzioni BBOB.}
 \end{abstract}
 \noindent\textbf{Parole chiave.} Continuous Particle Swarm Optimization, parallelismo multicore, propagatore analitico, tempo al target, COCO BBOB.
 

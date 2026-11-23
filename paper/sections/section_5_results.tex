@@ -60,75 +60,34 @@ Con 512 passi RK4 e $32\,768$ FE il vantaggio si ripete. Con topologia Global, i
 \subsection{Effetto dell'asincronia}\label{subsec:res-async}
 A $D=30$ con Global e otto worker, la differenza di log-residuo fra asincrono e sincrono è $-0.253$ (IC 95\% $[-0.323,-0.176]$) e il rapporto dei tempi $T_{\mathrm{sync}}/T_{\mathrm{async}}$ è $1.022$ (IC 95\% $[0.991,1.054]$). Con Random-8, sempre a $D=30$ e otto worker, la differenza è $-0.110$ (IC 95\% $[-0.150,-0.067]$) e il rapporto sale a $1.171$ (IC 95\% $[1.132,1.214]$). A $D=100$ con Global, la differenza a otto worker è $-0.053$ (IC 95\% $[-0.072,-0.033]$), con un rapporto temporale di $0.950$ (IC 95\% $[0.929,0.971]$). L'effetto della pubblicazione anticipata dei leader si manifesta quindi nella qualità e nei tempi, con risultati che dipendono da dimensione e vicinato.
 
-\subsection{Scelta della configurazione dello Studio III}\label{subsec:res-study3-selection}
-Nel fattoriale di sviluppo, Random-8 con casualità per coordinata occupa i primi due posti in ciascuna combinazione di dimensione e budget, con graduatoria fra i due passi che si inverte a $D=100$ e $500\,000$ FE. Aggregando i quattro casi, il rango medio è $1.84$ per $dt=1$ e $1.91$ per $dt=0.38125$ (Tabella~\ref{tab:study3-screen}). Il primo valore determina la configurazione selezionata. Nel confronto successivo tra adattamenti, la maggiore riduzione media di log-gap è $0.025$, inferiore alla soglia di $0.05$.
+\subsection{\rev{Tempo al target nella diffusione inversa}}\label{subsec:res-timed}
+\begingroup\color{RevisionBlue}
+A $D=20$ il CPSO raggiunge il target $10^{-8}$ in tutte le repliche, con il tempo mediano più basso fra gli undici metodi ($0.341$~s). SL-PSO e CSO seguono con $0.351$~s e $0.424$~s. Il CPSO è il più rapido in 13 dei 20 blocchi ed è più rapido di CSO in 19 confronti appaiati su 20. A $D=100$ raggiunge ancora il target in 20 repliche su 20, con il secondo tempo mediano ($6.405$~s), dopo CSO ($3.988$~s). SPSO-2011 completa 20 repliche con mediana di $7.891$~s e SL-PSO raggiunge il target in 18 repliche. A $D=100$, le FE mediane al target sono $56\,275$ per il CPSO e $31\,925$ per CSO. La Figura~\ref{fig:study3-inverse-target} mostra la distribuzione dei tempi e la Tabella~\ref{tab:study3-time-to-target} riporta i risultati di tutti i metodi.
 
-\subsection{Qualità a parità di valutazioni}\label{subsec:res-scope}
-Su BBOB, il rango medio del CPSO a $50\,000$ FE è $4.81$ a $D=20$ e $4.66$ a $D=40$. Nella graduatoria descrittiva dei 13 metodi ciò corrisponde al terzo e al quarto posto (Tabella~\ref{tab:study3-ranks}). A $D=20$, SL-PSO e SPSO-2011 ottengono ranghi medi vicini, rispettivamente $4.78$ e $4.91$. A $10\,000$ FE, il CPSO è terzo in entrambe le graduatorie descrittive.
+\endgroup
 
-Il confronto con la PSO discreta abbinata favorisce il CPSO su 13 funzioni su 14 in ciascuna dimensione a $10\,000$ FE ($p_{\mathrm{Holm}}=0.070$) e su 12 funzioni su 14 a $50\,000$ FE ($p_{\mathrm{Holm}}=0.336$). Al budget maggiore, $F_5$ e $F_{22}$ favoriscono il controllo discreto in entrambe le dimensioni. La Tabella~\ref{tab:study3-bbob-matched-effects} mostra i contrasti per funzione e i relativi intervalli puntuali. Il bilancio contro CSO a $50\,000$ FE è di 3 vittorie, una parità e 10 sconfitte a $D=20$, e di 2 vittorie, una parità e 11 sconfitte a $D=40$. Rispetto al miglior riferimento di letteratura scelto separatamente per funzione, il CPSO registra 3 vittorie, 3 parità e 50 sconfitte nelle quattro combinazioni di budget e dimensione. La Figura~\ref{fig:study3-bbob-d40} mostra la frazione di target raggiunti al variare del numero di valutazioni.
-
-Sulle sei funzioni standard, il CPSO è quarto o quinto nelle quattro combinazioni di budget e dimensione. Migliora il proprio riferimento Global su tutte le funzioni in ciascuna combinazione. Contro la migliore PSO di letteratura per funzione, registra due parità e 22 sconfitte. A $500\,000$ FE e $D=20$, i due propagatori abbinati ottengono due vittorie ciascuno e due parità. Le curve a $D=100$ mostrano come si sviluppano i divari durante la ricerca (Figura~\ref{fig:study3-native-d100}).
-\begin{table*}[!htbp]
-\centering\small
-\caption{Ranghi medi dei 13 metodi a parità di valutazioni della funzione obiettivo. I ranghi sono calcolati entro ciascun blocco appaiato e mediati assegnando lo stesso peso a ogni funzione. Valori più bassi indicano risultati migliori. In grassetto il rango medio minimo di ciascuna colonna.}
-\label{tab:study3-ranks}
-\begin{tabular}{@{}lrrrrrrrr@{}}
-\toprule
- & \multicolumn{4}{c}{Suite nativa (6 funzioni)} & \multicolumn{4}{c}{COCO BBOB (14 funzioni)} \\
-\cmidrule(lr){2-5}\cmidrule(l){6-9}
-Budget (FE) & \multicolumn{2}{c}{$50\,000$} & \multicolumn{2}{c}{$500\,000$} & \multicolumn{2}{c}{$10\,000$} & \multicolumn{2}{c}{$50\,000$} \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(l){8-9}
-Metodo & $D=20$ & $D=100$ & $D=20$ & $D=100$ & $D=20$ & $D=40$ & $D=20$ & $D=40$ \\
-\midrule
-CPSO Random-8 & 4.04 & 4.37 & 6.35 & 4.98 & 3.67 & 3.66 & 4.81 & 4.66 \\
-CPSO Global & 8.36 & 7.59 & 11.49 & 11.19 & 7.74 & 7.99 & 8.97 & 9.56 \\
-PSO discreta abbinata & 10.24 & 12.86 & 6.42 & 11.03 & 10.34 & 11.03 & 9.12 & 10.77 \\
-\midrule
-Classic gbest & 13.00 & 11.03 & 13.00 & 12.93 & 9.53 & 9.41 & 11.59 & 11.10 \\
-Inertia gbest & 5.42 & 5.90 & 6.57 & 5.41 & 5.63 & 5.49 & 4.95 & 5.06 \\
-Inertia lbest ring & 8.01 & 8.50 & 7.62 & 7.82 & 7.37 & 7.79 & 6.60 & 7.01 \\
-Constriction gbest & 3.80 & 4.54 & 6.60 & 5.63 & 5.67 & 5.84 & 4.93 & 4.69 \\
-CLPSO & 10.92 & 9.97 & 5.31 & 4.48 & 12.61 & 12.33 & 11.14 & 11.57 \\
-FIPS ring & 10.72 & 12.11 & 6.99 & 10.40 & 11.23 & 11.74 & 9.71 & 9.67 \\
-SPSO-2011 & 3.75 & 2.46 & \textbf{4.33} & 2.34 & 5.04 & 4.99 & 4.91 & 4.55 \\
-SL-PSO & 2.81 & 2.69 & 5.33 & 4.44 & \textbf{2.89} & \textbf{2.19} & 4.78 & 3.56 \\
-CSO & \textbf{2.31} & \textbf{1.36} & 4.60 & \textbf{2.14} & 3.00 & 2.61 & \textbf{2.93} & \textbf{2.51} \\
-DMS-PSO & 7.62 & 7.62 & 6.39 & 8.22 & 6.27 & 5.94 & 6.56 & 6.29 \\
-\bottomrule
-\end{tabular}
-\end{table*}
-
-\begin{figure}[H]
+\begin{figure*}[!t]
  \centering
- \includegraphics[width=0.9\columnwidth]{paper/fig07_target_ecdf_fe_d40.pdf}
- \caption{Raggiungimento dei target su COCO BBOB a $D=40$ entro $50\,000$ FE. Ogni curva aggrega otto target per ciascuna delle 14 funzioni e cinque istanze.}
- \label{fig:study3-bbob-d40}
-\end{figure}
-
-\begin{figure*}[!htbp]
- \centering
- \includegraphics[width=0.83\textwidth]{paper/fig08_convergence_fe_d100.pdf}
- \caption{Confronto nativo a $D=100$. Gap mediano del miglior valore osservato su 20 repliche durante le esecuzioni da $500\,000$ FE. Sono mostrati il CPSO e le quattro varianti PSO incluse anche nella campagna temporale.}
- \label{fig:study3-native-d100}
+ \includegraphics[width=\textwidth]{fig_study3_inverse_time_to_target.pdf}
+ \caption{\rev{Diffusione inversa con 512 passi RK4. Quota cumulativa delle 20 repliche che raggiungono $J-J^*\leq10^{-8}$ entro il tempo indicato, per $D=20$ e $D=100$. Il limite è 15~s per replica.}}
+ \label{fig:study3-inverse-target}
 \end{figure*}
-
-Le curve complementari per la suite nativa e le ECDF dei target sono in Appendice~\ref{app:external-ranks}.
-
-\subsection{Qualità entro una scadenza e tempo al target}\label{subsec:res-timed}
-Nei 160 confronti appaiati a uno e quattro worker, la traccia del migliore valore del CPSO coincide sul prefisso comune di FE. A 60 s, le mediane dei rapporti appaiati $\mathrm{FE}_4/\mathrm{FE}_1$ sono $1.60$ e $2.29$ su Rastrigin e $2.82$ e $2.91$ sulla diffusione inversa, rispettivamente a $D=20$ e $D=100$.
-
-Sulla diffusione inversa a $D=20$, entrambe le configurazioni CPSO raggiungono il target $10^{-8}$ in tutte le repliche e allo stesso numero di FE in ciascuna coppia. Nelle esecuzioni da 60~s, il tempo mediano passa da $1.16$~s a un worker a $0.32$~s a quattro, con una mediana dei rapporti appaiati di $3.53$. CSO e SL-PSO impiegano rispettivamente $0.33$ e $0.26$~s. Il rapporto al target si riferisce alla parte iniziale della ricerca, mentre il rapporto fra FE completate si riferisce all'intera durata. A $D=100$, entrambe le configurazioni CPSO registrano $0/20$ successi entro 60~s. CSO, SL-PSO e SPSO-2011 raggiungono l'obiettivo in tutte le repliche già entro 15~s (Tabella~\ref{tab:study3-time-to-target}).
 
 \input{tables/study3_time_to_target.tex}
 
-Su Rastrigin a $D=100$ (Figura~\ref{fig:study3-time-d100}), il CPSO a quattro worker completa $36.0$ milioni di FE mediane in 60~s e raggiunge un gap mediano di $239.4$. CSO ottiene $53.2$ con $5.1$ milioni di FE e CLPSO arriva alla soglia numerica di $10^{-12}$. Il gap del CPSO cambia poco fra 15 e 60~s. Rispetto alla migliore variante di letteratura per funzione, il CPSO a quattro worker ottiene due parità sulla diffusione inversa a $D=20$ e sei sconfitte nelle otto combinazioni a tempo fissato.
+\subsection{\rev{Qualità a parità di valutazioni}}\label{subsec:res-scope}
+\begingroup\color{RevisionBlue}
+Il CPSO occupa il quarto posto per rango medio fra gli undici metodi in ciascuna suite, con ranghi pari a $3.86$ sulle funzioni native, $4.34$ su BBOB e $4.60$ su CEC2013 (Tabella~\ref{tab:study3-ranks}). Su BBOB ottiene il gap inferiore alla migliore baseline per funzione su $F_{13}$, $F_{19}$, $F_{23}$ e $F_{24}$, con parità pratica su $F_1$. Su CEC2013 ottiene il miglior risultato su $F_3$ e una parità pratica su $F_6$ e $F_{10}$. Il CPSO resta quarto considerando separatamente i casi nativi originali, traslati e traslati--ruotati.
 
-\begin{figure}[H]
+La Figura~\ref{fig:study3-external-performance} mostra il raggiungimento dei target BBOB al crescere delle valutazioni e il profilo dei gap finali su CEC2013. I confronti per funzione sulle due suite esterne e le curve sulle funzioni native sono riportati in Appendice~\ref{app:external-ranks}.
+
+\endgroup
+
+\input{tables/study3_ranks.tex}
+
+\begin{figure*}[!t]
  \centering
- \includegraphics[width=0.85\columnwidth]{paper/fig09_convergence_seconds_d100.pdf}
- \caption{Gap mediano del miglior valore osservato a $D=100$ durante le esecuzioni da 60 s. Il confronto affianca al CPSO a quattro worker il controllo a un worker e quattro varianti PSO.}
- \label{fig:study3-time-d100}
-\end{figure}
-
-
+ \includegraphics[width=\textwidth]{fig_study3_external_performance.pdf}
+ \caption{\rev{(a) Quota di coppie esecuzione--target raggiunte su BBOB in funzione delle FE, a $D=40$. (b) Profilo dei gap finali su CEC2013 a $120\,000$ FE. In ogni blocco appaiato il gap di ciascun metodo è diviso per il minimo gap osservato nel blocco. Le curve riportano la quota di blocchi per cui il rapporto è al più pari alla soglia indicata.}}
+ \label{fig:study3-external-performance}
+\end{figure*}

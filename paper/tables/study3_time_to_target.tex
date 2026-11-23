@@ -1,20 +1,25 @@
-\begin{table*}[!t]
-\centering\footnotesize
-\caption{Raggiungimento del target $g\leq10^{-8}$ a 15 e 60 s. Le celle indicano il numero di successi su 20 repliche e, fra parentesi, il tempo mediano in secondi fra le repliche che raggiungono il target entro la scadenza. Il trattino indica assenza di un tempo osservato.}
+\begin{table}[!htbp]
+\color{RevisionBlue}
+\centering\small
+\caption{\rev{Successi entro 15~s e tempo mediano al target $10^{-8}$ fra le repliche riuscite, espresso in secondi.}}
 \label{tab:study3-time-to-target}
-\begin{tabular}{@{}lrrcccccc@{}}
+\begin{tabular}{@{}lrrrr@{}}
 \toprule
-Problema & $D$ & s & CPSO (1) & CPSO (4) & CSO & CLPSO & SL-PSO & SPSO-2011 \\
+ & \multicolumn{2}{c}{$D=20$} & \multicolumn{2}{c}{$D=100$} \\
+\cmidrule(lr){2-3}\cmidrule(l){4-5}
+Metodo & Successi & s & Successi & s \\
 \midrule
-Diffusione inversa & 20 & 15 & 20/20 (1.18) & 20/20 (0.33) & 20/20 (0.31) & 20/20 (5.08) & 20/20 (0.25) & 20/20 (0.51) \\
- & 20 & 60 & 20/20 (1.16) & 20/20 (0.32) & 20/20 (0.33) & 20/20 (5.00) & 20/20 (0.26) & 20/20 (0.55) \\
- & 100 & 15 & 0/20 (--) & 0/20 (--) & 20/20 (2.81) & 0/20 (--) & 20/20 (8.73) & 20/20 (6.65) \\
- & 100 & 60 & 0/20 (--) & 0/20 (--) & 20/20 (2.95) & 19/20 (53.26) & 20/20 (7.62) & 20/20 (6.74) \\
-\addlinespace
-Rastrigin & 20 & 15 & 0/20 (--) & 0/20 (--) & 0/20 (--) & 20/20 (3.07) & 0/20 (--) & 0/20 (--) \\
- & 20 & 60 & 0/20 (--) & 0/20 (--) & 0/20 (--) & 20/20 (3.08) & 0/20 (--) & 0/20 (--) \\
- & 100 & 15 & 0/20 (--) & 0/20 (--) & 0/20 (--) & 0/20 (--) & 0/20 (--) & 0/20 (--) \\
- & 100 & 60 & 0/20 (--) & 0/20 (--) & 0/20 (--) & 20/20 (17.55) & 0/20 (--) & 0/20 (--) \\
+CPSO & 20/20 & 0.341 & 20/20 & 6.405 \\
+CSO & 20/20 & 0.424 & 20/20 & 3.988 \\
+SL-PSO & 20/20 & 0.351 & 18/20 & 10.526 \\
+SPSO-2011 & 20/20 & 0.709 & 20/20 & 7.891 \\
+Constriction gbest & 20/20 & 0.523 & 0/20 & -- \\
+Inertia gbest & 20/20 & 2.035 & 0/20 & -- \\
+DMS-PSO & 20/20 & 2.443 & 0/20 & -- \\
+Inertia lbest ring & 20/20 & 3.294 & 0/20 & -- \\
+CLPSO & 20/20 & 6.534 & 0/20 & -- \\
+FIPS ring & 20/20 & 5.195 & 0/20 & -- \\
+Classic gbest & 0/20 & -- & 0/20 & -- \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}

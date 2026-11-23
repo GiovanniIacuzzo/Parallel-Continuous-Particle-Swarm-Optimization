@@ -1,55 +1,17 @@
 \section{Risultati complementari dello Studio III}\label{app:external-ranks}
-La Tabella~\ref{tab:study3-screen} riporta i ranghi delle configurazioni valutate in fase di sviluppo. La Tabella~\ref{tab:study3-bbob-matched-effects} riporta gli effetti appaiati per funzione BBOB.
+\rev{La Figura~\ref{fig:study3-external-effects} mostra il divario dalla migliore baseline per funzione sulle due suite esterne. La Figura~\ref{fig:study3-native-ecdf} riporta le curve di raggiungimento dei target sulle funzioni native.}
 
-\input{tables/study3_configuration_screen.tex}
-\input{tables/study3_bbob_matched_effects.tex}
-\FloatBarrier
-
-Le curve di convergenza e le ECDF completano i confronti a valutazioni fissate e a tempo fissato dello Studio III. Le ECDF seguono la definizione della Sezione~\ref{subsec:exp-pso}. Nelle figure a tempo fissato compaiono entrambe le configurazioni CPSO, a uno e quattro worker.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.9\textwidth]{appendices/figs01_convergence_fe_d20.pdf}
-  \caption{Confronto nativo a $D=20$. Gap mediano del miglior valore osservato su 20 repliche, campagna a $500\,000$ FE. Sono mostrate la configurazione CPSO selezionata e quattro baseline rappresentative.}
-  \label{fig:study3-native-d20}
+\begin{figure}[!htbp]
+ \centering
+ \includegraphics[width=0.98\textwidth]{fig_study3_external_function_effects.pdf}
+ \caption{\rev{Differenza di log-gap medio fra il CPSO e la migliore baseline selezionata separatamente per ciascuna funzione BBOB e CEC2013. Valori negativi favoriscono il CPSO. La banda centrale indica la soglia di parità pratica $|\Delta|\leq0.01$.}}
+ \label{fig:study3-external-effects}
 \end{figure}
 
-\begin{figure}[htbp]
-  \centering
-  \begin{subfigure}[b]{0.48\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{appendices/figs02_target_ecdf_fe_d20.pdf}
-    \caption{$D=20$}
-    \label{fig:study3-native-ecdf-d20}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.48\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{appendices/figs03_target_ecdf_fe_d100.pdf}
-    \caption{$D=100$}
-    \label{fig:study3-native-ecdf-d100}
-  \end{subfigure}
-  \caption{Confronto nativo: ECDF dei target aggregata sulle sei funzioni e 20 repliche, campagna a $500\,000$ FE.}
-  \label{fig:study3-native-ecdf-all}
+\begin{figure}[!htbp]
+ \centering
+ \includegraphics[width=0.98\textwidth]{fig_study3_native_target_ecdf.pdf}
+ \caption{\rev{Quota cumulativa di coppie esecuzione--target raggiunte sulle sei funzioni native entro $50\,000$ FE, per $D=20$ e $D=100$. Le versioni originale, traslata e traslata--ruotata hanno lo stesso peso.}}
+ \label{fig:study3-native-ecdf}
 \end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \begin{subfigure}[b]{0.48\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{appendices/figs04_target_ecdf_seconds_d20.pdf}
-    \caption{$D=20$}
-    \label{fig:study3-time-ecdf-d20}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.48\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{appendices/figs05_target_ecdf_seconds_d100.pdf}
-    \caption{$D=100$}
-    \label{fig:study3-time-ecdf-d100}
-  \end{subfigure}
-  \caption{Confronto temporale: ECDF dei target aggregata sui due problemi e 20 repliche, campagna da 60 s.}
-  \label{fig:study3-time-ecdf-all}
-\end{figure}
-
 \FloatBarrier
