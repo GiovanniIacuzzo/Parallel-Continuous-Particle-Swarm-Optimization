@@ -11,6 +11,8 @@ import numpy as np
 
 from .coco_logging import archive_interrupted_observer, observer_optimum, short_coco_observer
 from .common import BOUNDS, ROOT, fingerprint, native_config, native_version, sha
+from .study3_transforms import native_instance
+from cpso_serial.benchmarks.cec2013_lsgo import CEC2013LSGOAdapter
 from cpso_serial.native import native_batch_evaluator, run_synchronous_study
 from cpso_serial.pso_baselines import PSOConfig, available_pso_methods, minimize_pso
 
@@ -120,7 +122,7 @@ def _unavailable_scalar(_):
 
 
 def _baseline(key, settings, bounds, budget, work, schedule, seconds, objective):
-    config = PSOConfig(*bounds, population_size=POPULATION, max_evaluations=budget,
+    config = PSOConfig(*bounds, population_size=settings.get("population", POPULATION), max_evaluations=budget,
                        seed=key["seed"], schedule_iterations=schedule or None)
     trace = BatchTrace(time.perf_counter(), seconds)
     if objective is not None:
@@ -130,7 +132,7 @@ def _baseline(key, settings, bounds, budget, work, schedule, seconds, objective)
                   zip(result.history_evaluations, result.best_history)],
             elapsed=time.perf_counter() - trace.started, fe=result.function_evaluations,
             value=result.best_value, discarded_evaluations=0,
-            implementation="numpy_coco_observer",
+            implementation="numpy_update_scalar_objective",
         )
 
     with native_batch_evaluator(key["function"], settings["workers"], work) as evaluate:
@@ -152,9 +154,13 @@ def _baseline(key, settings, bounds, budget, work, schedule, seconds, objective)
 
 def _cpso(key, settings, bounds, budget, work, schedule, seconds, objective):
     recipe = settings["recipe"]
+    population = settings.get("population", POPULATION)
+    batch = settings.get("batch", population)
+    if budget < population or (budget - population) % batch:
+        raise ValueError("FE budget must admit full initialization and whole update batches")
     config = native_config(
         key["function"] if objective is None else "sphere", key["dimension"], key["seed"],
-        budget // POPULATION - 1, recipe["dt"], recipe["topology"], POPULATION,
+        (budget - population) // batch, recipe["dt"], recipe["topology"], population,
     )
     config = replace(config, lower_bounds=bounds[0], upper_bounds=bounds[1])
     adapt_step, recovery = ADAPTATIONS[recipe["adaptation"]]
@@ -162,7 +168,10 @@ def _cpso(key, settings, bounds, budget, work, schedule, seconds, objective):
         config, key["function"], workers=settings["workers"], graph_seed=key["seed"],
         coordinate=recipe["coordinate"], discrete=settings.get("discrete", False),
         adapt_step=adapt_step, recovery=recovery, seconds=seconds,
-        schedule_iterations=schedule, work_iterations=work, objective=objective,
+        schedule_iterations=schedule * (population // batch), work_iterations=work,
+        objective=objective, update_batch_size=batch if batch < population else 0,
+        local_search=recipe.get("local_search", False), partial_restart=recipe.get("partial_restart", False),
+        quadratic_local=recipe.get("quadratic_local", False),
     )
     timestamps = details.pop("batch_seconds")
     if objective is not None:
@@ -172,16 +181,25 @@ def _cpso(key, settings, bounds, budget, work, schedule, seconds, objective):
     )]
     return dict(rows=rows, elapsed=result.elapsed_seconds, fe=result.function_evaluations,
                 value=result.best_value if result.function_evaluations else None,
-                implementation="cpp_coco_observer" if objective is not None else "cpp_native",
+                implementation="cpp_scalar_objective" if objective is not None else "cpp_native",
                 **details)
 
 
 @contextmanager
-def _problem(folder, key):
-    if key["instance"] == 0:
+def _problem(folder, key, suite_name):
+    if suite_name == "cec":
+        problem = CEC2013LSGOAdapter().get_problem(int(key["function"][1:]))
+        if problem.dimension != key["dimension"]:
+            raise RuntimeError("CEC dimension does not match the planned function")
+        yield (problem.lower_bounds, problem.upper_bounds), problem.objective, problem.optimum, None
+        return
+    if suite_name != "bbob":
         function = key["function"]
         lo, hi = (-2.0, 2.0) if function == "inverse_diffusion" else BOUNDS[function]
-        yield ((lo,) * key["dimension"], (hi,) * key["dimension"]), None, None
+        objective = None
+        if "variant" in key:
+            objective, _ = native_instance(function, key["dimension"], key["variant"], key["instance"])
+        yield ((lo,) * key["dimension"], (hi,) * key["dimension"]), objective, 0.0, None
         return
 
     import cocoex
@@ -195,7 +213,7 @@ def _problem(folder, key):
     archive_interrupted_observer(log)
     bounds = (tuple(problem.lower_bounds), tuple(problem.upper_bounds))
     with short_coco_observer(problem, log, key["method"]):
-        yield bounds, problem, log
+        yield bounds, lambda point: float(problem(np.asarray(point))), 0.0, (problem, log)
 
 
 def run_job(folder, protocol, key):
@@ -205,12 +223,12 @@ def run_job(folder, protocol, key):
     schedule = protocol["schedule_iterations"] if seconds else 0
     work = protocol["rk4_steps"] if key["function"] == "inverse_diffusion" else 0
     execute = _baseline if settings["recipe"] is None else _cpso
-    with _problem(folder, key) as (bounds, problem, log):
-        objective = None if problem is None else lambda point: float(problem(np.asarray(point)))
+    with _problem(folder, key, protocol["suite"]) as (bounds, objective, optimum, observer):
         result = execute(key, settings, bounds, budget, work, schedule, seconds, objective)
-        if problem is not None and int(problem.evaluations) != result["fe"]:
+        if observer is not None and int(observer[0].evaluations) != result["fe"]:
             raise RuntimeError(f"COCO and solver FE counts disagree for {key}")
-    optimum = 0.0 if log is None else observer_optimum(log)
+    if observer is not None:
+        optimum = observer_optimum(observer[1])
     if seconds and result["fe"] >= budget:
         raise RuntimeError(f"FE ceiling reached before a valid time-budget result: {key}. "
                            "Increase --time-cap-fe in a fresh output directory.")

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -26,9 +27,14 @@ struct SynchronousStudy {
     std::chrono::steady_clock::time_point start;
     double seconds{};
     std::size_t schedule_iterations{};
+    std::size_t update_batch_size{};  // 0 uses the full population.
     bool adaptive_step{};
     bool recovery{};
     bool serial_objective{};
+    bool local_search{};
+    bool partial_restart{};
+    bool quadratic_local{};
+    std::array<std::uint64_t, 6> refinement_counts{};
     std::vector<double> batch_seconds;
     std::uint64_t discarded_evaluations{};
     std::uint64_t triggers{};

@@ -204,6 +204,20 @@ CPSO_API int cpso_run_synchronous_study(
     CpsoObjectiveCallback, CpsoSynchronousStudy*, CpsoCResult*, double*,
     double*, uint64_t*, double* batch_seconds, size_t, char*, size_t);
 
+CPSO_API int cpso_run_synchronous_batched_study(
+    const CpsoCConfig*, const CpsoCExecutionConfig*, int flags, uint64_t graph_seed,
+    CpsoObjectiveCallback, CpsoSynchronousStudy*, CpsoCResult*, double*,
+    double*, uint64_t*, double* batch_seconds, size_t, char*, size_t, size_t update_batch_size);
+
+// Refinement mask: bit 0 local search, bit 1 partial restart, bit 2 quadratic probe
+// (requires bit 0). Counts: local trials, local improvements, restarted particles,
+// restart improvements, followed by quadratic trials and improvements if bit 2 is set.
+CPSO_API int cpso_run_synchronous_refined_study(
+    const CpsoCConfig*, const CpsoCExecutionConfig*, int flags, uint64_t graph_seed,
+    CpsoObjectiveCallback, CpsoSynchronousStudy*, CpsoCResult*, double*,
+    double*, uint64_t*, double* batch_seconds, size_t, char*, size_t, size_t update_batch_size,
+    unsigned refinement, uint64_t* counts);
+
 // Persistent pool for baseline objective batches, with the same native
 // evaluator used by the synchronous CPSO. Input is row-major.
 CPSO_API void* cpso_create_batch_evaluator(int benchmark, uint64_t work, size_t workers, char*, size_t);

@@ -18,6 +18,125 @@ struct EvaluationTimings {
     double worker_seconds{};
 };
 
+enum class TrialKind { Swarm, Local, Quadratic, RestartGlobal, RestartNearLeader };
+
+struct RefinementTrial {
+    TrialKind kind{TrialKind::Swarm};
+    std::size_t axis{};
+    double sign{};
+};
+
+struct Refinement {
+    std::vector<RefinementTrial> trials;
+    std::vector<double> radius;
+    std::vector<std::size_t> available;
+    std::vector<std::size_t> personal_progress;
+    std::vector<double> quadratic_point;
+    bool quadratic_pending{};
+    std::size_t next_axis{};
+    std::size_t last_progress{};
+    std::size_t last_restart{};
+
+    Refinement(std::size_t batch, std::size_t dimension, std::size_t population)
+        : trials(batch), radius(dimension, 0.02), personal_progress(population) {
+        available.reserve(batch);
+    }
+
+    void plan(const SynchronousStudy& study, const std::vector<Particle>& particles,
+              std::size_t best, std::size_t first, std::size_t batch, std::size_t sweep_batches) {
+        std::fill(trials.begin(), trials.end(), RefinementTrial{});
+        const auto stalled = batch - last_progress;
+        const bool local = study.local_search && batch >= 10U * sweep_batches
+            && (stalled >= 6U * sweep_batches || batch % (2U * sweep_batches) == 0U);
+        const bool restart = study.partial_restart && batch >= 16U * sweep_batches
+            && batch - last_restart >= 8U * sweep_batches;
+        if (!local && !restart && !quadratic_pending) return;
+
+        available.clear();
+        for (std::size_t slot = 0; slot < trials.size(); ++slot) {
+            if (first + slot != best) available.push_back(slot);
+        }
+        std::sort(available.begin(), available.end(), [&](auto a, auto b) {
+            const auto va = particles[first + a].personal_best_value;
+            const auto vb = particles[first + b].personal_best_value;
+            return va == vb ? a < b : va > vb;
+        });
+
+        std::size_t used = 0;
+        if (local) {
+            const auto pairs = (available.size() - (quadratic_pending && !available.empty())) / 2U;
+            const auto axes = std::min({radius.size(), std::size_t{4}, pairs});
+            for (std::size_t k = 0; k < axes; ++k) {
+                const auto axis = next_axis;
+                next_axis = (next_axis + 1U) % radius.size();
+                trials[available[used++]] = {TrialKind::Local, axis, -1.0};
+                trials[available[used++]] = {TrialKind::Local, axis, 1.0};
+            }
+        }
+        if (quadratic_pending && used < available.size()) {
+            trials[available[used++]] = {TrialKind::Quadratic};
+        }
+        quadratic_pending = false;
+        if (restart) {
+            const auto limit = std::max(std::size_t{1}, trials.size() / 10U);
+            const auto weak_end = (available.size() + 1U) / 2U;
+            std::size_t count = 0;
+            for (; used < weak_end && count < limit; ++used) {
+                const auto slot = available[used];
+                if (batch - personal_progress[first + slot] < 16U * sweep_batches) continue;
+                trials[slot] = {
+                    count % 2U == 0U ? TrialKind::RestartGlobal : TrialKind::RestartNearLeader
+                };
+                ++count;
+            }
+            if (count != 0U) last_restart = batch;
+        }
+    }
+
+    void finish_local(const Config& config, const std::vector<std::vector<double>>& positions,
+                      const std::vector<double>& values, const std::vector<double>& leader,
+                      double incumbent) {
+        if (available.empty() || trials[available.front()].kind != TrialKind::Local) return;
+        // Only schedule a prediction that could improve on the best evaluated point.
+        double best_prediction = config.study->quadratic_local
+            ? std::min(incumbent, *std::min_element(values.begin(), values.end())) - incumbent
+            : 0.0;
+        for (std::size_t k = 0; k + 1U < available.size(); k += 2U) {
+            const auto first = available[k];
+            const auto second = available[k + 1U];
+            if (trials[first].kind != TrialKind::Local) break;
+            const auto axis = trials[first].axis;
+            auto& step = radius[axis];
+            if (config.study->quadratic_local) {
+                // Fit changes from the old leader in normalized coordinates -1, 0, +1.
+                const auto width = config.upper_bounds[axis] - config.lower_bounds[axis];
+                const auto distance = width * step;
+                if (positions[first][axis] == leader[axis] - distance
+                    && positions[second][axis] == leader[axis] + distance
+                    && positions[first][axis] < leader[axis] && leader[axis] < positions[second][axis]) {
+                    const auto minus = values[first] - incumbent;
+                    const auto plus = values[second] - incumbent;
+                    const auto curvature = 0.5 * minus + 0.5 * plus;
+                    const auto slope = 0.5 * plus - 0.5 * minus;
+                    if (std::isfinite(curvature) && curvature > 0.0) {
+                        const auto fraction = -0.5 * slope / curvature;
+                        const auto predicted_change = 0.5 * slope * fraction;
+                        if (std::abs(fraction) >= 0.05 && std::abs(fraction) <= 0.90
+                            && std::isfinite(predicted_change) && predicted_change < best_prediction) {
+                            best_prediction = predicted_change;
+                            quadratic_point = leader;
+                            quadratic_point[axis] += fraction * distance;
+                            quadratic_pending = true;
+                        }
+                    }
+                }
+            }
+            const bool improved = std::min(values[first], values[second]) < incumbent;
+            step = std::clamp(step * (improved ? 1.25 : 0.5), 1e-10, 0.10);
+        }
+    }
+};
+
 void evaluate_serial_batch(
     const Objective& objective,
     const std::vector<std::vector<double>>& positions,
@@ -73,6 +192,13 @@ template <typename BatchEvaluator>
     };
     const std::size_t dimension = config.lower_bounds.size();
     const std::size_t population_size = config.population_size;
+    const std::size_t update_batch_size = study != nullptr && study->update_batch_size != 0U
+        ? study->update_batch_size : population_size;
+    if (population_size % update_batch_size != 0U
+        || (update_batch_size != population_size && (study->adaptive_step || study->recovery))) {
+        throw std::invalid_argument("Invalid synchronous update batch");
+    }
+    const std::size_t batches_per_sweep = population_size / update_batch_size;
     std::vector<Particle> particles(population_size);
 
     Result result;
@@ -117,12 +243,12 @@ template <typename BatchEvaluator>
         if (study != nullptr) {
             const double seconds = elapsed();
             if (expired(seconds)) {
-                study->discarded_evaluations = population_size;
+                study->discarded_evaluations = pending_positions.size();
                 return false;
             }
             study->batch_seconds.push_back(seconds);
         }
-        result.function_evaluations += population_size;
+        result.function_evaluations += pending_positions.size();
         return true;
     };
     if (!accept_batch()) {
@@ -145,14 +271,25 @@ template <typename BatchEvaluator>
     result.history_evaluations.push_back(result.function_evaluations);
 
     std::size_t best_index = global_best_index(particles);
+    std::optional<Refinement> refinement;
+    if (study != nullptr && (study->local_search || study->partial_restart)) {
+        refinement.emplace(update_batch_size, dimension, population_size);
+    }
     const bool adapting = study != nullptr && (study->adaptive_step || study->recovery);
     std::optional<Config> step_config;
     if (adapting) step_config = config;
     std::size_t stagnant_generations = 0;
     std::vector<unsigned char> restart(study != nullptr && study->recovery ? population_size : 0, 0);
     std::vector<double> radius(adapting ? dimension : 0, 0.0);
+    pending_positions.resize(update_batch_size);
+    pending_velocities.resize(update_batch_size);
+    pending_values.resize(update_batch_size);
     for (std::size_t iteration = 0; iteration < config.iterations; ++iteration) {
         if (study != nullptr && expired(elapsed())) break;
+        const auto first_particle = (iteration % batches_per_sweep) * update_batch_size;
+        if (refinement) {
+            refinement->plan(*study, particles, best_index, first_particle, iteration, batches_per_sweep);
+        }
         std::size_t restart_count = 0;
         if (adapting && stagnant_generations >= 12U) {
             stagnant_generations = 0;
@@ -202,33 +339,56 @@ template <typename BatchEvaluator>
         result.social_selection_seconds +=
             std::chrono::duration<double>(Clock::now() - social_start).count();
 
-        std::vector<double> propagation_task_seconds(population_size, 0.0);
+        std::vector<double> propagation_task_seconds(update_batch_size, 0.0);
         const auto propagation_start = Clock::now();
-        const auto propagate_one = [&](const std::size_t i) {
+        const auto propagate_one = [&](const std::size_t slot) {
+            const std::size_t i = first_particle + slot;
             const auto task_start = Clock::now();
             const std::vector<double>& attractor = config.topology == TopologyKind::GlobalBest
                 ? global_best_snapshot : local_snapshot[i];
-            if (restart_count != 0U && restart[i] != 0U) {
+            const auto trial = refinement ? refinement->trials[slot] : RefinementTrial{};
+            if (trial.kind != TrialKind::Swarm) {
+                const auto& leader = particles[best_index].personal_best;
+                auto& position = pending_positions[slot];
+                position = leader;
+                std::fill(pending_velocities[slot].begin(), pending_velocities[slot].end(), 0.0);
+                if (trial.kind == TrialKind::Quadratic) {
+                    position = refinement->quadratic_point;
+                } else if (trial.kind == TrialKind::Local) {
+                    const auto j = trial.axis;
+                    const auto width = config.upper_bounds[j] - config.lower_bounds[j];
+                    position[j] = std::clamp(position[j] + trial.sign * width * refinement->radius[j],
+                                             config.lower_bounds[j], config.upper_bounds[j]);
+                } else {
+                    for (std::size_t j = 0; j < dimension; ++j) {
+                        const auto lo = config.lower_bounds[j];
+                        const auto hi = config.upper_bounds[j];
+                        const auto u = uniform01(particles[i].random_engine);
+                        position[j] = trial.kind == TrialKind::RestartGlobal ? lo + u * (hi - lo)
+                            : std::clamp(leader[j] + (2.0 * u - 1.0) * 0.10 * (hi - lo), lo, hi);
+                    }
+                }
+            } else if (restart_count != 0U && restart[i] != 0U) {
                 auto& engine = particles[i].random_engine;
                 for (std::size_t j = 0; j < dimension; ++j) {
                     const double offset = (2.0 * uniform01(engine) - 1.0) * radius[j];
-                    pending_positions[i][j] = std::clamp(attractor[j] + offset,
+                    pending_positions[slot][j] = std::clamp(attractor[j] + offset,
                         config.lower_bounds[j], config.upper_bounds[j]);
-                    pending_velocities[i][j] = 0.0;
+                    pending_velocities[slot][j] = 0.0;
                 }
             } else {
                 propagate_particle(
                     particles[i], attractor, adapting ? *step_config : config, iteration,
-                    pending_positions[i], pending_velocities[i]);
+                    pending_positions[slot], pending_velocities[slot]);
             }
-            propagation_task_seconds[i] =
+            propagation_task_seconds[slot] =
                 std::chrono::duration<double>(Clock::now() - task_start).count();
         };
         if (particle_pool != nullptr) {
-            particle_pool->parallel_for(population_size, propagate_one);
+            particle_pool->parallel_for(update_batch_size, propagate_one);
         } else {
-            for (std::size_t i = 0; i < population_size; ++i) {
-                propagate_one(i);
+            for (std::size_t slot = 0; slot < update_batch_size; ++slot) {
+                propagate_one(slot);
             }
         }
         result.propagation_seconds +=
@@ -239,19 +399,38 @@ template <typename BatchEvaluator>
 
         if (!accept_batch()) break;
         const double previous_best = result.best_value;
+        if (refinement && study->local_search) {
+            refinement->finish_local(config, pending_positions, pending_values,
+                                     particles[best_index].personal_best, previous_best);
+        }
         if (restart_count != 0U) study->recovered_particles += restart_count;
 
-        for (std::size_t i = 0; i < population_size; ++i) {
+        for (std::size_t slot = 0; slot < update_batch_size; ++slot) {
+            const std::size_t i = first_particle + slot;
             Particle& particle = particles[i];
-            particle.position = pending_positions[i];
-            particle.velocity = pending_velocities[i];
-            particle.current_value = pending_values[i];
+            const auto kind = refinement ? refinement->trials[slot].kind : TrialKind::Swarm;
+            const bool restarted = kind == TrialKind::RestartGlobal || kind == TrialKind::RestartNearLeader;
+            if (kind == TrialKind::Local || kind == TrialKind::Quadratic) {
+                const auto count = kind == TrialKind::Local ? 0U : 4U;
+                ++study->refinement_counts[count];
+                if (pending_values[slot] >= previous_best) continue;
+                ++study->refinement_counts[count + 1U];
+            }
+            if (restarted) {
+                ++study->refinement_counts[2];
+                if (pending_values[slot] < previous_best) ++study->refinement_counts[3];
+            }
+            particle.position = pending_positions[slot];
+            particle.velocity = pending_velocities[slot];
+            particle.current_value = pending_values[slot];
             if (restart_count != 0U && restart[i] != 0U && particle.current_value < previous_best) {
                 ++study->recovery_improvements;
             }
-            if ((restart_count != 0U && restart[i] != 0U) || particle.current_value < particle.personal_best_value) {
+            if (restarted || (restart_count != 0U && restart[i] != 0U)
+                || particle.current_value < particle.personal_best_value) {
                 particle.personal_best = particle.position;
                 particle.personal_best_value = particle.current_value;
+                if (refinement) refinement->personal_progress[i] = iteration + 1U;
             }
             if (particle.personal_best_value < result.best_value) {
                 result.best_value = particle.personal_best_value;
@@ -259,6 +438,7 @@ template <typename BatchEvaluator>
             }
         }
         if (restart_count != 0U) std::fill(restart.begin(), restart.end(), 0U);
+        if (refinement && result.best_value < previous_best) refinement->last_progress = iteration + 1U;
         if (adapting) {
             if (result.best_value < previous_best) {
                 stagnant_generations = 0;

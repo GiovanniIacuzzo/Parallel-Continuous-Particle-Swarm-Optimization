@@ -2,6 +2,7 @@ results/
 data/
 build/
 build-m2/
+backup/
 .pytest_cache/
 __pycache__/
 figures/

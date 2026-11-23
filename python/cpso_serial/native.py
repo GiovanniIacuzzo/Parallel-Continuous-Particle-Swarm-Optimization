@@ -198,7 +198,7 @@ def _run(
     custom_objective: Optional[Callable[[Sequence[float]], float]] = None,
     experiment: tuple[int, int] | None = None,
     research: tuple[int, float] | None = None,
-    synchronous_study: tuple[_CSynchronousStudy, dict] | None = None,
+    synchronous_study: tuple[_CSynchronousStudy, dict, int, int] | None = None,
 ) -> CpsoResult:
     config.validate()
     if custom_objective is not None and architecture != "serial" and synchronous_study is None:
@@ -323,10 +323,15 @@ def _run(
     else:
         callback = None
     if synchronous_study is not None:
-        options, details = synchronous_study
+        options, details, update_batch_size, refinement = synchronous_study
         flags, graph_seed = experiment
         batch_seconds = (ctypes.c_double * history_capacity)()
-        function = library.cpso_run_synchronous_study
+        function = (library.cpso_run_synchronous_batched_study if update_batch_size
+                    else library.cpso_run_synchronous_study)
+        counts = None
+        if refinement:
+            function = library.cpso_run_synchronous_refined_study
+            counts = (ctypes.c_uint64 * (6 if refinement & 4 else 4))()
         function.argtypes = [
             ctypes.POINTER(_CConfig), ctypes.POINTER(_CExecutionConfig),
             ctypes.c_int, ctypes.c_uint64, _ObjectiveCallback, ctypes.POINTER(_CSynchronousStudy),
@@ -334,17 +339,28 @@ def _run(
             ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_uint64),
             ctypes.POINTER(ctypes.c_double), ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t,
         ]
+        if update_batch_size:
+            function.argtypes += [ctypes.c_size_t]
         function.restype = ctypes.c_int
+        batch_argument = (update_batch_size,) if update_batch_size else ()
+        if refinement:
+            function.argtypes += [ctypes.c_uint, ctypes.POINTER(ctypes.c_uint64)]
+            batch_argument += (refinement, counts)
         status = function(
             ctypes.byref(c_config), ctypes.byref(execution), flags, graph_seed,
             callback if callback is not None else _ObjectiveCallback(), ctypes.byref(options),
             ctypes.byref(c_result), best_position, history, history_evaluations,
-            batch_seconds, history_capacity, error, len(error),
+            batch_seconds, history_capacity, error, len(error), *batch_argument,
         )
         if status == 0:
             details["batch_seconds"] = batch_seconds[:c_result.history_size]
             for field, _ in _CSynchronousStudy._fields_[4:]:
                 details[field] = getattr(options, field)
+            if counts is not None:
+                fields = ("local_trials", "local_improvements", "restart_trials", "restart_improvements")
+                if refinement & 4:
+                    fields += ("quadratic_trials", "quadratic_improvements")
+                details.update(zip(fields, counts, strict=True))
     elif research is not None:
         function = library.cpso_run_research
         function.argtypes = [ctypes.POINTER(_CConfig), ctypes.POINTER(_CExecutionConfig),
@@ -603,19 +619,33 @@ def run_synchronous_study(
     coordinate: bool = False, discrete: bool = False, adapt_step: bool = False,
     recovery: bool = False, seconds: float = 0.0, schedule_iterations: int = 0,
     work_iterations: int = 0, objective: Callable | None = None,
+    update_batch_size: int = 0,
+    local_search: bool = False, partial_restart: bool = False,
+    quadratic_local: bool = False,
 ) -> tuple[CpsoResult, dict]:
     """Run the synchronous competition and retain completed-batch timestamps."""
     if not math.isfinite(seconds) or seconds < 0.0 or schedule_iterations < 0:
         raise ValueError("Invalid deadline or schedule")
     if not 0 <= graph_seed < 2**64:
         raise ValueError("Invalid graph seed")
+    if update_batch_size < 0 or (update_batch_size and config.population_size % update_batch_size):
+        raise ValueError("The update batch must divide the population")
+    if 0 < update_batch_size < config.population_size and (adapt_step or recovery):
+        raise ValueError("Partial batches require a fixed step and no recovery")
+    if quadratic_local and not local_search:
+        raise ValueError("Quadratic probes require local search")
+    refinement = int(local_search) | (int(partial_restart) << 1) | (int(quadratic_local) << 2)
+    if refinement:
+        update_batch_size = update_batch_size or config.population_size
+        if update_batch_size < 4 or any((adapt_step, recovery, discrete)):
+            raise ValueError("Refinement requires continuous fixed-step CPSO and batches of at least four")
     flags = 4 | (int(coordinate) << 1) | int(discrete)
     options = _CSynchronousStudy(seconds, schedule_iterations, adapt_step, recovery)
     details = {}
     result = _run(
         config, benchmark, architecture="particle_parallel",
         workers=workers, work_iterations=work_iterations, custom_objective=objective,
-        experiment=(flags, graph_seed), synchronous_study=(options, details),
+        experiment=(flags, graph_seed), synchronous_study=(options, details, update_batch_size, refinement),
     )
     return result, details
 

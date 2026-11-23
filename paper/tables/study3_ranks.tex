@@ -1,20 +1,23 @@
-\begin{table*}[tbp]
+\begin{table}[!htbp]
+\color{RevisionBlue}
 \centering\small
-\caption{Confronti confermativi a FE fissate dello Studio III. I ranghi medi sono calcolati fra 13 metodi. La colonna finale riporta vittorie, parità e sconfitte del CPSO selezionato rispetto alla migliore PSO di letteratura per funzione, con la soglia di parità del protocollo.}
+\caption{\rev{Rango medio aggregato a budget fissato. Valori minori indicano risultati migliori.}}
 \label{tab:study3-ranks}
-\begin{tabular}{@{}lrrlrlc@{}}
+\begin{tabular}{@{}lrrr@{}}
 \toprule
-Suite & $D$ & FE & Migliore per rango & Rango minimo & CPSO: posto (rango) & V/P/S \\
+Metodo & Native & BBOB & CEC2013 \\
 \midrule
-Nativa & 20 & $50\,000$ & CSO & 2.31 & 5 (4.04) & 0/0/6 \\
-Nativa & 100 & $50\,000$ & CSO & 1.36 & 4 (4.37) & 0/0/6 \\
-Nativa & 20 & $500\,000$ & SPSO-2011 & 4.33 & 5 (6.35) & 0/2/4 \\
-Nativa & 100 & $500\,000$ & CSO & 2.14 & 5 (4.98) & 0/0/6 \\
-\midrule
-BBOB & 20 & $10\,000$ & SL-PSO & 2.89 & 3 (3.67) & 2/1/11 \\
-BBOB & 40 & $10\,000$ & SL-PSO & 2.19 & 3 (3.66) & 0/2/12 \\
-BBOB & 20 & $50\,000$ & CSO & 2.93 & 3 (4.81) & 1/0/13 \\
-BBOB & 40 & $50\,000$ & CSO & 2.51 & 4 (4.66) & 0/0/14 \\
+CPSO & 3.86 & 4.34 & 4.60 \\
+CSO & 1.77 & 2.43 & 2.65 \\
+SL-PSO & 2.92 & 3.66 & 6.93 \\
+SPSO-2011 & 3.09 & 3.88 & 2.72 \\
+Constriction gbest & 4.44 & 4.75 & 4.89 \\
+Inertia gbest & 5.62 & 5.01 & 5.16 \\
+DMS-PSO & 6.91 & 6.24 & 4.52 \\
+Inertia lbest ring & 7.65 & 6.45 & 6.12 \\
+CLPSO & 9.26 & 10.13 & 8.31 \\
+FIPS ring & 10.06 & 9.22 & 9.93 \\
+Classic gbest & 10.43 & 9.89 & 10.16 \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}

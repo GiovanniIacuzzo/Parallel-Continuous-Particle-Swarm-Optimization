@@ -82,3 +82,62 @@ def test_same_native_evaluator_at_one_and_four_workers():
             expected = serial(points)
         with native_batch_evaluator(benchmark, 4, work) as parallel:
             assert np.array_equal(expected, parallel(points))
+
+
+def test_partial_updates_preserve_inactive_state_and_consume_exact_fe():
+    config = CpsoConfig((-5.0,) * 5, (5.0,) * 5, population_size=100,
+                        iterations=3, mu_min=0.5, mu_max=0.5)
+
+    def run(config, workers, batch=0):
+        visited = []
+
+        def flat(point):
+            visited.append(point)
+            return 1.0
+
+        result, _ = run_synchronous_study(config, "sphere", workers=workers, graph_seed=2,
+                                          objective=flat, update_batch_size=batch)
+        return result, visited
+
+    full, full_points = run(config, 1)
+    partial_config = replace(config, iterations=6)
+    partial, partial_points = run(partial_config, 4, 50)
+    _, serial_partial_points = run(partial_config, 1, 50)
+    # With a flat objective and constant inertia the social snapshot never
+    # changes. Every particle must follow exactly its full-sweep trajectory.
+    assert full_points == partial_points == serial_partial_points
+    assert full.function_evaluations == partial.function_evaluations == 400
+    assert partial.history_evaluations == (100, 150, 200, 250, 300, 350, 400)
+
+
+def test_native_transform_shares_the_feasible_minimizer_across_paired_variants():
+    from publication_tools.study3_transforms import native_instance
+
+    shifted, optimum = native_instance("rosenbrock", 20, "shifted", 101)
+    rotated, rotated_optimum = native_instance("rosenbrock", 20, "rotated", 101)
+    assert optimum == rotated_optimum
+    assert all(-5.0 < x < 10.0 for x in optimum)
+    assert shifted(optimum) == rotated(optimum) == 0.0
+    probe = np.asarray(optimum) + 0.3
+    assert shifted(probe) != pytest.approx(rotated(probe))
+    assert optimum != native_instance("rosenbrock", 20, "shifted", 201)[1]
+
+
+def test_partial_batch_refinement_accounts_for_trials_and_is_worker_deterministic():
+    config = CpsoConfig((-5.0,) * 5, (5.0,) * 5, population_size=100, iterations=160,
+                        dt=1.0, cognitive=0.0, social=2.05, mu_min=0.4, mu_max=0.4)
+
+    for local_search, partial_restart in ((True, False), (False, True), (True, True)):
+        runs = [run_synchronous_study(config, "sphere", workers=workers, graph_seed=2,
+                                    objective=lambda point: 1.0, update_batch_size=50,
+                                    local_search=local_search, partial_restart=partial_restart)
+                for workers in (1, 4)]
+        (one, a), (four, b) = runs
+        assert one.best_history == four.best_history
+        assert one.best_position == four.best_position
+        assert one.history_evaluations == four.history_evaluations == tuple(range(100, 8101, 50))
+        assert (a["local_trials"] > 0) == local_search
+        assert (a["restart_trials"] > 0) == partial_restart
+        for key in ("local_trials", "local_improvements", "restart_trials", "restart_improvements"):
+            assert a[key] == b[key]
+        assert a["local_improvements"] == a["restart_improvements"] == 0

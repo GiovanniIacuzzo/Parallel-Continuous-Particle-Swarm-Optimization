@@ -447,13 +447,44 @@ extern "C" CPSO_API int cpso_run_synchronous_study(
     CpsoSynchronousStudy* options, CpsoCResult* result, double* position,
     double* history, std::uint64_t* fe, double* batch_seconds, std::size_t capacity,
     char* error, std::size_t error_capacity) {
+    return cpso_run_synchronous_batched_study(config, execution, flags, graph_seed, callback,
+        options, result, position, history, fe, batch_seconds, capacity, error, error_capacity, 0U);
+}
+
+extern "C" CPSO_API int cpso_run_synchronous_batched_study(
+    const CpsoCConfig* config, const CpsoCExecutionConfig* execution,
+    int flags, std::uint64_t graph_seed, CpsoObjectiveCallback callback,
+    CpsoSynchronousStudy* options, CpsoCResult* result, double* position,
+    double* history, std::uint64_t* fe, double* batch_seconds, std::size_t capacity,
+    char* error, std::size_t error_capacity, std::size_t update_batch_size) {
+    return cpso_run_synchronous_refined_study(config, execution, flags, graph_seed, callback,
+        options, result, position, history, fe, batch_seconds, capacity, error, error_capacity,
+        update_batch_size, 0U, nullptr);
+}
+
+extern "C" CPSO_API int cpso_run_synchronous_refined_study(
+    const CpsoCConfig* config, const CpsoCExecutionConfig* execution,
+    int flags, std::uint64_t graph_seed, CpsoObjectiveCallback callback,
+    CpsoSynchronousStudy* options, CpsoCResult* result, double* position,
+    double* history, std::uint64_t* fe, double* batch_seconds, std::size_t capacity,
+    char* error, std::size_t error_capacity, std::size_t update_batch_size,
+    unsigned refinement, std::uint64_t* counts) {
     const auto start = cpso::detail::Clock::now();
+    const auto population_size = config != nullptr && config->population_size > 0
+        ? static_cast<std::size_t>(config->population_size) : 0U;
     if (execution == nullptr || options == nullptr || batch_seconds == nullptr
         || (execution->algorithm_id != CPSO_ALGORITHM_SERIAL
             && execution->algorithm_id != CPSO_ALGORITHM_PARTICLE_PARALLEL)
         || flags < 0 || flags > 7 || !std::isfinite(options->seconds) || options->seconds < 0.0
         || (options->seconds > 0.0 && options->schedule_iterations == 0U)
         || (callback != nullptr && options->seconds > 0.0)
+        || refinement > 7U || ((refinement & 4U) != 0U && (refinement & 1U) == 0U)
+        || (refinement != 0U && (counts == nullptr || (flags & 1) != 0
+            || options->adapt_step != 0 || options->recovery != 0 || update_batch_size < 4U))
+        || (update_batch_size != 0U && (population_size == 0U
+            || population_size % update_batch_size != 0U
+            || (update_batch_size != population_size
+                && (options->adapt_step != 0 || options->recovery != 0))))
         || ((flags & 1) != 0 && options->adapt_step != 0)) {
         write_error(error, error_capacity, "Invalid synchronous study options");
         return -1;
@@ -462,9 +493,13 @@ extern "C" CPSO_API int cpso_run_synchronous_study(
     study.start = start;
     study.seconds = options->seconds;
     study.schedule_iterations = options->schedule_iterations;
+    study.update_batch_size = update_batch_size;
     study.adaptive_step = options->adapt_step != 0;
     study.recovery = options->recovery != 0;
     study.serial_objective = callback != nullptr;
+    study.local_search = (refinement & 1U) != 0U;
+    study.partial_restart = (refinement & 2U) != 0U;
+    study.quadratic_local = (refinement & 4U) != 0U;
     const auto status = run_impl(config, execution, result, position, history, fe, capacity,
                                  error, error_capacity, callback, nullptr, flags, graph_seed,
                                  0.0, false, &study);
@@ -475,6 +510,9 @@ extern "C" CPSO_API int cpso_run_synchronous_study(
         options->recovered_particles = study.recovered_particles;
         options->recovery_improvements = study.recovery_improvements;
         options->mean_trigger_dispersion = study.mean_trigger_dispersion;
+        if (counts != nullptr) {
+            std::copy_n(study.refinement_counts.begin(), study.quadratic_local ? 6U : 4U, counts);
+        }
         result->elapsed_seconds =
             std::chrono::duration<double>(cpso::detail::Clock::now() - start).count();
     }
