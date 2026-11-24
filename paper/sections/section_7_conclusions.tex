@@ -1,8 +1,6 @@
 \section{Conclusioni}\label{sec:conclusions}
 
-Sulla diffusione inversa, master--slave e particle-parallel preservano la traiettoria del CPSO seriale. A $D=100$, con 512 passi RK4, entrambi accelerano di circa $3.6$ volte la stessa ricerca con otto worker. Alla risoluzione più elevata, il passaggio da quattro a otto worker riduce i tempi di circa il 19--22\% nelle configurazioni Global valutate. \review{Queste misure quantificano l’accelerazione ottenibile dopo aver fissato il passo del propagatore e mantenendo invariata la ricerca.}
+Sulla diffusione inversa, master--slave e particle-parallel preservano la traiettoria del CPSO seriale. A $D=100$, con 512 passi RK4, entrambi accelerano di circa $3.6$ volte la stessa ricerca con otto worker. Alla risoluzione più elevata, il passaggio da quattro a otto worker riduce i tempi di circa il 19--22\% nelle configurazioni Global valutate. Queste misure quantificano l’accelerazione ottenibile dopo aver fissato il passo del propagatore e mantenendo invariata la ricerca.
 
-\begingroup\color{RevisionBlue}
-\review{Nello Studio~III, il CPSO parallelo raggiunge il target $10^{-8}$ in tutte le repliche entro 15~s. Nella diffusione inversa ha il tempo mediano osservato più basso a $D=20$ e il secondo a $D=100$, dopo CSO. A budget di valutazioni fissato, si colloca al quarto posto per rango medio osservato nelle tre suite. I risultati quantificano il guadagno computazionale del parallelismo a traiettoria invariata e descrivono le prestazioni comparative della configurazione completa nelle condizioni misurate.}
+Nello Studio~III, il CPSO parallelo raggiunge il target $10^{-8}$ in tutte le repliche entro 15~s. Nella diffusione inversa ha il tempo mediano osservato più basso a $D=20$ e il secondo a $D=100$, dopo CSO. A budget di valutazioni fissato, si colloca al quarto posto per rango medio osservato nelle tre suite. I risultati quantificano il guadagno computazionale del parallelismo a traiettoria invariata e descrivono le prestazioni comparative della configurazione completa nelle condizioni misurate.
 
-\endgroup

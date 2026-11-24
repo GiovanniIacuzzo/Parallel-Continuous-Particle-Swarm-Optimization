@@ -60,7 +60,7 @@ A $D=30$ con Global e otto worker, la differenza di log-residuo fra asincrono e 
 
 \subsection{\rev{Tempo al target nella diffusione inversa}}\label{subsec:res-timed}
 \begingroup\color{RevisionBlue}
-\review{A $D=20$ il CPSO raggiunge il target $10^{-8}$ in tutte le repliche. Ha il tempo mediano osservato più basso ($0.341$~s), seguito da SL-PSO ($0.351$~s) e CSO ($0.424$~s). Il CPSO è il più rapido in 13 dei 20 blocchi appaiati, precede SL-PSO in 14 blocchi e CSO in 19. A $D=100$ il CPSO e CSO raggiungono entrambi il target in 20 repliche su 20. CSO ha il tempo mediano più basso ($3.988$~s contro $6.405$~s) e impiega meno FE mediane ($31\,925$ contro $56\,275$). Anche per ERT il CPSO è primo a $D=20$ e secondo a $D=100$. La Figura~\ref{fig:study3-inverse-target} mostra la distribuzione dei tempi e la Tabella~\ref{tab:study3-time-to-target} riporta i risultati per tutti i metodi.}
+A $D=20$ il CPSO raggiunge il target $10^{-8}$ in tutte le repliche. Ha il tempo mediano osservato più basso ($0.341$~s), seguito da SL-PSO ($0.351$~s) e CSO ($0.424$~s). Il CPSO è il più rapido in 13 dei 20 blocchi appaiati, precede SL-PSO in 14 blocchi e CSO in 19. A $D=100$ il CPSO e CSO raggiungono entrambi il target in 20 repliche su 20. CSO ha il tempo mediano più basso ($3.988$~s contro $6.405$~s) e impiega meno FE mediane ($31\,925$ contro $56\,275$). Anche per ERT il CPSO è primo a $D=20$ e secondo a $D=100$. La Figura~\ref{fig:study3-inverse-target} mostra la distribuzione dei tempi e la Tabella~\ref{tab:study3-time-to-target} riporta i risultati per tutti i metodi.
 
 \endgroup
 
@@ -75,17 +75,15 @@ A $D=30$ con Global e otto worker, la differenza di log-residuo fra asincrono e 
 
 \subsection{\rev{Qualità a parità di valutazioni}}\label{subsec:res-scope}
 \begingroup\color{RevisionBlue}
-\review{Il CPSO occupa il quarto posto per rango medio osservato fra gli undici metodi in ciascuna suite, con ranghi pari a $3.86$ sulle funzioni native, $4.34$ su BBOB e $4.60$ su CEC2013 (Tabella~\ref{tab:study3-ranks}). Rispetto alla migliore baseline osservata per funzione (Figura~\ref{fig:study3-external-effects}), il CPSO ottiene un log-gap medio inferiore oltre la soglia di parità pratica sulle funzioni BBOB $F_{13}$, $F_{19}$, $F_{23}$ e $F_{24}$ e sulla funzione CEC2013 $F_3$. Si osserva parità pratica su $F_1$ in BBOB e su $F_6$ e $F_{10}$ in CEC2013.}
+Il CPSO occupa il quarto posto per rango medio osservato fra gli undici metodi in ciascuna suite, con ranghi pari a $3.86$ sulle funzioni native, $4.34$ su BBOB e $4.60$ su CEC2013 (Tabella~\ref{tab:study3-ranks}). Rispetto alla migliore baseline osservata per funzione (Figura~\ref{fig:study3-external-effects}), il CPSO ottiene un log-gap medio inferiore oltre la soglia di parità pratica sulle funzioni BBOB $F_{13}$, $F_{19}$, $F_{23}$ e $F_{24}$ e sulla funzione CEC2013 $F_3$. Si osserva parità pratica su $F_1$ in BBOB e su $F_6$ e $F_{10}$ in CEC2013.
 
-\review{Nei confronti appaiati per funzione, su BBOB il log-gap favorisce il CPSO rispetto a cinque baseline dopo la correzione di Holm, mentre per CSO si ottiene $p_{\mathrm{Holm}}=0.224$. Su CEC2013 i confronti favoriscono CSO ($p_{\mathrm{Holm}}=0.0060$) e SPSO-2011 ($p_{\mathrm{Holm}}=0.0157$) rispetto al CPSO e favoriscono il CPSO rispetto a tre baseline. Sulle sei funzioni native tutti i valori $p$ corretti sono superiori a $0.05$.}
+Nei confronti appaiati per funzione, su BBOB il log-gap favorisce il CPSO rispetto a cinque baseline dopo la correzione di Holm, mentre per CSO si ottiene $p_{\mathrm{Holm}}=0.224$. Su CEC2013 i confronti favoriscono CSO ($p_{\mathrm{Holm}}=0.0060$) e SPSO-2011 ($p_{\mathrm{Holm}}=0.0157$) rispetto al CPSO e favoriscono il CPSO rispetto a tre baseline. Sulle sei funzioni native tutti i valori $p$ corretti sono superiori a $0.05$.
 
-\begingroup\color{ReviewBlue}
 La Tabella~\ref{tab:study3-holm} riporta i confronti esplorativi per funzione tra il CPSO e ciascuna baseline sui gap a fine budget.
 
 \begin{table*}[!htbp]
-\color{ReviewBlue}
 \centering\small
-\caption{\review{Mediana $\widetilde{\Delta}$ delle differenze di log-gap medio fra CPSO e ciascuna baseline e valori $p$ bilaterali corretti secondo Holm. Valori negativi di $\widetilde{\Delta}$ favoriscono il CPSO.}}
+\caption{Mediana $\widetilde{\Delta}$ delle differenze di log-gap medio fra CPSO e ciascuna baseline e valori $p$ bilaterali corretti secondo Holm. Valori negativi di $\widetilde{\Delta}$ favoriscono il CPSO.}
 \label{tab:study3-holm}
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
@@ -106,7 +104,6 @@ Classic gbest & $-3.294$ & $0.3125$ & $-0.843$ & $<0.0001$ & $-0.888$ & $0.0006$
 \bottomrule
 \end{tabular}
 \end{table*}
-\endgroup
 
 \begin{figure}[H]
  \centering
@@ -116,8 +113,6 @@ Classic gbest & $-3.294$ & $0.3125$ & $-0.843$ & $<0.0001$ & $-0.888$ & $0.0006$
 \end{figure}
 
 La Figura~\ref{fig:study3-external-performance} mostra il raggiungimento dei target BBOB al crescere delle valutazioni e il profilo dei gap finali su CEC2013.
-
-\endgroup
 
 \input{tables/study3_ranks.tex}
 
